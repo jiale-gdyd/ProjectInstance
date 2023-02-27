@@ -70,6 +70,10 @@
    ```shell
    ./build.sh ax620a_azure_gui          最终生成azure_gui可执行文件，可通过修改build.ax620a.version中对应名字的版本号
    ```
++ 构建基于爱心元智AX620A soc的gstreamer+ai项目
+   ```shell
+   ./build.sh ax620a_gst_api            最终生成GstAiApp可执行文件，可通过修改build.ax620a.version中对应名字的版本号
+   ```
 
 ### 工程清理与帮助
 + 项目工程清理
