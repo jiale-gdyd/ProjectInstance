@@ -1,0 +1,14 @@
+#
+# LittlevGL Kconfig
+#
+
+menu "LittlevGL"
+
+config LVGL
+    bool "Light and Versatile Embedded Graphics Library"
+    depends on GUI
+    default n
+    help
+      Light and Versatile Embedded Graphics Library
+
+endmenu

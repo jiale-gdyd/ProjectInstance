@@ -1,0 +1,32 @@
+#
+# Automatically generated file; DO NOT EDIT.
+# Application Configuration
+#
+
+#
+# LittlevGL Gui
+#
+CONFIG_GUI=y
+CONFIG_LVGL=y
+
+# CONFIG_LVGL_MUSIC_TEST is not set
+# CONFIG_LVGL_WIDGET_TEST is not set
+# CONFIG_LVGL_STRESS_TEST is not set
+CONFIG_LVGL_BENCHMARK_TEST=y
+# CONFIG_LVGL_KEYPAD_ENCODER_TEST is not set
+
+CONFIG_DRM_DISP_DRIVER=y
+# CONFIG_X11_DISP_DRIVER is not set
+# CONFIG_FBDEV_DISP_DRIVER is not set
+# CONFIG_WAYLAND_DISP_DRIVER is not set
+
+# CONFIG_LIBDRM is not set
+# CONFIG_LIBDRM_TOOLS is not set
+# CONFIG_LIBDRM_MODETEST is not set
+# CONFIG_LIBDRM_MODEPRINT is not set
+
+#
+# hardware platform
+#
+CONFIG_X86_64=y
+CONFIG_LINUX_GNU=y

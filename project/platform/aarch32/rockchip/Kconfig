@@ -1,0 +1,8 @@
+#
+# Rockchip AArch32 Platform Application Kconfig
+# 
+
+menu "Rockchip AArch32 Platform Application"
+
+
+endmenu

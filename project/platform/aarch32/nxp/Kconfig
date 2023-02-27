@@ -1,0 +1,9 @@
+#
+# NXP AArch32 Platform Application Kconfig
+# 
+
+menu "NXP AArch32 Platform Application"
+
+
+
+endmenu

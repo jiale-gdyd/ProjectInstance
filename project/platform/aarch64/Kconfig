@@ -1,0 +1,9 @@
+#
+# aarch64 Kconfig
+#
+
+menu "AArch64 platform"
+
+
+
+endmenu

@@ -1,0 +1,8 @@
+#
+# AXera ax630a Application Kconfig
+# 
+
+menu "AXera ax630a Application"
+
+
+endmenu

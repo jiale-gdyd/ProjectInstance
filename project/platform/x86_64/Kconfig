@@ -1,0 +1,9 @@
+#
+# x86_64 Kconfig
+#
+
+menu "x86_64 platform"
+
+
+
+endmenu

@@ -1,0 +1,11 @@
+#
+# aarch32 Kconfig
+#
+
+menu "AArch32 platform"
+
+source "project/platform/aarch32/nxp/Kconfig"
+source "project/platform/aarch32/axera/Kconfig"
+source "project/platform/aarch32/rockchip/Kconfig"
+
+endmenu

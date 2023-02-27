@@ -1,0 +1,11 @@
+#
+# AXera AArch32 Platform Application Kconfig
+# 
+
+menu "AXera AArch32 Platform Application"
+
+
+endmenu
+
+source "project/platform/aarch32/axera/ax620a/Kconfig"
+source "project/platform/aarch32/axera/ax630a/Kconfig"

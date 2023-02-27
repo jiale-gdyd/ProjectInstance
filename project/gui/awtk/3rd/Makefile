@@ -1,0 +1,10 @@
+obj-y += agg/
+obj-y += agge/
+obj-y += cjson/
+obj-y += fribidi/
+obj-y += gpinyin/
+obj-y += libunibreak/
+obj-y += mbedtls/
+obj-y += miniz/
+obj-y += nanovg/
+obj-y += svgtiny/

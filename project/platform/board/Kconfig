@@ -1,0 +1,85 @@
+#
+# Board Kconfig
+#
+
+menu "Platform Vendor Board"
+
+menu "AXera Platform Board"
+config AXERA
+    bool "AXera"
+    default n
+    help
+      https://www.axera-tech.com
+
+choice
+    prompt "AXera soc choice"
+    depends on AXERA
+    default AX620A
+
+    config AX620A
+        bool "Quad Core Cortex-A7"
+        select AARCH32
+        select CORTEX_A7
+
+    config AX630A
+        bool "Quad Core Cortex-A53"
+        select AARCH32
+        select CORTEX_A53
+endchoice
+endmenu
+
+menu "NXP Semiconductors Platform Board"
+config NXP
+    bool "freescale"
+    default n
+    help
+      Nxp Semiconductors N.V.
+
+choice
+    prompt "NXP soc choice"
+    depends on NXP
+    default IMX6ULL
+
+    config IMX6ULL
+        bool "i.MX 6UltraLite"
+        select AARCH32
+        select CORTEX_A7
+
+    config IMX6Q
+        bool "i.MX 6Quad"
+        select AARCH32
+        select CORTEX_A9
+endchoice
+endmenu
+
+menu "Rockchip Platform Board"
+config ROCKCHIP
+    bool "Rockchip"
+    default n
+    help
+      Rockchip Electronics Co., Ltd
+
+choice
+    prompt "Rockchip soc choice"
+    depends on ROCKCHIP
+    default RV11XX
+
+    config RV11XX
+        bool "rv1126 or rv1109"
+        select AARCH32
+
+    config RK3399
+        bool "rockchip 3399 chip"
+        select AARCH64
+
+    config RK3568
+        bool "rockchip 3568 chip"
+        select AARCH64
+
+    config RK3588
+        bool "rockchip 3588 chip"
+        select AARCH64
+endchoice
+endmenu
+
+endmenu
