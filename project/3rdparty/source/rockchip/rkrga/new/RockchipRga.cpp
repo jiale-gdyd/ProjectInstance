@@ -12,9 +12,9 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#include <libdrm/drm/drm.h>
+#include <libdrm/drm.h>
 #include <libdrm/xf86drm.h>
-#include <libdrm/drm/drm_mode.h>
+#include <libdrm/drm_mode.h>
 #include <rockchip/rkrgax/im2d.h>
 #include <rockchip/rkrgax/rgadbg.h>
 #include <rockchip/rkrgax/NormalRga.h>

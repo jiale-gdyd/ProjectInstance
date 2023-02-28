@@ -3,27 +3,25 @@ USER_LD_LIB      :=
 USER_LINK_LIB    :=
 USER_PTH_RT_LIB  :=
 
-GUI_ROOT         := $(shell pwd)/project
 SDK_ROOT         := $(shell pwd)/sdk/rockchip/rv11xx
 
-SDK_LIB          := $(SDK_ROOT)/sdk2.1/lib
-SDK_INC          := $(SDK_ROOT)/sdk2.1/include
+SDK_LIB          := $(SDK_ROOT)/sdk/lib
+SDK_INC          := $(SDK_ROOT)/sdk/include
+
+SELF_LIB         := $(SDK_ROOT)/aure/lib
+SELF_INC         := $(SDK_ROOT)/aure/include
 
 USER_LIB_INCLUDE += $(SDK_INC) \
-                    $(SDK_INC)/freetype2 \
-                    $(GUI_ROOT) \
-                    $(GUI_ROOT)/gui \
-                    $(GUI_ROOT)/gui/azure \
-                    $(GUI_ROOT)/gui/azure/guix \
-                    $(GUI_ROOT)/gui/azure/threadx \
-                    $(GUI_ROOT)/gui/awtk/3rd \
-                    $(GUI_ROOT)/gui/awtk/src \
-                    $(GUI_ROOT)/gui/awtk/driver \
-                    $(GUI_ROOT)/gui/awtk/src/ext_widgets
+                    $(SELF_INC)/freetype2 \
+                    $(SELF_INC)/opencv4
 
-USER_LINK_LIB    := -L$(SDK_LIB)
+USER_LINK_LIB    := -L$(SDK_LIB) \
+                    -L$(SELF_LIB)
 
-USER_LD_LIB      += 
+ifeq ($(APP_NAME),Rv11xxEMSApp)
+USER_LD_LIB      += rknn_runtime OpenVX VSC GAL ArchModelSw NNArchPerf \
+                    opencv_world rockchip_mpp rga
+endif
 
 USER_LINK_LIB         += $(addprefix -l,${USER_LD_LIB})
 USER_PTH_RT_LIB       += -lpthread -lrt -lm -ldl $(USE_STDCPP_VERSION)

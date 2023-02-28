@@ -3,22 +3,12 @@ USER_LD_LIB      :=
 USER_LINK_LIB    :=
 USER_PTH_RT_LIB  :=
 
-GUI_ROOT         := $(shell pwd)/project
 SDK_ROOT         := $(shell pwd)/sdk/nxp/imx6ull
 
 SDK_LIB          := $(SDK_ROOT)/sdk/lib
 SDK_INC          := $(SDK_ROOT)/sdk/include
 
-USER_LIB_INCLUDE += $(SDK_INC) \
-                    $(GUI_ROOT) \
-                    $(GUI_ROOT)/gui \
-                    $(GUI_ROOT)/gui/azure \
-                    $(GUI_ROOT)/gui/azure/guix \
-                    $(GUI_ROOT)/gui/azure/threadx \
-                    $(GUI_ROOT)/gui/awtk/3rd \
-                    $(GUI_ROOT)/gui/awtk/src \
-                    $(GUI_ROOT)/gui/awtk/driver \
-                    $(GUI_ROOT)/gui/awtk/src/ext_widgets
+USER_LIB_INCLUDE += $(SDK_INC)
 
 USER_LINK_LIB    := -L$(SDK_LIB)
 

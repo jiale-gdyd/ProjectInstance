@@ -1,0 +1,11 @@
+obj-y += EMSDemo.o
+obj-y += EMSDemoInit.o
+obj-y += EMSDemoMisc.o
+obj-y += EMSDemoDisp.o
+obj-y += EMSDemoDraw.o
+obj-y += EMSDemoPost.o
+obj-y += EMSDemoSend.o
+obj-y += EMSDemoParamInit.o
+obj-y += EMSDemoVideoEncode.o
+obj-y += EMSDemoVideoEncodeInit.o
+obj-y += EMSDemoVideoEncodeRemove.o

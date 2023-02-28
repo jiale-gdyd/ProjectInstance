@@ -1,0 +1,5 @@
+#ifndef XOBJECT_VISIBILITY_H
+#define XOBJECT_VISIBILITY_H
+
+
+#endif

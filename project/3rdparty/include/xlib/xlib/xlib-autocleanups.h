@@ -1,0 +1,76 @@
+static inline void x_autoptr_cleanup_generic_xfree(void *p)
+{
+    void **pp = (void **)p;
+    x_free(*pp);
+}
+
+static inline void x_autoptr_cleanup_xstring_free(XString *string)
+{
+    if (string) {
+        x_string_free(string, TRUE);
+    }
+}
+
+X_GNUC_BEGIN_IGNORE_DEPRECATIONS
+
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XAsyncQueue, x_async_queue_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XBookmarkFile, x_bookmark_file_free)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XBytes, x_bytes_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XChecksum, x_checksum_free)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XDateTime, x_date_time_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XDate, x_date_free)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XDir, x_dir_close)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XError, x_error_free)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XHashTable, x_hash_table_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XHmac, x_hmac_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XIOChannel, x_io_channel_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XKeyFile, x_key_file_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XList, x_list_free)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XArray, x_array_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XPtrArray, x_ptr_array_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XByteArray, x_byte_array_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XMainContext, x_main_context_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XMainContextPusher, x_main_context_pusher_free)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XMainLoop, x_main_loop_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XSource, x_source_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XMappedFile, x_mapped_file_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XMarkupParseContext, x_markup_parse_context_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XNode, x_node_destroy)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XOptionContext, x_option_context_free)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XOptionGroup, x_option_group_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XPatternSpec, x_pattern_spec_free)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XQueue, x_queue_free)
+X_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(XQueue, x_queue_clear)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XRand, x_rand_free)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XRegex, x_regex_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XMatchInfo, x_match_info_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XScanner, x_scanner_destroy)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XSequence, x_sequence_free)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XSList, x_slist_free)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XString, x_autoptr_cleanup_xstring_free)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XStringChunk, x_string_chunk_free)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XStrvBuilder, x_strv_builder_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XThread, x_thread_unref)
+X_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(XMutex, x_mutex_clear)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XMutexLocker, x_mutex_locker_free)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XRecMutexLocker, x_rec_mutex_locker_free)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XRWLockWriterLocker, x_rw_lock_writer_locker_free)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XRWLockReaderLocker, x_rw_lock_reader_locker_free)
+X_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(XCond, x_cond_clear)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XTimer, x_timer_destroy)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XTimeZone, x_time_zone_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XTree, x_tree_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XVariant, x_variant_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XVariantBuilder, x_variant_builder_unref)
+X_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(XVariantBuilder, x_variant_builder_clear)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XVariantIter, x_variant_iter_free)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XVariantDict, x_variant_dict_unref)
+X_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(XVariantDict, x_variant_dict_clear)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XVariantType, x_variant_type_free)
+X_DEFINE_AUTO_CLEANUP_FREE_FUNC(XStrv, x_strfreev, NULL)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XRefString, x_ref_string_release)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XUri, x_uri_unref)
+X_DEFINE_AUTOPTR_CLEANUP_FUNC(XPathBuf, x_path_buf_free)
+X_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(XPathBuf, x_path_buf_clear)
+
+X_GNUC_END_IGNORE_DEPRECATIONS

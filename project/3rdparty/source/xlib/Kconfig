@@ -1,0 +1,13 @@
+#
+# xlib Kconfig
+#
+
+menu "xlib"
+
+config XLIB
+    bool "xlib tools"
+    default n
+    help
+      Enable xlib.
+
+endmenu

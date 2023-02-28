@@ -1,0 +1,24 @@
+obj-y += libffi/
+
+obj-y += xtype.o
+obj-y += xboxed.o
+obj-y += xenums.o
+obj-y += xparam.o
+obj-y += xvalue.o
+obj-y += xsignal.o
+obj-y += xobject.o
+obj-y += xbinding.o
+obj-y += xclosure.o
+obj-y += xmarshal.o
+obj-y += xvaluetypes.o
+obj-y += xvaluearray.o
+obj-y += xtypeplugin.o
+obj-y += xtypemodule.o
+obj-y += xparamspecs.o
+obj-y += xsignalgroup.o
+obj-y += xatomicarray.o
+obj-y += xbindinggroup.o
+obj-y += xsourceclosure.o
+obj-y += xlib-enumtypes.o
+obj-y += xvaluetransform.o
+obj-x += xobjectnotifyqueue.o

@@ -1,0 +1,1 @@
+obj-$(CONFIG_RV11XX_EMS) += EMS/

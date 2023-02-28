@@ -3,7 +3,6 @@ USER_LD_LIB      :=
 USER_LINK_LIB    :=
 USER_PTH_RT_LIB  :=
 
-GUI_ROOT         := $(shell pwd)/project
 HOST_ROOT        := /usr/include
 HOST_ROOT2       := /usr/local/include
 
@@ -15,24 +14,11 @@ USER_LIB_INCLUDE += $(HOST_ROOT) \
                     $(HOST_ROOT2)/opencv4 \
                     $(HOST_ROOT)/gstreamer-1.0 \
                     /usr/lib/x86_64-linux-gnu/glib-2.0/include \
-                    $(GUI_ROOT) \
-                    $(GUI_ROOT)/gui \
-                    $(GUI_ROOT)/gui/azure \
-                    $(GUI_ROOT)/gui/azure/guix \
-                    $(GUI_ROOT)/gui/azure/threadx \
-                    $(GUI_ROOT)/gui/awtk/3rd \
-                    $(GUI_ROOT)/gui/awtk/src \
-                    $(GUI_ROOT)/gui/awtk/driver \
-                    $(GUI_ROOT)/gui/awtk/src/ext_widgets
 
 USER_LINK_LIB    := -L/usr/local/lib \
                     -L/usr/libx86_64-linux-gnu
 
-ifeq ($(APP_NAME),azure_gui)
-USER_LD_LIB      += X11
-else
 USER_LD_LIB      += # xkbcommon wayland-client wayland-cursor
-endif
 
 USER_LINK_LIB         += $(addprefix -l,${USER_LD_LIB})
 USER_PTH_RT_LIB       += -lpthread -lrt -lm -ldl $(USE_STDCPP_VERSION)

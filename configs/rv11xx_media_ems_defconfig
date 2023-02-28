@@ -1,0 +1,34 @@
+#
+# Automatically generated file; DO NOT EDIT.
+# Application Configuration
+#
+
+#
+# Application
+#
+CONFIG_RV11XX_EMS=y
+
+# media
+CONFIG_MEDIA_API=y
+
+CONFIG_RKRGA=y
+CONFIG_RKRGA_OLD=y
+# CONFIG_RKRGA_NEW is not set
+CONFIG_RKMPP=y
+CONFIG_LIBDRM=y
+CONFIG_RKMPP_HWOSD=y
+CONFIG_RKMPP_RGA_OSD=y
+# CONFIG_RKAIQ is not set
+
+#
+# xlib
+#
+CONFIG_XLIB=y
+
+#
+# hardware platform
+#
+CONFIG_ROCKCHIP=y
+CONFIG_RV11XX=y
+CONFIG_CORTEX_A7=y
+CONFIG_AARCH32=y

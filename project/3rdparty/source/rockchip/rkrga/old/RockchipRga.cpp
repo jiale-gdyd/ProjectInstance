@@ -13,9 +13,9 @@
 #include <rockchip/rkrga/RockchipRga.h>
 
 #if defined(CONFIG_LIBDRM)
-#include <libdrm/drm/drm.h>
+#include <libdrm/drm.h>
 #include <libdrm/xf86drm.h>
-#include <libdrm/drm/drm_mode.h>
+#include <libdrm/drm_mode.h>
 #endif
 
 RGA_SINGLETON_STATIC_INSTANCE(RockchipRga)

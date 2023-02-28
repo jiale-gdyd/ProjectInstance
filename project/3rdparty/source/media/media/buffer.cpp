@@ -55,11 +55,11 @@ static MediaGroupBuffer *alloc_common_memory_group(size_t size)
 }
 
 #include <libdrm/xf86drm.h>
-#include <libdrm/drm/drm_fourcc.h>
+#include <libdrm/drm_fourcc.h>
 
 #define STATIC_ASSERT(COND)                                                         \
     do {                                                                            \
-        /*(void)sizeof(char[1 - 2 * !(COND)]);*/                                        \
+        /*(void)sizeof(char[1 - 2 * !(COND)]);*/                                    \
     } while (0)
 
 #define drm_mmap(addr, length, prot, flags, fd, offset)                             \

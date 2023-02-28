@@ -1,0 +1,6 @@
+#!/bin/sh
+
+SELF_LIB_ROOT=/opt/aure
+
+export PATH=$PATH:$SELF_LIB_ROOT/bin:$SELF_LIB_ROOT/sbin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$SELF_LIB_ROOT/lib

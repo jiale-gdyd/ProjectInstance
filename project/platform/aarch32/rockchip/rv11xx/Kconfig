@@ -1,0 +1,23 @@
+#
+# Rockchip rv11xx(rv1109/rv1126) Application Kconfig
+# 
+
+menu "Rockchip rv1109/rv1126 Application"
+
+choice
+prompt "Rockchip rv1109/rv1126 Application Implementation"
+depends on ROCKCHIP && RV11XX
+default RV11XX_EMS
+
+config RV11XX_EMS
+    bool "Electronic rearview mirror system"
+    depends on MEDIA_API
+    depends on RKRGA
+    depends on RKMPP
+    depends on LIBDRM
+
+config RV11XX_UNKNOWN
+    bool "Unknown Application"
+endchoice
+
+endmenu

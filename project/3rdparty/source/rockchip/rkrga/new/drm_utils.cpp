@@ -1,8 +1,8 @@
 #include <unordered_map>
 
 #include <stdint.h>
+#include <libdrm/drm_fourcc.h>
 #include <rockchip/rkrgax/rga.h>
-#include <libdrm/drm/drm_fourcc.h>
 
 enum format_colormodel {
     rgb,
