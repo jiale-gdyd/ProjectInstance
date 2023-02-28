@@ -4,6 +4,7 @@
 
 menu "Rockchip AArch32 Platform Application"
 
+source "project/platform/aarch32/rockchip/rknpu/Kconfig"
 source "project/platform/aarch32/rockchip/rv11xx/Kconfig"
 
 endmenu

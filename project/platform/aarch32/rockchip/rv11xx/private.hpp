@@ -1,7 +1,7 @@
 #ifndef PLATFORM_AARCH32_ROCKCHIP_PRIVATE_HPP
 #define PLATFORM_AARCH32_ROCKCHIP_PRIVATE_HPP
 
-#include <aarch32/rockchip/mediaBase/mediaBase.hpp>
+#include <aarch32/rockchip/mpi/mediaBase.hpp>
 
 API_BEGIN_NAMESPACE(media)
 

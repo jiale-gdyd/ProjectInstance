@@ -14,7 +14,7 @@
 
 #include <xlib/xlib.h>
 #include <utils/RingBuffer.hpp>
-#include <aarch32/rockchip/mediaBase/mediaBase.hpp>
+#include <aarch32/rockchip/mpi/mediaBase.hpp>
 
 #include "EMSDemoMacros.h"
 #include "EMSDemoParam.hpp"

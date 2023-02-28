@@ -1,0 +1,21 @@
+#
+# Rockchip NPU Kconfig
+# 
+
+menu "Rockchip NPU"
+
+choice
+
+prompt "Rockchip NPU Architecture"
+depends on ROCKCHIP
+default RKNPU1
+
+config RKNPU1
+    bool "Rockchip first generation NPU architecture"
+
+config RKNPU2
+    bool "Rockchip second generation NPU architecture"
+
+endchoice
+
+endmenu

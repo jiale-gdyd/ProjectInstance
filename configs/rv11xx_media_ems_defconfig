@@ -8,6 +8,11 @@
 #
 CONFIG_RV11XX_EMS=y
 
+#
+# rknpu
+#
+CONFIG_RKNPU1=y
+
 # media
 CONFIG_MEDIA_API=y
 
