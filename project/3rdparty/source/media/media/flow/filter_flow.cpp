@@ -202,7 +202,7 @@ FilterFlow::FilterFlow(const char *param) : support_async(true), thread_model(Mo
             for (int i = 0; i < m_cnt; i++) {
                 auto mb = buffer_pool->GetBuffer(false);
                 if (!mb) {
-                    DRM_MEDIA_LOGE("%s: buffer_pool get null buffer", GetFlowTag());
+                    // DRM_MEDIA_LOGE("%s: buffer_pool get null buffer", GetFlowTag());
                     return;
                 }
             }
@@ -245,7 +245,7 @@ bool do_filters(Flow *f, MediaBufferVector &input_vector)
                 if (flow->buffer_pool) {
                     auto mb = flow->buffer_pool->GetBuffer(false);
                     if (!mb) {
-                        DRM_MEDIA_LOGE("%s: buffer_pool get null buffer", flow->GetFlowTag());
+                        // DRM_MEDIA_LOGE("%s: buffer_pool get null buffer", flow->GetFlowTag());
                         return false;
                     }
 

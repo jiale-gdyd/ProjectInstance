@@ -1,0 +1,9 @@
+#
+#  NPU Kconfig
+# 
+
+menu "Algorithm NPU"
+
+source "project/npu/rknpu/Kconfig"
+
+endmenu

@@ -1,0 +1,15 @@
+#
+# MPI Kconfig
+#
+
+menu "Media Process Interface"
+
+config MPI
+    bool "Media Process Interface"
+    default n
+    help
+      Media Process Interface
+
+source "project/mpi/rkmpi/Kconfig"
+
+endmenu

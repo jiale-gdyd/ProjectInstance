@@ -2,8 +2,8 @@
 
 API_BEGIN_NAMESPACE(EMS)
 
-EMSDemoImpl::EMSDemoImpl(media::MediaInterface *theMedia) : media::MediaBase(theMedia),
-    mThreadQuit(false),
+EMSDemoImpl::EMSDemoImpl()
+    : mThreadQuit(false),
     mAlgoInitOk(false),
     mUseVdecNotVi(false),
     mOriginWidth(1280),
@@ -170,13 +170,14 @@ void EMSDemoImpl::inferStreamCaptureThread()
         if (mediaFrame) {
             abortCount = 0;
 
-            if (mAlgoInitOk) {
-                /* 将帧送入推理 */
-
-                /* 推理完，通知取结果线程取结果进行运算 */
-                mAlgForwardFishRing.insert(1);
+#if defined(CONFIG_RKNPU)
+            if (pDetector && mAlgoInitOk) {
+                int ret = pDetector->forward(mediaFrame);
+                if (ret == 0) {
+                    mAlgForwardFishRing.insert(1);
+                }
             }
-
+#endif
             if (mediaFrame) {
                 getMedia()->getRga().releaseFrame(mediaFrame);
             }

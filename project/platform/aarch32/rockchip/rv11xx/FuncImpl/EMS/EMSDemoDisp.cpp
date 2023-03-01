@@ -6,7 +6,9 @@ void EMSDemoImpl::drawPostThread()
 {
     int cpus = 0;
     cpu_set_t cpuset;
+    int usePrevResultCount = 0;
     media_buffer_t mediaFrame = NULL;
+    std::vector<Ai::bbox> prevResult, lastResult;
 
     pthread_setname_np(pthread_self(), "drawPostThread");
 
@@ -17,7 +19,20 @@ void EMSDemoImpl::drawPostThread()
 
     while (!mThreadQuit) {
         if (!mDispRawFrameRing.isEmpty() && mDispRawFrameRing.remove(mediaFrame)) {
-            /* 在这里可以绘制信息，然后在下面发送出去进行显示 */
+            if (!mAlgExtractResultRing.isEmpty() && mAlgExtractResultRing.remove(lastResult)) {
+                prevResult = lastResult;
+                usePrevResultCount = 0;
+            } else {
+                lastResult = prevResult;
+                if (++usePrevResultCount > 1) {
+                    usePrevResultCount = 0;
+                    prevResult.clear();
+                }
+            }
+
+            if (lastResult.size() > 0) {
+                dispObjects(mediaFrame, lastResult);
+            }
 
             if (!mSendDrawFrameRing.insert(mediaFrame)) {
                 getMedia()->getRga().releaseFrame(mediaFrame);

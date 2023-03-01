@@ -1,0 +1,14 @@
+#
+# Rockchip MPI Kconfig
+#
+
+menu "Rockchip Media Process Interface"
+
+config ROCKCHIP_MPI
+    bool "rockchip platform media process interface"
+    default n
+    depends on ROCKCHIP && MEDIA_API
+    help
+      Rockchip platform media process interface
+
+endmenu

@@ -3,5 +3,8 @@
 #
 
 source "project/entry/Kconfig"
-source "project/3rdparty/Kconfig"
 source "project/platform/Kconfig"
+
+source "project/npu/Kconfig"
+source "project/mpi/Kconfig"
+source "project/3rdparty/Kconfig"
