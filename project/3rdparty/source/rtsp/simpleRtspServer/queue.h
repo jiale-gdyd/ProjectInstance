@@ -151,8 +151,7 @@
     } while (0)
 
 #define STAILQ_INSERT_TAIL(head, elm, field)                                                    \
-    do                                                                                          \
-    {                                                                                           \
+    do {                                                                                        \
         (elm)->field.stqe_next = NULL;                                                          \
         *(head)->stqh_last = (elm);                                                             \
         (head)->stqh_last = &(elm)->field.stqe_next;                                            \

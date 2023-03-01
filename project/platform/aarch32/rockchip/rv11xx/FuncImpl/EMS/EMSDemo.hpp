@@ -19,6 +19,7 @@
 #include <utils/RingBuffer.hpp>
 #include <npu/rknpu/Detector.hpp>
 #include <mpi/rkmpi/mediaBase.hpp>
+#include <rtsp/SimpleRtspServer.hpp>
 
 #include "EMSDemoMacros.h"
 #include "EMSDemoParam.hpp"

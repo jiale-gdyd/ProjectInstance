@@ -17,7 +17,6 @@ struct stream_queue {
 void streamq_free(struct stream_queue *q);
 struct stream_queue *streamq_alloc(int pktsiz, int nbpkts);
 
-
 int streamq_inused(struct stream_queue *q, int index);
 int streamq_query(struct stream_queue *q, int index, char **ppacket, int **ppktlen);
 

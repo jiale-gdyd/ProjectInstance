@@ -5,10 +5,17 @@
 menu "RTSP Server and Client"
 
 config RTSP
-    bool "implementation rtsp server and client"
+    bool "implementation rtsp"
     default n
     help
-      Implementation rtsp server and client
+      Implementation rtsp
+
+config RTSP_SERVER_CLIENT
+    bool "rtsp server and client"
+    default n
+    depends on RTSP
+    help
+      Enable rtsp server and client.
 
 config SIMPLE_RTSP_SERVER
     bool "simple rtsp server with c language"

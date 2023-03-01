@@ -31,6 +31,12 @@ CONFIG_RKMPP_RGA_OSD=y
 # CONFIG_RKAIQ is not set
 
 #
+# simple rtsp server
+#
+CONFIG_RTSP=y
+CONFIG_SIMPLE_RTSP_SERVER=y
+
+#
 # xlib
 #
 CONFIG_XLIB=y

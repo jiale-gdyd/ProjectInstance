@@ -1,5 +1,5 @@
 #include "simpleRtspServer.h"
-#include "SimpleRtspServer.hpp"
+#include <rtsp/SimpleRtspServer.hpp>
 
 namespace rtsp {
 SimpleRTSPServer::SimpleRTSPServer() : mInitialized(false), mRtspServerHandle(NULL), mRtspServerSession(NULL)
@@ -34,17 +34,7 @@ int SimpleRTSPServer::init(std::string path, uint16_t port, int codecFlag)
         return -2;
     }
 
-    if (RTSP_SERVER_CODEC_H264 == codecFlag) {
-        simple_rtsp_set_video(mRtspServerSession, RTSP_CODEC_ID_VIDEO_H264, NULL, 0);
-    } else if (RTSP_SERVER_CODEC_H265 == codecFlag) {
-        simple_rtsp_set_video(mRtspServerSession, RTSP_CODEC_ID_VIDEO_H265, NULL, 0);
-    } else {
-        return -3;
-    }
-
     mInitialized = true;
-    simple_rtsp_sync_video_timestamp(mRtspServerSession, simple_rtsp_get_reltime(), simple_rtsp_get_ntptime());
-
     return 0;
 }
 
@@ -54,7 +44,6 @@ int SimpleRTSPServer::sendFrame(const uint8_t *frame, uint32_t frameSize, uint64
         return -1;
     }
 
-    simple_rtsp_send_video(mRtspServerSession, frame, frameSize, timestamp);
-    return simple_rtsp_wait_frame_finished(mRtspServerHandle);
+    return simple_rtsp_server_send_video(mRtspServerHandle, mRtspServerSession, frame, frameSize, timestamp);
 }
 }

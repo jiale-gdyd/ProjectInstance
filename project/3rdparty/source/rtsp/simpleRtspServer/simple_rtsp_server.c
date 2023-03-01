@@ -1,3 +1,4 @@
+#include <time.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <errno.h>
@@ -47,6 +48,12 @@ struct rtsp_client_connection;
 TAILQ_HEAD(rtsp_session_queue_head, rtsp_session);
 TAILQ_HEAD(rtsp_client_connection_queue_head, rtsp_client_connection);
 
+struct rtsp_handle {
+    SOCKET                                   sockfd;
+    struct rtsp_session_queue_head           sessions_qhead;
+    struct rtsp_client_connection_queue_head connections_qhead;
+};
+
 struct rtsp_session {
     char                                     path[64];
     int                                      vcodec_id;
@@ -70,10 +77,9 @@ struct rtsp_session {
     uint64_t                                 video_ntptime_of_zero_ts;
     uint64_t                                 audio_ntptime_of_zero_ts;
 
-    struct rtsp_demo                         *demo;
+    struct rtsp_handle                       *handle;
     struct rtsp_client_connection_queue_head connections_qhead;
-    TAILQ_ENTRY(rtsp_session)
-    demo_entry;
+    TAILQ_ENTRY(rtsp_session)                handle_entry;
 };
 
 struct rtp_connection {
@@ -96,46 +102,37 @@ struct rtp_connection {
 #define RTSP_CC_STATE_PLAYING   2
 #define RTSP_CC_STATE_RECORDING 3
 
-struct rtsp_client_connection
-{
-    int                   state;
+struct rtsp_client_connection {
+    int                                 state;
 #define RTSP_CC_STATE_INIT      0
 #define RTSP_CC_STATE_READY     1
 #define RTSP_CC_STATE_PLAYING   2
 #define RTSP_CC_STATE_RECORDING 3
 
-    SOCKET                sockfd;
-    struct in_addr        peer_addr;
-    unsigned long         session_id;
+    SOCKET                              sockfd;
+    struct in_addr                      peer_addr;
+    unsigned long                       session_id;
 
-    char                  reqbuf[1024];
-    int                   reqlen;
+    char                                reqbuf[1024];
+    int                                 reqlen;
 
-    struct rtp_connection *vrtp;
-    struct rtp_connection *artp;
+    struct rtp_connection               *vrtp;
+    struct rtp_connection               *artp;
 
-    struct rtsp_demo      *demo;
-    struct rtsp_session   *session;
-    TAILQ_ENTRY(rtsp_client_connection)
-    demo_entry;
-    TAILQ_ENTRY(rtsp_client_connection)
-    session_entry;
-};
-
-struct rtsp_demo {
-    SOCKET                                   sockfd;
-    struct rtsp_session_queue_head           sessions_qhead;
-    struct rtsp_client_connection_queue_head connections_qhead;
+    struct rtsp_handle                  *handle;
+    struct rtsp_session                 *session;
+    TAILQ_ENTRY(rtsp_client_connection) handle_entry;
+    TAILQ_ENTRY(rtsp_client_connection) session_entry;
 };
 
 static void rtsp_del_rtp_connection(struct rtsp_client_connection *cc, int isaudio);
 static int rtcp_try_tx_sr(struct rtp_connection *c, uint64_t ntptime_of_zero_ts, uint64_t ts, uint32_t sample_rate);
 
-static struct rtsp_demo *__alloc_demo(void)
+static struct rtsp_handle *__alloc_handle(void)
 {
-    struct rtsp_demo *d = (struct rtsp_demo *)calloc(1, sizeof(struct rtsp_demo));
+    struct rtsp_handle *d = (struct rtsp_handle *)calloc(1, sizeof(struct rtsp_handle));
     if (NULL == d) {
-        simple_rtsp_server_error("alloc memory for rtsp_demo failed");
+        simple_rtsp_server_error("alloc memory for rtsp_handle failed");
         return NULL;
     }
 
@@ -145,14 +142,14 @@ static struct rtsp_demo *__alloc_demo(void)
     return d;
 }
 
-static void __free_demo(struct rtsp_demo *d)
+static void __free_handle(struct rtsp_handle *d)
 {
     if (d) {
         free(d);
     }
 }
 
-static struct rtsp_session *__alloc_session(struct rtsp_demo *d)
+static struct rtsp_session *__alloc_session(struct rtsp_handle *d)
 {
     struct rtsp_session *s = (struct rtsp_session *)calloc(1, sizeof(struct rtsp_session));
     if (NULL == s) {
@@ -160,9 +157,9 @@ static struct rtsp_session *__alloc_session(struct rtsp_demo *d)
         return NULL;
     }
 
-    s->demo = d;
+    s->handle = d;
     TAILQ_INIT(&s->connections_qhead);
-    TAILQ_INSERT_TAIL(&d->sessions_qhead, s, demo_entry);
+    TAILQ_INSERT_TAIL(&d->sessions_qhead, s, handle_entry);
 
     return s;
 }
@@ -170,13 +167,13 @@ static struct rtsp_session *__alloc_session(struct rtsp_demo *d)
 static void __free_session(struct rtsp_session *s)
 {
     if (s) {
-        struct rtsp_demo *d = s->demo;
-        TAILQ_REMOVE(&d->sessions_qhead, s, demo_entry);
+        struct rtsp_handle *d = s->handle;
+        TAILQ_REMOVE(&d->sessions_qhead, s, handle_entry);
         free(s);
     }
 }
 
-static struct rtsp_client_connection *__alloc_client_connection(struct rtsp_demo *d)
+static struct rtsp_client_connection *__alloc_client_connection(struct rtsp_handle *d)
 {
     struct rtsp_client_connection *cc = (struct rtsp_client_connection *)calloc(1, sizeof(struct rtsp_client_connection));
     if (NULL == cc) {
@@ -184,8 +181,8 @@ static struct rtsp_client_connection *__alloc_client_connection(struct rtsp_demo
         return NULL;
     }
 
-    cc->demo = d;
-    TAILQ_INSERT_TAIL(&d->connections_qhead, cc, demo_entry);
+    cc->handle = d;
+    TAILQ_INSERT_TAIL(&d->connections_qhead, cc, handle_entry);
 
     return cc;
 }
@@ -193,8 +190,8 @@ static struct rtsp_client_connection *__alloc_client_connection(struct rtsp_demo
 static void __free_client_connection(struct rtsp_client_connection *cc)
 {
     if (cc) {
-        struct rtsp_demo *d = cc->demo;
-        TAILQ_REMOVE(&d->connections_qhead, cc, demo_entry);
+        struct rtsp_handle *d = cc->handle;
+        TAILQ_REMOVE(&d->connections_qhead, cc, handle_entry);
         free(cc);
     }
 }
@@ -221,9 +218,9 @@ static simple_rtsp_handle_t simple_rtsp_new(uint16_t port)
     int ret;
     SOCKET sockfd;
     struct sockaddr_in inaddr;
-    struct rtsp_demo *d = NULL;
+    struct rtsp_handle *d = NULL;
 
-    d = __alloc_demo();
+    d = __alloc_handle();
     if (NULL == d) {
         return NULL;
     }
@@ -231,7 +228,7 @@ static simple_rtsp_handle_t simple_rtsp_new(uint16_t port)
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == INVALID_SOCKET) {
         simple_rtsp_server_error("create socket failed, errstr:[%s]", sk_strerror(sk_errno()));
-        __free_demo(d);
+        __free_handle(d);
         return NULL;
     }
 
@@ -251,7 +248,7 @@ static simple_rtsp_handle_t simple_rtsp_new(uint16_t port)
     if (ret == SOCKET_ERROR) {
         simple_rtsp_server_error("bind socket to address failed, errstr:[%s]", sk_strerror(sk_errno()));
         closesocket(sockfd);
-        __free_demo(d);
+        __free_handle(d);
         return NULL;
     }
 
@@ -259,13 +256,13 @@ static simple_rtsp_handle_t simple_rtsp_new(uint16_t port)
     if (ret == SOCKET_ERROR) {
         simple_rtsp_server_error("listen socket failed, errstr:[%s]", sk_strerror(sk_errno()));
         closesocket(sockfd);
-        __free_demo(d);
+        __free_handle(d);
         return NULL;
     }
 
     d->sockfd = sockfd;
 
-    simple_rtsp_server_info("rtsp server demo starting on %d", port);
+    simple_rtsp_server_info("rtsp server handle starting on %d", port);
     return (simple_rtsp_handle_t)d;
 }
 
@@ -326,7 +323,7 @@ static int rtsp_set_client_socket(SOCKET sockfd)
     return 0;
 }
 
-static struct rtsp_client_connection *rtsp_new_client_connection(struct rtsp_demo *d)
+static struct rtsp_client_connection *rtsp_new_client_connection(struct rtsp_handle *d)
 {
     SOCKET sockfd;
     struct sockaddr_in inaddr;
@@ -356,7 +353,7 @@ static struct rtsp_client_connection *rtsp_new_client_connection(struct rtsp_dem
     return cc;
 }
 
-static void rtsp_del_client_connection(struct rtsp_client_connection *cc)
+static void rtsp_delete_client_connection(struct rtsp_client_connection *cc)
 {
     if (cc) {
         simple_rtsp_server_info("delete client:[%d] from:[%s]", cc->sockfd, inet_ntoa(cc->peer_addr));
@@ -395,14 +392,14 @@ static int rtsp_path_match(const char *main_path, const char *full_path)
 static simple_rtsp_session_t simple_rtsp_new_session(simple_rtsp_handle_t handle, const char *path)
 {
     struct rtsp_session *s = NULL;
-    struct rtsp_demo *d = (struct rtsp_demo *)handle;
+    struct rtsp_handle *d = (struct rtsp_handle *)handle;
 
     if (!d || !path || (strlen(path) == 0)) {
-        simple_rtsp_server_error("param invalid\n");
+        simple_rtsp_server_error("param invalid");
         goto fail;
     }
 
-    TAILQ_FOREACH(s, &d->sessions_qhead, demo_entry) {
+    TAILQ_FOREACH(s, &d->sessions_qhead, handle_entry) {
         if (rtsp_path_match(s->path, path) || rtsp_path_match(path, s->path)) {
             simple_rtsp_server_error("path:%s (%s) is exist!!!", s->path, path);
             goto fail;
@@ -456,7 +453,7 @@ int simple_rtsp_set_video(simple_rtsp_session_t session, enum rtspCodecIdEnum co
         return -1;
     }
 
-    switch (codec_id) {
+    switch ((int)codec_id) {
         case RTSP_CODEC_ID_VIDEO_H264:
         case RTSP_CODEC_ID_VIDEO_H265:
             break;
@@ -477,14 +474,14 @@ int simple_rtsp_set_video(simple_rtsp_session_t session, enum rtspCodecIdEnum co
         switch ((int)codec_id) {
             case RTSP_CODEC_ID_VIDEO_H264:
                 if (rtsp_codec_data_parse_from_user_h264(codec_data, data_len, &s->vcodec_data.h264) <= 0) {
-                    simple_rtsp_server_warn("parse codec_data failed");
+                    simple_rtsp_server_warn("parse h264 codec data failed");
                     break;
                 }
                 break;
 
             case RTSP_CODEC_ID_VIDEO_H265:
                 if (rtsp_codec_data_parse_from_user_h265(codec_data, data_len, &s->vcodec_data.h265) <= 0) {
-                    simple_rtsp_server_warn("parse codec_data failed");
+                    simple_rtsp_server_warn("parse h265 codec data failed");
                     break;
                 }
                 break;
@@ -511,7 +508,7 @@ int simple_rtsp_set_audio(simple_rtsp_session_t session, enum rtspCodecIdEnum co
         return -1;
     }
 
-    switch (codec_id) {
+    switch ((int)codec_id) {
         case RTSP_CODEC_ID_AUDIO_G711A:
         case RTSP_CODEC_ID_AUDIO_G711U:
         case RTSP_CODEC_ID_AUDIO_G726:
@@ -534,14 +531,14 @@ int simple_rtsp_set_audio(simple_rtsp_session_t session, enum rtspCodecIdEnum co
         switch ((int)codec_id) {
             case RTSP_CODEC_ID_AUDIO_G726:
                 if (rtsp_codec_data_parse_from_user_g726(codec_data, data_len, &s->acodec_data.g726) <= 0) {
-                    simple_rtsp_server_warn("parse codec_data failed");
+                    simple_rtsp_server_warn("parse g726 codec data failed");
                     break;
                 }
                 break;
 
             case RTSP_CODEC_ID_AUDIO_AAC:
                 if (rtsp_codec_data_parse_from_user_aac(codec_data, data_len, &s->acodec_data.aac) <= 0) {
-                    simple_rtsp_server_warn("parse codec_data failed");
+                    simple_rtsp_server_warn("parse aac codec data failed");
                     break;
                 }
                 s->artpe.sample_rate = s->acodec_data.aac.sample_rate;
@@ -567,7 +564,7 @@ void simple_rtsp_delete_session(simple_rtsp_session_t session)
     if (s) {
         struct rtsp_client_connection *cc;
         while ((cc = TAILQ_FIRST(&s->connections_qhead))) {
-            rtsp_del_client_connection(cc);
+            rtsp_delete_client_connection(cc);
         }
 
         simple_rtsp_server_debug("del session path:[%s]", s->path);
@@ -586,13 +583,13 @@ void simple_rtsp_delete_session(simple_rtsp_session_t session)
 
 void simple_rtsp_delete_handle(simple_rtsp_handle_t handle)
 {
-    struct rtsp_demo *d = (struct rtsp_demo *)handle;
+    struct rtsp_handle *d = (struct rtsp_handle *)handle;
     if (d) {
         struct rtsp_session *s;
         struct rtsp_client_connection *cc;
 
         while ((cc = TAILQ_FIRST(&d->connections_qhead))) {
-            rtsp_del_client_connection(cc);
+            rtsp_delete_client_connection(cc);
         }
 
         while ((s = TAILQ_FIRST(&d->sessions_qhead))) {
@@ -600,7 +597,7 @@ void simple_rtsp_delete_handle(simple_rtsp_handle_t handle)
         }
 
         closesocket(d->sockfd);
-        __free_demo(d);
+        __free_handle(d);
     }
 }
 
@@ -610,7 +607,7 @@ static int build_simple_sdp(struct rtsp_session *s, const char *uri, char *sdpbu
 
     p += sprintf(p, "v=0\r\n");
     p += sprintf(p, "o=- 0 0 IN IP4 0.0.0.0\r\n");
-    p += sprintf(p, "s=rtsp_demo\r\n");
+    p += sprintf(p, "s=rtsp_handle\r\n");
     p += sprintf(p, "t=0 0\r\n");
     p += sprintf(p, "a=control:%s\r\n", uri ? uri : "*");
     p += sprintf(p, "a=range:npt=0-\r\n");
@@ -876,20 +873,20 @@ static int rtsp_handle_SETUP(struct rtsp_client_connection *cc, const rtsp_msg_t
 
     if (!reqmsg->hdrs.transport) {
         rtsp_msg_set_response(resmsg, 461);
-        simple_rtsp_server_warn("rtsp no transport simple_rtsp_server_error");
+        simple_rtsp_server_warn("rtsp no transport error");
         return 0;
     }
 
     if (reqmsg->hdrs.transport->type == RTSP_MSG_TRANSPORT_TYPE_RTP_AVP_TCP) {
         istcp = 1;
         if (!(reqmsg->hdrs.transport->flags & RTSP_MSG_TRANSPORT_FLAG_INTERLEAVED)) {
-            simple_rtsp_server_warn("rtsp no interleaved simple_rtsp_server_error");
+            simple_rtsp_server_warn("rtsp no interleaved error");
             rtsp_msg_set_response(resmsg, 461);
             return 0;
         }
     } else {
         if (!(reqmsg->hdrs.transport->flags & RTSP_MSG_TRANSPORT_FLAG_CLIENT_PORT)) {
-            simple_rtsp_server_warn("rtsp no client_port simple_rtsp_server_error");
+            simple_rtsp_server_warn("rtsp no client_port error");
             rtsp_msg_set_response(resmsg, 461);
             return 0;
         }
@@ -903,7 +900,7 @@ static int rtsp_handle_SETUP(struct rtsp_client_connection *cc, const rtsp_msg_t
     } else if ((s->acodec_id != RTSP_CODEC_ID_NONE) && rtsp_path_match(apath, reqmsg->hdrs.startline.reqline.uri.abspath)) {
         isaudio = 1;
     } else {
-        simple_rtsp_server_warn("rtsp urlpath:[%s] simple_rtsp_server_error", reqmsg->hdrs.startline.reqline.uri.abspath);
+        simple_rtsp_server_warn("rtsp urlpath:[%s] error", reqmsg->hdrs.startline.reqline.uri.abspath);
 
         rtsp_msg_set_response(resmsg, 461);
         return 0;
@@ -1003,14 +1000,14 @@ static int rtsp_handle_TEARDOWN(struct rtsp_client_connection *cc, const rtsp_ms
 
 static int rtsp_process_request(struct rtsp_client_connection *cc, const rtsp_msg_t *reqmsg, rtsp_msg_t *resmsg)
 {
-    struct rtsp_demo *d = cc->demo;
     uint32_t cseq = 0, session = 0;
+    struct rtsp_handle *d = cc->handle;
     struct rtsp_session *s = cc->session;
     const char *path = reqmsg->hdrs.startline.reqline.uri.abspath;
 
     rtsp_msg_set_response(resmsg, 200);
     rtsp_msg_set_date(resmsg, NULL);
-    rtsp_msg_set_server(resmsg, "rtsp_demo");
+    rtsp_msg_set_server(resmsg, "jiale-gdyd rtsp-server");
 
     if (rtsp_msg_get_cseq(reqmsg, &cseq) < 0) {
         rtsp_msg_set_response(resmsg, 400);
@@ -1037,7 +1034,7 @@ static int rtsp_process_request(struct rtsp_client_connection *cc, const rtsp_ms
             return 0;
         }
     } else if (reqmsg->hdrs.startline.reqline.method != RTSP_MSG_METHOD_OPTIONS) {
-        TAILQ_FOREACH(s, &d->sessions_qhead, demo_entry) {
+        TAILQ_FOREACH(s, &d->sessions_qhead, handle_entry) {
             if (rtsp_path_match(s->path, path)) {
                 break;
             }
@@ -1259,6 +1256,8 @@ static int rtsp_tx_video_packet(struct rtsp_client_connection *cc)
     struct stream_queue *q = s->vstreamq;
     struct rtp_connection *rtp = cc->vrtp;
 
+    simple_rtsp_server_debug("index:[%d] head:[%d] tail:[%d] used:[%d]", rtp->streamq_index, streamq_head(q), streamq_tail(q), streamq_inused(q, rtp->streamq_index));
+
     while (streamq_inused(q, rtp->streamq_index) > 0) {
         streamq_query(q, rtp->streamq_index, (char **)&ppacket, &ppktlen);
 
@@ -1316,7 +1315,7 @@ int simple_rtsp_wait_frame_finished(simple_rtsp_handle_t handle)
     SOCKET maxfd;
     struct timeval tv;
     struct rtsp_client_connection *cc = NULL;
-    struct rtsp_demo *d = (struct rtsp_demo *)handle;
+    struct rtsp_handle *d = (struct rtsp_handle *)handle;
 
     if (NULL == d) {
         return -1;
@@ -1328,7 +1327,7 @@ int simple_rtsp_wait_frame_finished(simple_rtsp_handle_t handle)
     FD_SET(d->sockfd, &rfds);
 
     maxfd = d->sockfd;
-    TAILQ_FOREACH(cc, &d->connections_qhead, demo_entry) {
+    TAILQ_FOREACH(cc, &d->connections_qhead, handle_entry) {
         struct rtsp_session *s = cc->session;
         struct rtp_connection *vrtp = cc->vrtp;
         struct rtp_connection *artp = cc->artp;
@@ -1345,8 +1344,9 @@ int simple_rtsp_wait_frame_finished(simple_rtsp_handle_t handle)
         if (vrtp && (streamq_inused(s->vstreamq, vrtp->streamq_index) > 0)) {
             if (vrtp->is_over_tcp) {
                 FD_SET(vrtp->tcp_sockfd, &wfds);
-                if (vrtp->tcp_sockfd > maxfd)
+                if (vrtp->tcp_sockfd > maxfd) {
                     maxfd = vrtp->tcp_sockfd;
+                }
             } else {
                 FD_SET(vrtp->udp_sockfd[0], &wfds);
                 if (vrtp->udp_sockfd[0] > maxfd) {
@@ -1422,7 +1422,7 @@ int simple_rtsp_wait_frame_finished(simple_rtsp_handle_t handle)
         struct rtp_connection *vrtp = cc1->vrtp;
         struct rtp_connection *artp = cc1->artp;
 
-        cc = TAILQ_NEXT(cc, demo_entry);
+        cc = TAILQ_NEXT(cc, handle_entry);
 
         if (FD_ISSET(cc1->sockfd, &rfds)) {
             do {
@@ -1437,7 +1437,7 @@ int simple_rtsp_wait_frame_finished(simple_rtsp_handle_t handle)
                 }
 
                 if (ret < 0) {
-                    rtsp_del_client_connection(cc1);
+                    rtsp_delete_client_connection(cc1);
                     cc1 = NULL;
                     break;
                 }
