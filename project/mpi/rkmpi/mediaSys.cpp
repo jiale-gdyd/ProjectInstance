@@ -10,6 +10,7 @@
 
 #define __ROCKCHIP_MEDIABASE_HPP_INSIDE__
 #include "mediaSys.hpp"
+#include "../private.h"
 #undef __ROCKCHIP_MEDIABASE_HPP_INSIDE__
 
 API_BEGIN_NAMESPACE(media)

@@ -13,9 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <linux/kconfig.h>
 #define MODULE_TAG "mpi"
-
+#include "private.h"
 #include <string.h>
 
 #include "rockchip/rkmpp/rk_mpi.h"
@@ -473,6 +472,7 @@ MPP_RET mpp_init(MppCtx ctx, MppCtxType type, MppCodingType coding)
         }
 
         ret = p->ctx->init(type, coding);
+        printf("p->ctx->init(%d, %d) return:[%d]\n", type, coding, ret);
         p->type     = type;
         p->coding   = coding;
     } while (0);

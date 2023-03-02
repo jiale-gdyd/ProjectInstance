@@ -1124,7 +1124,7 @@ int drm_mpi_system_send_media_buffer(mod_id_e enModID, int s32ChnId, media_buffe
         target_chn->media_flow->SendInput(mb->media_mb, 0);
     } else {
         target_mutex->unlock();
-        DRM_MEDIA_LOGE("media flow null");
+        // DRM_MEDIA_LOGE("media flow null");
         return -7;
     }
 

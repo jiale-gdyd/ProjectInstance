@@ -50,7 +50,7 @@ int RTSPLiveStreamer::run()
         return -1;
     }
 
-    m_pServerSession = new LiveServerMediaSession(m_pSessionName, "LJLMediaPlayer", "Session streamed by \"LJLMediaPlayer\"", false, NULL);
+    m_pServerSession = new LiveServerMediaSession(m_pSessionName, "jiale-gdyd", "Session streamed by \"jiale-gdyd\"", false, NULL);
 
     MediaSubsession *subsession = NULL;
     MediaSubsessionIterator *iter = new MediaSubsessionIterator(m_pRtspClient->mediaSession());
@@ -138,7 +138,7 @@ char *RTSPLiveStreamer::checkControlPath(const char *controlPath)
 
     char *newControlPath;
     if (*ptr == '/') {
-        newControlPath = strDup(ptr+1);
+        newControlPath = strDup(ptr + 1);
     } else {
         newControlPath = strDup(controlPath);
     }

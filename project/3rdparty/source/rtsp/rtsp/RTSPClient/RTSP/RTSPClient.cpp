@@ -28,7 +28,7 @@ RTSPClient::RTSPClient()
 
     m_nTimeoutSecond = 2;
 
-    fUserAgentHeaderStr = "User-Agent: LJLMediaPlayer\r\n";
+    fUserAgentHeaderStr = "User-Agent: jiale-gdyd\r\n";
     fUserAgentHeaderStrSize = strlen(fUserAgentHeaderStr);
 
     fBaseURL = NULL;
@@ -1490,7 +1490,7 @@ int RTSPClient::openURL(const char *url, int streamType, int timeout, bool rtpOn
         addr.s_addr = address;
         const char *ip_address = inet_ntoa(addr);
 
-        parsedURL = new char[strlen(ip_address)+strlen(urlSuffix)+20];
+        parsedURL = new char[strlen(ip_address) + strlen(urlSuffix) + 20];
         sprintf((char *)parsedURL, "rtsp://%s:%hu%s", ip_address, port, urlSuffix);
 
         parseRTSPURLUsernamePassword(url, username, password);
@@ -1611,7 +1611,7 @@ int RTSPClient::openURL(const char *url, int streamType, int timeout, bool rtpOn
     return 0;
 }
 
-int RTSPClient::playURL(FrameHandlerFunc func, void *funcData,  OnCloseFunc onCloseFunc, void *onCloseFuncData,  OnPacketReceiveFunc onRTPReceiveFunc, void *onRTPReceiveFuncData, OnPacketReceiveFunc onRTCPReceiveFunc, void *onRTCPReceiveFuncData)
+int RTSPClient::playURL(FrameHandlerFunc func, void *funcData, OnCloseFunc onCloseFunc, void *onCloseFuncData, OnPacketReceiveFunc onRTPReceiveFunc, void *onRTPReceiveFuncData, OnPacketReceiveFunc onRTCPReceiveFunc, void *onRTCPReceiveFuncData)
 {
     if (!fMediaSession) {
         return -1;

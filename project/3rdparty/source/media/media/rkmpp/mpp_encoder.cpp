@@ -158,7 +158,7 @@ bool MPPEncoder::Init()
 
     ret = mpp_init(ctx, MPP_CTX_ENC, coding_type);
     if (ret != MPP_OK) {
-        DRM_MEDIA_LOGE("mpp_init failed with type:[%d]", coding_type);
+        DRM_MEDIA_LOGE("mpp_init failed with type:[%d], return:[%d]", coding_type, ret);
 
         mpp_destroy(ctx);
         ctx = NULL;

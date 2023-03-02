@@ -10,7 +10,7 @@ int AlgoDetector::extract_yolov5s_non_tensormem_jialelu(rknn_output *output, std
     std::vector<yolo_layer_t> m_layers = pArgs->yoloAnchors;
 
     if (m_layers.size() == 0) {
-        printf("anchors parameter must be non-empty\n");
+        npu_error("anchors parameter must be non-empty");
         return -1;
     }
 
@@ -94,7 +94,7 @@ int AlgoDetector::extract_yoloxs_non_tensormem_jialelu(rknn_output *output, std:
     std::vector<yolo_layer_t> m_layers = pArgs->yoloAnchors;
 
     if (m_layers.size() == 0) {
-        printf("anchors parameter must be non-empty\n");
+        npu_error("anchors parameter must be non-empty");
         return -1;
     }
 

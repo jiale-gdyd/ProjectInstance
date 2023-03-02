@@ -7,19 +7,19 @@ int AlgoDetector::forward(cv::Mat frame)
     mTensorMem = false;
 
     if (!mInitFin || (frame.data == NULL)) {
-        printf("mInitFin:[%s], frame == NULL:[%s]\n", mInitFin ? "true" : "false", frame.data == NULL ? "true" : "false");
+        npu_error("mInitFin:[%s], frame == NULL:[%s]", mInitFin ? "true" : "false", frame.data == NULL ? "true" : "false");
         return -1;
     }
 
     int ret = processInferImage(frame, mInferMat[mPingPongFlag], mCacheData[mPingPongFlag]);
     if (ret != 0) {
-        printf("processInferImage failed, return:[%d]\n", ret);
+        npu_error("processInferImage failed, return:[%d]", ret);
         return -2;
     }
 
     ret = pAiEngine->forward(mInferMat[mPingPongFlag]);
     if (ret != 0) {
-        printf("pAiEngine->forward failed, return:[%d]\n", ret);
+        npu_error("pAiEngine->forward failed, return:[%d]", ret);
     }
 
     if (mPingPongFlag == CACHE_PING) {
@@ -36,19 +36,19 @@ int AlgoDetector::forward(void *mediaFrame)
     mTensorMem = false;
 
     if (!mInitFin || (mediaFrame == NULL)) {
-        printf("mInitFin:[%s], mediaFrame == NULL:[%s]\n", mInitFin ? "true" : "false", mediaFrame == NULL ? "true" : "false");
+        npu_error("mInitFin:[%s], mediaFrame == NULL:[%s]", mInitFin ? "true" : "false", mediaFrame == NULL ? "true" : "false");
         return -1;
     }
 
     int ret = processInferImage(mediaFrame, mInferMat[mPingPongFlag], mCacheData[mPingPongFlag]);
     if (ret != 0) {
-        printf("processInferImage failed, return:[%d]\n", ret);
+        npu_error("processInferImage failed, return:[%d]", ret);
         return -2;
     }
 
     ret = pAiEngine->forward(mInferMat[mPingPongFlag]);
     if (ret != 0) {
-        printf("pAiEngine->forward failed, return:[%d]\n", ret);
+        npu_error("pAiEngine->forward failed, return:[%d]", ret);
     }
 
     if (mPingPongFlag == CACHE_PING) {
@@ -63,7 +63,7 @@ int AlgoDetector::forward(void *mediaFrame)
 int AlgoDetector::forward(unsigned char *data, size_t dataSize)
 {
     if (!mInitFin || (data == nullptr)) {
-        printf("mInitFin:[%s], data == nullptr:[%s]\n", mInitFin ? "true" : "false", data == nullptr ? "true" : "false");
+        npu_error("mInitFin:[%s], data == nullptr:[%s]", mInitFin ? "true" : "false", data == nullptr ? "true" : "false");
         return -1;
     }
 
@@ -74,14 +74,14 @@ int AlgoDetector::forward(unsigned char *data, size_t dataSize)
         ret = pAccelerator->imageResize(data, mInputsTensorMem[index].fd);
         if (ret != 0) {
             mTensorMem = false;
-            printf("[4] use physical address resize image failed, so try to use virtual address resize\n");
+            npu_error("[4] use physical address resize image failed, so try to use virtual address resize");
             goto USE_VIRADDR;
         }
 
         ret = pAiEngine->forward(mInputsTensorMem, index, mLockInputMem);
         if (ret != 0) {
             mTensorMem = false;
-            printf("pAiEngine->forward failed\n");
+            npu_error("pAiEngine->forward failed");
             return -2;
         }
 
@@ -97,13 +97,13 @@ USE_VIRADDR:
         }
 
         if (ret != 0) {
-            printf("pAccelerator->imageResize failed\n");
+            npu_error("pAccelerator->imageResize failed");
             return -3;
         }
 
         ret = pAiEngine->forward(mCacheData[mPingPongFlag], mCacheDataSize);
         if (ret != 0) {
-            printf("pAiEngine->forward failed\n");
+            npu_error("pAiEngine->forward failed");
         }
 
         if (mPingPongFlag == CACHE_PING) {

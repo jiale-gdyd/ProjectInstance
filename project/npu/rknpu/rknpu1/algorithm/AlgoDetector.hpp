@@ -4,6 +4,8 @@
 #include <mutex>
 #include <numeric>
 #include <algorithm>
+
+#include <npu/private.h>
 #include <opencv2/opencv.hpp>
 
 #include "private.hpp"

@@ -29,12 +29,12 @@ int AiDetector::init(std::string modelFile, size_t imageWidth, size_t imageHeigh
 
     mDetector = std::make_shared<AlgoDetector>(modelFile, imageWidth, imageHeight, classCount, confThreshold, nmsThreshold, algoType, algoAuthor);
     if (mDetector == nullptr) {
-        printf("new AlgoDetector failed\n");
+        npu_error("new AlgoDetector failed");
         return -1;
     }
 
     if (mDetector->init()) {
-        printf("mDetector detector init failed\n");
+        npu_error("mDetector detector init failed");
         return -2;
     }
 
@@ -54,7 +54,7 @@ void AiDetector::setYoloAnchor(std::vector<yolo_layer_t> anchor)
 int AiDetector::forward(void *mediaFrame)
 {
     if (!mInitFin || !mediaFrame || !mDetector) {
-        printf("detector not init or with null mediaFrame\n");
+        npu_error("detector not init or with null mediaFrame");
         return -1;
     }
 

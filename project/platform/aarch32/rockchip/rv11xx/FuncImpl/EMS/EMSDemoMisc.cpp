@@ -279,6 +279,70 @@ void EMSDemoImpl::parseApplicationConfigParam(std::string confJsonFile)
 
         mEMSConfig.disableVideoEncoderSave = disableVideoEncoderSave;
     }
+
+    if (j.contains("disableVideoRtspServer") && j.at("disableVideoRtspServer").is_boolean()) {
+        bool disableVideoRtspServer = true;
+        j.at("disableVideoRtspServer").get_to(disableVideoRtspServer);
+
+        if (!disableVideoRtspServer) {
+            if (j.contains("videoRtspServerParam") && j.at("videoRtspServerParam").is_object()) {
+                nlohmann::Json JRtspServer = j.at("videoRtspServerParam");
+
+                if (JRtspServer.contains("videpFPS") && JRtspServer.at("videpFPS").is_number_unsigned()) {
+                    size_t videpFPS;
+                    JRtspServer.at("videpFPS").get_to(videpFPS);
+
+                    videpFPS = videpFPS >= 25 && videpFPS <= 60 ? videpFPS : 30;
+                    mEMSConfig.videoRtspServerParam.videoFPS = videpFPS;
+                }
+
+                if (JRtspServer.contains("encodeProfile") && JRtspServer.at("encodeProfile").is_number_unsigned()) {
+                    size_t encodeProfile;
+                    JRtspServer.at("encodeProfile").get_to(encodeProfile);
+
+                    encodeProfile = encodeProfile > 0 ? encodeProfile : 66;
+                    mEMSConfig.videoRtspServerParam.encodeProfile = encodeProfile;
+                }
+
+                if (JRtspServer.contains("encodeBitRate") && JRtspServer.at("encodeBitRate").is_number_unsigned()) {
+                    size_t encodeBitRate;
+                    JRtspServer.at("encodeBitRate").get_to(encodeBitRate);
+
+                    encodeBitRate = encodeBitRate > 0 ? encodeBitRate : 8000000;
+                    mEMSConfig.videoRtspServerParam.encodeBitRate = encodeBitRate;
+                }
+
+                if (JRtspServer.contains("encodeIFrameInterval") && JRtspServer.at("encodeIFrameInterval").is_number_unsigned()) {
+                    size_t encodeIFrameInterval;
+                    JRtspServer.at("encodeIFrameInterval").get_to(encodeIFrameInterval);
+
+                    encodeIFrameInterval = encodeIFrameInterval > 0 ? encodeIFrameInterval : 15;
+                    mEMSConfig.videoRtspServerParam.encodeIFrameInterval = encodeIFrameInterval;
+                }
+
+                if (JRtspServer.contains("serverPort") && JRtspServer.at("serverPort").is_number_unsigned()) {
+                    size_t serverPort;
+                    JRtspServer.at("serverPort").get_to(serverPort);
+
+                    serverPort = (serverPort > 0 && serverPort < 65536) ? serverPort : 554;
+                    mEMSConfig.videoRtspServerParam.serverPort = serverPort;
+                }
+
+                if (JRtspServer.contains("streamPath") && JRtspServer.at("streamPath").is_string()) {
+                    std::string streamPath;
+                    JRtspServer.at("streamPath").get_to(streamPath);
+
+                    if (!streamPath.empty()) {
+                        mEMSConfig.videoRtspServerParam.streamPath = streamPath;
+                    } else {
+                        mEMSConfig.videoRtspServerParam.streamPath = "/live/main_stream";
+                    }
+                }
+            }
+        }
+
+        mEMSConfig.disableVideoRtspServer = disableVideoRtspServer;
+    }
 }
 
 void EMSDemoImpl::generateApplicationConfigParam(ems_config_t configParam)
@@ -305,6 +369,19 @@ void EMSDemoImpl::generateApplicationConfigParam(ems_config_t configParam)
     jVenc["saveMountPoint"] = configParam.videoEncoderParam.saveMountPoint;
     jVenc["saveDeviceNode"] = configParam.videoEncoderParam.saveDeviceNode;
     j["videoEncoderParam"] = jVenc;
+    /*********************************************************************************************************************/
+
+    /*********************************************************************************************************************/
+    nlohmann::Json jRtspServer;
+
+    j["disableVideoRtspServer"] = configParam.disableVideoRtspServer;
+    jRtspServer["videpFPS"] = configParam.videoRtspServerParam.videoFPS;
+    jRtspServer["encodeProfile"] = configParam.videoRtspServerParam.encodeProfile;
+    jRtspServer["encodeBitRate"] = configParam.videoRtspServerParam.encodeBitRate;
+    jRtspServer["encodeIFrameInterval"] = configParam.videoRtspServerParam.encodeIFrameInterval;
+    jRtspServer["serverPort"] = configParam.videoRtspServerParam.serverPort;
+    jRtspServer["streamPath"] = configParam.videoRtspServerParam.streamPath;
+    j["videoRtspServerParam"] = jRtspServer;
     /*********************************************************************************************************************/
 
     std::ofstream fout(confJsonFile);

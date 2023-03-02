@@ -369,7 +369,7 @@ typedef struct _drmSetVersion {
     || defined (__ARM_ARCH_6K__) || defined(__ARM_ARCH_6T2__)   \
     || defined (__ARM_ARCH_7__) || defined(__ARM_ARCH_7A__)     \
     || defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_7M__)     \
-    || defined(__ARM_ARCH_7EM__)
+    || defined(__ARM_ARCH_7EM__) || defined(__arm__)
 #undef DRM_DEV_MODE
 #define DRM_DEV_MODE                                        (S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH)
 

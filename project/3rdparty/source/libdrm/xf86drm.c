@@ -121,6 +121,7 @@ static const struct drmFormatModifierVendorInfo drm_format_modifier_vendor_table
     { DRM_FORMAT_MOD_VENDOR_ARM, "ARM" },
     { DRM_FORMAT_MOD_VENDOR_ALLWINNER, "ALLWINNER" },
     { DRM_FORMAT_MOD_VENDOR_AMLOGIC, "AMLOGIC" },
+    { DRM_FORMAT_MOD_VENDOR_ROCKCHIP, "ROCKCHIP" },
 };
 
 struct drmVendorInfo {
@@ -1065,11 +1066,23 @@ static int drmOpenByName(const char *name, int type)
                     drmFreeVersion(version);
                     id = drmGetBusid(fd);
                     drmMsg("drmGetBusid returned '%s'\n", id ? id : "NULL");
+#if defined(CONFIG_ROCKCHIP)
                     if (id) {
                         drmFreeBusid(id);
                     }
 
                     return fd;
+#else
+                    if (!id || !*id) {
+                        if (id) {
+                            drmFreeBusid(id);
+                        }
+
+                        return fd;
+                    } else {
+                        drmFreeBusid(id);
+                    }
+#endif
                 } else {
                     drmFreeVersion(version);
                 }

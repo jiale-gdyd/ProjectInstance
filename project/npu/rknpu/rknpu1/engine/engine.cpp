@@ -38,7 +38,7 @@ int AiEngine::init(std::string modelFile)
 {
     FILE *fp = fopen(modelFile.c_str(), "rb");
     if (!fp) {
-        printf("open model file:[%s] failed\n", modelFile.c_str());
+        npu_error("open model file:[%s] failed", modelFile.c_str());
         return -1;
     }
 
@@ -48,21 +48,21 @@ int AiEngine::init(std::string modelFile)
 
     if (modelBytes <= 0) {
         fclose(fp);
-        printf("load model file:[%s] failed, model bytes:[%ld]\n", modelFile.c_str(), modelBytes);
+        npu_error("load model file:[%s] failed, model bytes:[%ld]", modelFile.c_str(), modelBytes);
         return -2;
     }
 
     unsigned char *model = new unsigned char[modelBytes + 1];
     if (model == nullptr) {
         fclose(fp);
-        printf("new model memory failed\n");
+        npu_error("new model memory failed");
         return -3;
     }
 
     size_t nread = fread(model, 1, modelBytes, fp);
     if ((long)nread != modelBytes) {
         fclose(fp);
-        printf("load model file:[%s] failed, read model bytes:[%u] != [%ld]\n", modelFile.c_str(), nread, modelBytes);
+        npu_error("load model file:[%s] failed, read model bytes:[%u] != [%ld]", modelFile.c_str(), nread, modelBytes);
         delete[] model;
         return -4;
     }
@@ -71,10 +71,10 @@ int AiEngine::init(std::string modelFile)
     int ret = rknn_init(&mContext, model, modelBytes, RKNN_FLAG_PRIOR_HIGH);
     if (ret != RKNN_SUCC) {
         delete[] model;
-        printf("rknn_init failed, return:[%d]\n", ret);
+        npu_error("rknn_init failed, return:[%d]", ret);
         return -5;
     } else {
-        printf("rknn init succeeded, context:[0x%X]\n", mContext);
+        npu_info("rknn init succeeded, context:[0x%X]", mContext);
     }
 
     delete[] model;
@@ -83,7 +83,7 @@ int AiEngine::init(std::string modelFile)
     do {
         if (access("/dev/galcore", F_OK) != 0) {
             findGalcoreDevCount += 1;
-            printf("\033[1;31mcan't find npu driver, %d times\033[0m\n", findGalcoreDevCount);
+            npu_warn("can't find npu driver, %d times", findGalcoreDevCount);
             sleep(1);
         } else {
             findGalcoreDevCount = 0;
@@ -92,21 +92,21 @@ int AiEngine::init(std::string modelFile)
     } while (findGalcoreDevCount < 3);
 
     if (findGalcoreDevCount >= 3) {
-        printf("\033[1;31mcan't find npu driver, please check npu driver\033[0m\n");
+        npu_error("can't find npu driver, please check npu driver");
         return -6;
     }
 
     rknn_sdk_version sdkver;
     ret = rknn_query(mContext, RKNN_QUERY_SDK_VERSION, &sdkver, sizeof(sdkver));
     if (ret == RKNN_SUCC) {
-        printf("\033[1;32msdk version:[%s], driver version:[%s]\033[0m\n", sdkver.api_version, sdkver.drv_version);
+        npu_info("sdk version:[%s], driver version:[%s]", sdkver.api_version, sdkver.drv_version);
     } else {
-        printf("\033[1;31mrknn_query sdk version failed, return:[%d]\033[0m\n", ret);
+        npu_warn("rknn_query sdk version failed, return:[%d]", ret);
     }
 
     ret = rknn_query(mContext, RKNN_QUERY_IN_OUT_NUM, &mIOCount, sizeof(mIOCount));
     if (ret != RKNN_SUCC) {
-        printf("rknn query input/output number failed, return:[%d]\n", ret);
+        npu_error("rknn query input/output number failed, return:[%d]", ret);
         return -7;
     }
 
@@ -116,7 +116,7 @@ int AiEngine::init(std::string modelFile)
         attr.index = i;
         ret = rknn_query(mContext, RKNN_QUERY_INPUT_ATTR, &attr, sizeof(attr));
         if (ret != RKNN_SUCC) {
-            printf("\033[1;31mrknn_query input attribute failed, return:[%d]\033[0m\n", ret);
+            npu_warn("rknn_query input attribute failed, return:[%d]", ret);
         }
 
         printRKNNTensor("input ", attr);
@@ -129,7 +129,7 @@ int AiEngine::init(std::string modelFile)
         attr.index = i;
         ret = rknn_query(mContext, RKNN_QUERY_OUTPUT_ATTR, (void *)&attr, sizeof(rknn_tensor_attr));
         if (ret != RKNN_SUCC) {
-            printf("\033[1;31mrknn_query output attribute failed, return:[%d]\033[0m\n", ret);
+            npu_warn("rknn_query output attribute failed, return:[%d]", ret);
         }
         printRKNNTensor("output", attr);
 
@@ -143,7 +143,7 @@ int AiEngine::init(std::string modelFile)
 int AiEngine::forward(cv::Mat image)
 {
     if (!mInitFin || image.empty()) {
-        printf("Invalid input image or engine not initialized\n");
+        npu_error("Invalid input image or engine not initialized");
         return -1;
     }
 
@@ -157,13 +157,13 @@ int AiEngine::forward(cv::Mat image)
 
     int ret = rknn_inputs_set(mContext, 1, inputs);
     if (ret != RKNN_SUCC) {
-        printf("rknn_inputs_set failed, return:[%d]", ret);
+        npu_error("rknn_inputs_set failed, return:[%d]", ret);
         return -2;
     }
 
     ret = rknn_run(mContext, NULL);
     if (ret != RKNN_SUCC) {
-        printf("rknn_run failed, return:[%d]", ret);
+        npu_error("rknn_run failed, return:[%d]", ret);
         return -3;
     }
 
@@ -173,13 +173,13 @@ int AiEngine::forward(cv::Mat image)
 int AiEngine::forward(std::vector<cv::Mat> imageSet)
 {
     if (!mInitFin || (imageSet.size() != mIOCount.n_input)) {
-        printf("engine not init or invalid image size\n");
+        npu_error("engine not init or invalid image size");
         return -1;
     }
 
     for (size_t i = 0; i < imageSet.size(); i++) {
         if (imageSet[i].empty()) {
-            printf("image null\n");
+            npu_error("image null");
             return -2;
         }
     }
@@ -198,13 +198,13 @@ int AiEngine::forward(std::vector<cv::Mat> imageSet)
 
     int ret = rknn_inputs_set(mContext, mIOCount.n_input, inputs);
     if (ret != RKNN_SUCC) {
-        printf("rknn_inputs_set failed, return:[%d]", ret);
+        npu_error("rknn_inputs_set failed, return:[%d]", ret);
         return -3;
     }
 
     ret = rknn_run(mContext, NULL);
     if (ret != RKNN_SUCC) {
-        printf("rknn_run failed, return:[%d]", ret);
+        npu_error("rknn_run failed, return:[%d]", ret);
         return -3;
     }
 
@@ -214,7 +214,7 @@ int AiEngine::forward(std::vector<cv::Mat> imageSet)
 int AiEngine::forward(unsigned char *data, size_t dataSize)
 {
     if (!mInitFin || !data || (dataSize == 0)) {
-        printf("Invalid input data or engine not initialized\n");
+        npu_error("Invalid input data or engine not initialized");
         return -1;
     }
 
@@ -228,13 +228,13 @@ int AiEngine::forward(unsigned char *data, size_t dataSize)
 
     int ret = rknn_inputs_set(mContext, 1, inputs);
     if (ret != RKNN_SUCC) {
-        printf("rknn_inputs_set failed, return:[%d]", ret);
+        npu_error("rknn_inputs_set failed, return:[%d]", ret);
         return -2;
     }
 
     ret = rknn_run(mContext, NULL);
     if (ret != RKNN_SUCC) {
-        printf("rknn_run failed, return:[%d]", ret);
+        npu_error("rknn_run failed, return:[%d]", ret);
         return -3;
     }
 
@@ -244,13 +244,13 @@ int AiEngine::forward(unsigned char *data, size_t dataSize)
 int AiEngine::forward(std::vector<unsigned char *> dataSet, std::vector<size_t> dataSizeSet)
 {
     if (!mInitFin || (dataSizeSet.size() != dataSet.size()) || (dataSet.size() != mIOCount.n_input)) {
-        printf("engine not initialized or invalid data\n");
+        npu_error("engine not initialized or invalid data");
         return -1;
     }
 
     for (size_t i = 0; i < dataSet.size(); ++i) {
         if ((dataSet[i] == NULL) || (dataSizeSet[i] == 0)) {
-            printf("image data null\n");
+            npu_error("image data null");
             return -2;
         }
     }
@@ -270,13 +270,13 @@ int AiEngine::forward(std::vector<unsigned char *> dataSet, std::vector<size_t> 
 
     ret = rknn_inputs_set(mContext, mIOCount.n_input, inputs);
     if (ret != RKNN_SUCC) {
-        printf("rknn_inputs_set failed, return:[%d]\n", ret);
+        npu_error("rknn_inputs_set failed, return:[%d]", ret);
         return -3;
     }
 
     ret = rknn_run(mContext, NULL);
     if (ret != RKNN_SUCC) {
-        printf("rknn_run failed, return:[%d]\n", ret);
+        npu_error("rknn_run failed, return:[%d]", ret);
         return -4;
     }
 
@@ -286,7 +286,7 @@ int AiEngine::forward(std::vector<unsigned char *> dataSet, std::vector<size_t> 
 int AiEngine::forward(std::vector<rknn_tensor_mem> &inputs_mem, size_t index, bool &bLockInMem)
 {
     if (!mInitFin) {
-        printf("engine not initialized\n");
+        npu_error("engine not initialized");
         return -1;
     }
 
@@ -298,7 +298,7 @@ int AiEngine::forward(std::vector<rknn_tensor_mem> &inputs_mem, size_t index, bo
     if (!bLockInMem) {
         ret = rknn_set_io_mem(mContext, &inputs_mem[index], &mInputAttr[index]);
         if (ret != RKNN_SUCC) {
-            printf("rknn_set_io_mem failed, return:[%d]\n", ret);
+            npu_error("rknn_set_io_mem failed, return:[%d]", ret);
             return -2;
         }
 
@@ -307,7 +307,7 @@ int AiEngine::forward(std::vector<rknn_tensor_mem> &inputs_mem, size_t index, bo
 
     ret = rknn_run(mContext, NULL);
     if (ret != RKNN_SUCC) {
-        printf("rknn_run failed, return:[%d]\n", ret);
+        npu_error("rknn_run failed, return:[%d]", ret);
         return -3;
     }
 
@@ -317,7 +317,7 @@ int AiEngine::forward(std::vector<rknn_tensor_mem> &inputs_mem, size_t index, bo
 int AiEngine::extract(extract_func_ptr extract_cb, nms_func_ptr nms_cb, void *args, std::map<int, std::vector<bbox>> &lastResult)
 {
     if (!mInitFin) {
-        printf("engine not initialized\n");
+        npu_error("engine not initialized");
         return -1;
     }
 
@@ -329,7 +329,7 @@ int AiEngine::extract(extract_func_ptr extract_cb, nms_func_ptr nms_cb, void *ar
 
     int ret = rknn_outputs_get(mContext, mIOCount.n_output, mOutputs, NULL);
     if (ret != RKNN_SUCC) {
-        printf("rknn_outputs_get failed, return:[%d]\n", ret);
+        npu_error("rknn_outputs_get failed, return:[%d]", ret);
         return -2;
     }
 
@@ -348,7 +348,7 @@ int AiEngine::setOutputMemory(std::vector<rknn_tensor_mem> &outputs_mem)
     for (size_t i = 0; i < outputs_mem.size(); ++i) {
         ret = rknn_set_io_mem(mContext, &outputs_mem[i], &mOutputAttr[i]);
         if (ret != RKNN_SUCC) {
-            printf("rknn_set_io_mem failed, return:[%d]\n", ret);
+            npu_error("rknn_set_io_mem failed, return:[%d]", ret);
             return -1;
         }
     }

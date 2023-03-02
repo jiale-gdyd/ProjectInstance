@@ -26,14 +26,26 @@
 #endif
 #endif
 
+#define MPLANE_MAX_FORMATS                  32
+
+struct mplane_formats {
+    struct v4l2_format formats[MPLANE_MAX_FORMATS];
+    int                index_map[MPLANE_MAX_FORMATS];
+    unsigned int       num_formats;
+    int                def_format;
+};
+
 struct mplane_plugin {
     union {
         struct {
-            unsigned int mplane_capture : 1;
-            unsigned int mplane_output : 1;
+            unsigned int  mplane_capture : 1;
+            unsigned int  mplane_output : 1;
         };
-        unsigned int     mplane;
+        unsigned int      mplane;
     };
+
+    struct mplane_formats capture_formats;
+    struct mplane_formats output_formats;
 };
 
 #define SIMPLE_CONVERT_IOCTL(fd, cmd, arg, __struc)                                                         \
@@ -52,6 +64,48 @@ struct mplane_plugin {
         __ret;                                                                                              \
     })
 
+static void mplane_setup_formats(int fd, struct mplane_formats *formats, enum v4l2_buf_type type)
+{
+    int ret, n;
+
+    formats->num_formats = 0;
+    formats->def_format = -1;
+
+    for (n = 0; formats->num_formats < MPLANE_MAX_FORMATS; n++) {
+        struct v4l2_format format = {0};
+        struct v4l2_fmtdesc fmtdesc = {0};
+
+        fmtdesc.type = type;
+        fmtdesc.index = n;
+
+        ret = SYS_IOCTL(fd, VIDIOC_ENUM_FMT, &fmtdesc);
+        if (ret < 0) {
+            break;
+        }
+
+        format.type = type;
+        format.fmt.pix.pixelformat = fmtdesc.pixelformat;
+
+        SYS_IOCTL(fd, VIDIOC_TRY_FMT, &format);
+
+        switch (format.fmt.pix_mp.num_planes) {
+            case 1:
+                if (formats->def_format < 0) {
+                    formats->def_format = formats->num_formats;
+                }
+
+            case 0:
+                formats->formats[formats->num_formats] = format;
+                formats->index_map[formats->num_formats] = n;
+                formats->num_formats++;
+                break;
+
+            default:
+                break;
+        }
+    }
+}
+
 static void *plugin_init(int fd)
 {
     int ret;
@@ -69,10 +123,12 @@ static void *plugin_init(int fd)
 
     if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) && (cap.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE)) {
         plugin.mplane_capture = 1;
+        mplane_setup_formats(fd, &plugin.capture_formats, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
     }
 
     if (!(cap.capabilities & V4L2_CAP_VIDEO_OUTPUT) && (cap.capabilities & V4L2_CAP_VIDEO_OUTPUT_MPLANE)) {
         plugin.mplane_output = 1;
+        mplane_setup_formats(fd, &plugin.output_formats, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
     }
 
     if (!plugin.mplane) {
@@ -148,6 +204,41 @@ static int convert_type(int type)
     }
 }
 
+static int enum_fmt_ioctl(struct mplane_plugin *plugin, int fd, unsigned long int cmd, struct v4l2_fmtdesc *arg)
+{
+    int ret, index;
+    struct mplane_formats *formats;
+
+    switch (arg->type) {
+        case V4L2_BUF_TYPE_VIDEO_CAPTURE:
+            formats = &plugin->capture_formats;
+            break;
+
+        case V4L2_BUF_TYPE_VIDEO_OUTPUT:
+            formats = &plugin->output_formats;
+            break;
+
+        case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
+        case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
+            errno = EINVAL;
+            return -1;
+
+        default:
+            return SYS_IOCTL(fd, cmd, arg);
+    }
+
+    if (arg->index >= formats->num_formats) {
+        return -EINVAL;
+    }
+
+    index = arg->index;
+    arg->index = formats->index_map[index];
+    ret = SIMPLE_CONVERT_IOCTL(fd, cmd, arg, v4l2_fmtdesc);
+    arg->index = index;
+
+    return ret;
+}
+
 static void sanitize_format(struct v4l2_format *fmt)
 {
     unsigned int offset;
@@ -162,19 +253,22 @@ static void sanitize_format(struct v4l2_format *fmt)
     memset(((char *)&fmt->fmt.pix) + offset, 0, sizeof(fmt->fmt.pix) - offset);
 }
 
-static int try_set_fmt_ioctl(int fd, unsigned long int cmd, struct v4l2_format *arg)
+static int try_set_fmt_ioctl(struct mplane_plugin *plugin, int fd, unsigned long int cmd,struct v4l2_format *arg)
 {
-    int ret;
+    int i, ret;
     struct v4l2_format fmt = {0};
     struct v4l2_format *org = arg;
+    struct mplane_formats *formats;
 
     switch (arg->type) {
         case V4L2_BUF_TYPE_VIDEO_CAPTURE:
             fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+            formats = &plugin->capture_formats;
             break;
 
         case V4L2_BUF_TYPE_VIDEO_OUTPUT:
             fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+            formats = &plugin->output_formats;
             break;
 
         case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
@@ -184,6 +278,16 @@ static int try_set_fmt_ioctl(int fd, unsigned long int cmd, struct v4l2_format *
 
         default:
             return SYS_IOCTL(fd, cmd, arg);
+    }
+
+    for (i = 0; i < formats->num_formats; i++) {
+        if (formats->formats[i].fmt.pix_mp.pixelformat == arg->fmt.pix.pixelformat) {
+            break;
+        }
+    }
+
+    if (i == formats->num_formats) {
+        return -EINVAL;
     }
 
     sanitize_format(org);
@@ -217,6 +321,10 @@ static int try_set_fmt_ioctl(int fd, unsigned long int cmd, struct v4l2_format *
     org->fmt.pix.bytesperline = fmt.fmt.pix_mp.plane_fmt[0].bytesperline;
     org->fmt.pix.sizeimage = fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
     org->fmt.pix.flags = fmt.fmt.pix_mp.flags;
+
+    if (cmd == VIDIOC_S_FMT) {
+        formats->def_format = -1;
+    }
 
     return 0;
 }
@@ -282,19 +390,22 @@ static int create_bufs_ioctl(int fd, unsigned long int cmd, struct v4l2_create_b
     return ret;
 }
 
-static int get_fmt_ioctl(int fd, unsigned long int cmd, struct v4l2_format *arg)
+static int get_fmt_ioctl(struct mplane_plugin *plugin, int fd, unsigned long int cmd, struct v4l2_format *arg)
 {
     int ret;
     struct v4l2_format fmt = {0};
     struct v4l2_format *org = arg;
+    struct mplane_formats *formats;
 
     switch (arg->type) {
         case V4L2_BUF_TYPE_VIDEO_CAPTURE:
             fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+            formats = &plugin->capture_formats;
             break;
 
         case V4L2_BUF_TYPE_VIDEO_OUTPUT:
             fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+            formats = &plugin->output_formats;
             break;
 
         case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
@@ -306,11 +417,17 @@ static int get_fmt_ioctl(int fd, unsigned long int cmd, struct v4l2_format *arg)
             return SYS_IOCTL(fd, cmd, arg);
     }
 
+    if ((formats->def_format >= 0) && (formats->def_format < formats->num_formats)) {
+        fmt = formats->formats[formats->def_format];
+        goto out;
+    }
+
     ret = SYS_IOCTL(fd, cmd, &fmt);
     if (ret) {
         return ret;
     }
 
+out:
     memset(&org->fmt.pix, 0, sizeof(org->fmt.pix));
     org->fmt.pix.width = fmt.fmt.pix_mp.width;
     org->fmt.pix.height = fmt.fmt.pix_mp.height;
@@ -375,19 +492,21 @@ static int buf_ioctl(int fd, unsigned long int cmd, struct v4l2_buffer *arg)
 
 static int plugin_ioctl(void *dev_ops_priv, int fd, unsigned long int cmd, void *arg)
 {
+    struct mplane_plugin *plugin = (struct mplane_plugin *)dev_ops_priv;
+
     switch (cmd) {
     case VIDIOC_QUERYCAP:
         return querycap_ioctl(fd, cmd, arg);
 
     case VIDIOC_TRY_FMT:
     case VIDIOC_S_FMT:
-        return try_set_fmt_ioctl(fd, cmd, arg);
+        return try_set_fmt_ioctl(plugin, fd, cmd, arg);
 
     case VIDIOC_G_FMT:
-        return get_fmt_ioctl(fd, cmd, arg);
+        return get_fmt_ioctl(plugin, fd, cmd, arg);
 
     case VIDIOC_ENUM_FMT:
-        return SIMPLE_CONVERT_IOCTL(fd, cmd, arg, v4l2_fmtdesc);
+        return enum_fmt_ioctl(plugin, fd, cmd, arg);
 
     case VIDIOC_S_PARM:
     case VIDIOC_G_PARM:

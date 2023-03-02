@@ -8,6 +8,7 @@
 
 #define __ROCKCHIP_MEDIABASE_HPP_INSIDE__
 #include "mediaVdec.hpp"
+#include "../private.h"
 #undef __ROCKCHIP_MEDIABASE_HPP_INSIDE__
 
 API_BEGIN_NAMESPACE(media)
@@ -84,17 +85,17 @@ int MediaVdec::destroyVdecChn(int vdecChn)
 int MediaVdec::createVdecChn(int vdecChn, drm_codec_type_e enCodecType)
 {
     if ((vdecChn < DRM_VDEC_CHANNEL_00) || (vdecChn >= DRM_VDEC_CHANNEL_BUTT)) {
-        printf("invalid vdec channel vdec:[%d]\n", vdecChn);
+        mpi_error("invalid vdec channel vdec:[%d]", vdecChn);
         return -1;
     }
 
     if ((enCodecType != DRM_CODEC_TYPE_H264) && (enCodecType != DRM_CODEC_TYPE_H265) && (enCodecType != DRM_CODEC_TYPE_JPEG) && (enCodecType != DRM_CODEC_TYPE_MJPEG)) {
-        printf("enCodecType only support DRM_CODEC_TYPE_H264/DRM_CODEC_TYPE_H265/DRM_CODEC_TYPE_JPEG/DRM_CODEC_TYPE_MJPEG\n");
+        mpi_error("enCodecType only support DRM_CODEC_TYPE_H264/DRM_CODEC_TYPE_H265/DRM_CODEC_TYPE_JPEG/DRM_CODEC_TYPE_MJPEG");
         return -1;
     }
 
     if (mVdecChnState[vdecChn] == VDEC_START) {
-        printf("vdec channel vdec:[%d] had started\n", vdecChn);
+        mpi_error("vdec channel vdec:[%d] had started", vdecChn);
         return -1;
     }
 
@@ -111,7 +112,7 @@ int MediaVdec::createVdecChn(int vdecChn, drm_codec_type_e enCodecType)
 
     ret = drm_mpi_vdec_create_channel(vdecChn, (const drm_vdec_chn_attr_t *)&stVdecChnAttr);
     if (ret) {
-        printf("create vdec channel vdec:[%d] failed, return:[%d]\n", vdecChn, ret);
+        mpi_error("create vdec channel vdec:[%d] failed, return:[%d]", vdecChn, ret);
         return ret;
     }
 
@@ -122,22 +123,22 @@ int MediaVdec::createVdecChn(int vdecChn, drm_codec_type_e enCodecType)
 int MediaVdec::createVdecChn(int vdecChn, std::string fileName, drm_codec_type_e enCodecType, bool decLoop, size_t decOneFrameSize, size_t decInterMs, bool bHardware, size_t allocFlag)
 {
     if ((vdecChn < DRM_VDEC_CHANNEL_00) || (vdecChn >= DRM_VDEC_CHANNEL_BUTT)) {
-        printf("invalid vdec channel vdec:[%d]\n", vdecChn);
+        mpi_error("invalid vdec channel vdec:[%d]", vdecChn);
         return -1;
     }
 
     if (mVdecChnState[vdecChn] == VDEC_START) {
-        printf("vdec channel vdec:[%d] had started\n", vdecChn);
+        mpi_error("vdec channel vdec:[%d] had started", vdecChn);
         return -1;
     }
 
     if (access(fileName.c_str(), F_OK) != 0) {
-        printf("vdec channel:[%d] file:[%s] not found\n", vdecChn, fileName.c_str());
+        mpi_error("vdec channel:[%d] file:[%s] not found", vdecChn, fileName.c_str());
         return -1;
     }
 
     if ((enCodecType != DRM_CODEC_TYPE_H264) && (enCodecType != DRM_CODEC_TYPE_H265) && (enCodecType != DRM_CODEC_TYPE_JPEG) && (enCodecType != DRM_CODEC_TYPE_MJPEG)) {
-        printf("enCodecType only support DRM_CODEC_TYPE_H264/DRM_CODEC_TYPE_H265/DRM_CODEC_TYPE_JPEG/DRM_CODEC_TYPE_MJPEG\n");
+        mpi_error("enCodecType only support DRM_CODEC_TYPE_H264/DRM_CODEC_TYPE_H265/DRM_CODEC_TYPE_JPEG/DRM_CODEC_TYPE_MJPEG");
         return -1;
     }
 
@@ -154,7 +155,7 @@ int MediaVdec::createVdecChn(int vdecChn, std::string fileName, drm_codec_type_e
     mDecodeFileCount[vdecChn] = 1;
 
     if (pthread_create(&mVdecThreadId[vdecChn], NULL, videoDecoderProcessThread, (void *)&param) != 0) {
-        printf("vdec channel vdec:[%d] create failed\n", vdecChn);
+        mpi_error("vdec channel vdec:[%d] create failed", vdecChn);
         return -1;
     }
 
@@ -164,22 +165,22 @@ int MediaVdec::createVdecChn(int vdecChn, std::string fileName, drm_codec_type_e
 int MediaVdec::createVdecChn(int vdecChn, std::vector<std::string> fileName, drm_codec_type_e enCodecType, bool decLoop, size_t decOneFrameSize, size_t decInterMs, bool bHardware, size_t allocFlag)
 {
     if ((vdecChn < DRM_VDEC_CHANNEL_00) || (vdecChn >= DRM_VDEC_CHANNEL_BUTT)) {
-        printf("invalid vdec channel vdec:[%d]\n", vdecChn);
+        mpi_error("invalid vdec channel vdec:[%d]", vdecChn);
         return -1;
     }
 
     if (mVdecChnState[vdecChn] == VDEC_START) {
-        printf("vdec channel vdec:[%d] had started\n", vdecChn);
+        mpi_error("vdec channel vdec:[%d] had started", vdecChn);
         return -1;
     }
 
     if (fileName.size() == 0) {
-        printf("vdec channel:[%d] file count:[%u]\n", vdecChn, fileName.size());
+        mpi_error("vdec channel:[%d] file count:[%u]", vdecChn, fileName.size());
         return -1;
     }
 
     if ((enCodecType != DRM_CODEC_TYPE_H264) && (enCodecType != DRM_CODEC_TYPE_H265) && (enCodecType != DRM_CODEC_TYPE_JPEG) && (enCodecType != DRM_CODEC_TYPE_MJPEG)) {
-        printf("enCodecType only support DRM_CODEC_TYPE_H264/DRM_CODEC_TYPE_H265/DRM_CODEC_TYPE_JPEG/DRM_CODEC_TYPE_MJPEG");
+        mpi_error("enCodecType only support DRM_CODEC_TYPE_H264/DRM_CODEC_TYPE_H265/DRM_CODEC_TYPE_JPEG/DRM_CODEC_TYPE_MJPEG");
         return -1;
     }
 
@@ -192,7 +193,7 @@ int MediaVdec::createVdecChn(int vdecChn, std::vector<std::string> fileName, drm
     }
 
     if (mDecodeFileCount[vdecChn] == 0) {
-        printf("vdec channel:[%d] file count:[%d]\n", vdecChn, mDecodeFileCount[vdecChn]);
+        mpi_error("vdec channel:[%d] file count:[%d]", vdecChn, mDecodeFileCount[vdecChn]);
         return -1;
     }
 
@@ -208,7 +209,7 @@ int MediaVdec::createVdecChn(int vdecChn, std::vector<std::string> fileName, drm
     param.user_data = this;
 
     if (pthread_create(&mVdecThreadId[vdecChn], NULL, videoDecoderProcessThreadMulti, (void *)&param) != 0) {
-        printf("vdec channel vdec:[%d] create failed\n", vdecChn);
+        mpi_error("vdec channel vdec:[%d] create failed", vdecChn);
         return -1;
     }
 
@@ -237,7 +238,7 @@ void *MediaVdec::videoDecoderProcessThread(void *arg)
 
     fp = fopen(vdecParam->decodeFile.c_str(), "rb");
     if (!fp) {
-        printf("vdec chn:[%d] open file:[%s] failed", vdec_chn, vdecParam->decodeFile.c_str());
+        mpi_error("vdec chn:[%d] open file:[%s] failed", vdec_chn, vdecParam->decodeFile.c_str());
         return NULL;
     }
 
@@ -253,7 +254,7 @@ void *MediaVdec::videoDecoderProcessThread(void *arg)
 
     ret = drm_mpi_vdec_create_channel(vdec_chn, (const drm_vdec_chn_attr_t *)&stVdecAttr);
     if (ret) {
-        printf("create vdec channel:[%d] failed, return:[%d]\n", vdec_chn, ret);
+        mpi_error("create vdec channel:[%d] failed, return:[%d]", vdec_chn, ret);
         return NULL;
     }
 
@@ -287,7 +288,7 @@ VDEC_LOOP0:
                 me->sendFrame(vdec_chn, mediaFrame, MOD_ID_VDEC);
                 me->releaseFrame(mediaFrame);
             } else {
-                printf("create media frame failed\n");
+                mpi_error("create media frame failed");
             }
         }
 
@@ -322,7 +323,7 @@ void *MediaVdec::videoDecoderProcessThreadMulti(void *arg)
     std::vector<std::string> decodeFile(vdecParam->decodeFile);
     fp = fopen(decodeFile[0].c_str(), "rb");
     if (!fp) {
-        printf("vdec chn:[%d] open file:[%s] failed\n", vdec_chn, decodeFile[0].c_str());
+        mpi_error("vdec chn:[%d] open file:[%s] failed", vdec_chn, decodeFile[0].c_str());
         return NULL;
     }
 
@@ -338,7 +339,7 @@ void *MediaVdec::videoDecoderProcessThreadMulti(void *arg)
 
     ret = drm_mpi_vdec_create_channel(vdec_chn, (const drm_vdec_chn_attr_t *)&stVdecAttr);
     if (ret) {
-        printf("create vdec channel:[%d] failed, return:[%d]\n", vdec_chn, ret);
+        mpi_error("create vdec channel:[%d] failed, return:[%d]", vdec_chn, ret);
         return NULL;
     }
 
@@ -384,7 +385,7 @@ OPEN_FILE_FAIL:
                         std::string decFile = decodeFile[index];
                         fp = fopen(decFile.c_str(), "rb");
                         if (!fp) {
-                            printf("vdec chn:[%d] open file:[%s] failed\n", vdec_chn, decFile.c_str());
+                            mpi_error("vdec chn:[%d] open file:[%s] failed", vdec_chn, decFile.c_str());
                             goto OPEN_FILE_FAIL;
                         }
 
@@ -402,7 +403,7 @@ OPEN_FILE_FAIL:
                 me->sendFrame(vdec_chn, mediaFrame, MOD_ID_VDEC);
                 me->releaseFrame(mediaFrame);
             } else {
-                printf("create media frame failed\n");
+                mpi_error("create media frame failed");
             }
         }
 

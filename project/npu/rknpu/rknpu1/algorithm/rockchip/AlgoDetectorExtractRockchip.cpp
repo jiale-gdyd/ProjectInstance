@@ -39,14 +39,14 @@ int AlgoDetector::extract_rockchip(std::map<int, std::vector<bbox>> &lastResults
         if (mAlgoType == YOLOV5S) {
             ret = extract_yolov5s_tensormem_rockchip(mOutputsTensorMem, (void *)&args, localResults);
         } else {
-            printf("rockchip algorithm type:[%d] not support now\n", mAlgoType);
+            npu_error("rockchip algorithm type:[%d] not support now", mAlgoType);
             return -1;
         }
     } else {
         if (mAlgoType == YOLOV5S) {
             ret = pAiEngine->extract(extract_yolov5s_non_tensormem_rockchip, pAiEngine->nms, (void *)&args, localResults);
         } else {
-            printf("rockchip algorithm type:[%d] not support now", mAlgoType);
+            npu_error("rockchip algorithm type:[%d] not support now", mAlgoType);
             return -1;
         }
     }

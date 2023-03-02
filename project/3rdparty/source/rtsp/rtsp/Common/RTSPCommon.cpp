@@ -1,3 +1,4 @@
+#include <string>
 #include <time.h>
 #include <stdio.h>
 #include <netdb.h>
@@ -359,6 +360,19 @@ bool isValidIpAddress(char *ipAddress)
     return result != 0;
 }
 
+static int findSpecCharCount(std::string str, std::string spec)
+{
+    int count = 0;
+    int begin = -1;
+    
+    while ((begin = str.find(spec, begin + 1)) != std::string::npos) {
+        count++;
+        begin = begin + spec.length() - 1;
+    }
+    
+    return count;
+}
+
 bool parseRTSPURL(const char *url, unsigned &address, unsigned short &port, char const **urlSuffix)
 {
     do {
@@ -373,13 +387,18 @@ bool parseRTSPURL(const char *url, unsigned &address, unsigned short &port, char
         char parseBuffer[parseBufferSize];
         char const *from = &url[prefixLength];
 
-        char const *from1 = from;
-        while ((*from1 != '\0') && (*from1 != '/')) {
-            if (*from1 == '@') {
-                from = ++from1;
-                break;
+        if (findSpecCharCount(from, "@") > 1) {
+            std::string lstr = std::string(url);
+            from = &url[lstr.rfind('@') + 1];
+        } else {
+            char const *from1 = from;
+            while ((*from1 != '\0') && (*from1 != '/')) {
+                if (*from1 == '@') {
+                    from = ++from1;
+                    break;
+                }
+                ++from1;
             }
-            ++from1;
         }
 
         unsigned i;
@@ -480,17 +499,34 @@ bool parseRTSPURLUsernamePassword(char const *url, char *&username, char *&passw
             break;
         }
 
-        char *urlCopy = strDup(url);
-        urlCopy[atIndex] = '\0';
-        if (colonIndex > 0) {
-            urlCopy[colonIndex] = '\0';
-            password = strDup(&urlCopy[colonIndex+1]);
-        } else {
-            password = strDup("");
-        }
+        if (findSpecCharCount(std::string(url), "@") > 1) {
+            const char *urlCopy2 = &url[prefixLength];
+            if (colonIndex > 0) {
+                std::string lstr1 = std::string(urlCopy2);
+                int pos1 = lstr1.find(':');
+                int pos2 = lstr1.rfind('@');
+                std::string lstr2 = lstr1.substr(pos1 + 1, pos2 - pos1 - 1);
 
-        username = strDup(&urlCopy[usernameIndex]);
-        delete[] urlCopy;
+                password = strDup(lstr2.c_str());
+            } else {
+                password = strDup("");
+            }
+
+            std::string lstr3 = std::string(urlCopy2);
+            username = strDup(lstr3.substr(0, lstr3.find(':')).c_str());
+        } else {
+            char *urlCopy = strDup(url);
+            urlCopy[atIndex] = '\0';
+            if (colonIndex > 0) {
+                urlCopy[colonIndex] = '\0';
+                password = strDup(&urlCopy[colonIndex + 1]);
+            } else {
+                password = strDup("");
+            }
+
+            username = strDup(&urlCopy[usernameIndex]);
+            delete[] urlCopy;
+        }
 
         return true;
     } while (0);

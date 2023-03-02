@@ -39,6 +39,8 @@ void EMSDemoImpl::sendZoomFrame(media_buffer_t &mediaFrame, int voChn, bool bDis
         return;
     }
 
+    getMedia()->getRga().sendFrame(mRtspVencRgaChn, mediaFrame);
+
     if (bDisplay) {
         if (getMedia()->getVo().voChnStart(voChn)) {
             if (getMedia()->getRga().rgaChnStart(rgaCropChn) && getMedia()->getRga().rgaChnStart(rgaZoomChn)) {

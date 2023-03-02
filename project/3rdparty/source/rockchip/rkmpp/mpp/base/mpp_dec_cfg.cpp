@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <linux/kconfig.h>
-#define MODULE_TAG "mpp_dec_cfg"
 
+#define MODULE_TAG "mpp_dec_cfg"
+#include "../private.h"
 #include "rockchip/rkmpp/rk_vdec_cfg.h"
 #include <string.h>
 
@@ -265,7 +265,7 @@ void mpp_dec_cfg_set_default(MppDecCfgSet *cfg)
     cfg->base.coding = MPP_VIDEO_CodingUnused;
     cfg->base.hw_type = -1;
     cfg->base.fast_parse = 1;
-#if defined(CONFIG_FASTPLAY_ONCE)
+#ifdef ENABLE_FASTPLAY_ONCE
     cfg->base.enable_fast_play = MPP_ENABLE_FAST_PLAY_ONCE;
 #else
     cfg->base.enable_fast_play = MPP_ENABLE_FAST_PLAY;

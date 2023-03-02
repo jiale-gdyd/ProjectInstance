@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <linux/kconfig.h>
-#define  MODULE_TAG "mpp_dec"
 
+#define  MODULE_TAG "mpp_dec"
+#include "../private.h"
 #include <string.h>
 
 #include "../../osal/inc/mpp_mem.h"
@@ -43,39 +43,39 @@
  * all decoder static register here
  */
 static const ParserApi *parsers[] = {
-#if defined(CONFIG_RKMPP_AVSD)
+#if HAVE_AVSD
     &api_avsd_parser,
     &api_avsd_plus_parser,
 #endif
-#if defined(CONFIG_RKMPP_AVS2D)
+#if HAVE_AVS2D
     &api_avs2d_parser,
 #endif
-#if defined(CONFIG_RKMPP_H263D)
+#if HAVE_H263D
     &api_h263d_parser,
 #endif
-#if defined(CONFIG_RKMPP_H264D)
+#if HAVE_H264D
     &api_h264d_parser,
 #endif
-#if defined(CONFIG_RKMPP_H265D)
+#if HAVE_H265D
     &api_h265d_parser,
 #endif
-#if defined(CONFIG_RKMPP_MPEG2D)
+#if HAVE_MPEG2D
     &api_m2vd_parser,
 #endif
-#if defined(CONFIG_RKMPP_MPEG4D)
+#if HAVE_MPEG4D
     &api_mpg4d_parser,
 #endif
-#if defined(CONFIG_RKMPP_VP8D)
+#if HAVE_VP8D
     &api_vp8d_parser,
 #endif
-#if defined(CONFIG_RKMPP_VP9D)
+#if HAVE_VP9D
     &api_vp9d_parser,
 #endif
-#if defined(CONFIG_RKMPP_JPEGD)
+#if HAVE_JPEGD
     &api_jpegd_parser,
 #endif
     &dummy_dec_parser,
-#if defined(CONFIG_RKMPP_AV1D)
+#if HAVE_AV1D
     &api_av1d_parser,
 #endif
 };

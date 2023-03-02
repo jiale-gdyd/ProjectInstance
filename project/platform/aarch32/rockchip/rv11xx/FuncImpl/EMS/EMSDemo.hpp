@@ -19,6 +19,8 @@
 #include <utils/RingBuffer.hpp>
 #include <npu/rknpu/Detector.hpp>
 #include <mpi/rkmpi/mediaBase.hpp>
+
+#include <rtsp/rtsp.hpp>
 #include <rtsp/SimpleRtspServer.hpp>
 
 #include "EMSDemoMacros.h"
@@ -43,19 +45,25 @@ private:
     void mediaDeinit();
 
 private:
+    int rtspServerInit();
+    static void rtspEncodeProcessCallback(media_buffer_t mediaFrame, void *user_data);
+
+    int rtspClientInit();
+    static void rtspClientFrameHandler(void *arg, int frameType, int64_t timestamp, uint8_t *frame, uint32_t frameSize);
+
+private:
     void videoEncodeInit();
     void videoEncodeExit();
 
     int getDvrRecordList(std::string rootDir);
 
     void detectTFCardProcessThread();
-    void videoEncodeObjectProcessThread();
     void saveEncVideoToTFCardProcessThread();
+
+    static void videoEncodeProcessCallback(media_buffer_t mediaFrame, void *user_data);
 
     void videoRemoveProcessThread();
     void videoRemovePreProcessThread();
-
-    static int videoEncodeProcessCallback(media_buffer_t mediaFrame, void *user_data);
 
 private:
     void algoInitThread();
@@ -125,7 +133,6 @@ private:
     drm_plane_type_e                         mOverlayDispLayers;             // Overlay显示层
 
     bool                                     mVideoVencEnOK;                 // 视频编码通道使能成功
-    int                                      mVideoVencRgaChn;               // 视频编码RGA通道
     int                                      mVideoVencChn;                  // 视频编码通道
     drm_codec_type_e                         mVideoVencType;                 // 编码类型
     drm_venc_rc_mode_e                       mVideoVencRcMode;               // 编码模式
@@ -176,9 +183,14 @@ private:
 
     static ems_config_t                      mEMSConfig;                     // 应用配置参数
 
-#if defined(CONFIG_RKNPU)
     std::shared_ptr<Ai::AiDetector>          pDetector;                      // 算法检测类
-#endif
+
+    bool                                     mRtspVencEnOK;                  // 视频编码通道使能成功
+    int                                      mRtspVencChn;                   // 视频编码通道
+    int                                      mRtspVencRgaChn;                // 视频编码RGA通道
+    std::shared_ptr<rtsp::SimpleRTSPServer>  pSimpleServer;                  // RTSP服务器句柄
+
+    std::shared_ptr<rtsp::RTSPClient>        pRTSPClient;                    // RTSP客户端
 };
 
 API_END_NAMESPACE(EMS)

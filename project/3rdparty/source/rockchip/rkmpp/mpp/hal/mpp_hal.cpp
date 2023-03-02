@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <linux/kconfig.h>
-#define  MODULE_TAG "mpp_hal"
 
+#define  MODULE_TAG "mpp_hal"
+#include "../private.h"
 #include "../../osal/inc/mpp_mem.h"
 #include "rockchip/rkmpp/mpp_log.h"
 #include "../../osal/inc/mpp_common.h"
@@ -44,38 +44,38 @@
  * all hardware api static register here
  */
 static const MppHalApi *hw_apis[] = {
-#if defined(CONFIG_RKMPP_AVSD)
+#if HAVE_AVSD
     &hal_api_avsd,
     &hal_api_avsd_plus,
 #endif
-#if defined(CONFIG_RKMPP_AVS2D)
+#if HAVE_AVS2D
     &hal_api_avs2d,
 #endif
-#if defined(CONFIG_RKMPP_H263D)
+#if HAVE_H263D
     &hal_api_h263d,
 #endif
-#if defined(CONFIG_RKMPP_H264D)
+#if HAVE_H264D
     &hal_api_h264d,
 #endif
-#if defined(CONFIG_RKMPP_H265D)
+#if HAVE_H265D
     &hal_api_h265d,
 #endif
-#if defined(CONFIG_RKMPP_MPEG2D)
+#if HAVE_MPEG2D
     &hal_api_m2vd,
 #endif
-#if defined(CONFIG_RKMPP_MPEG4D)
+#if HAVE_MPEG4D
     &hal_api_mpg4d,
 #endif
-#if defined(CONFIG_RKMPP_VP8D)
+#if HAVE_VP8D
     &hal_api_vp8d,
 #endif
-#if defined(CONFIG_RKMPP_VP9D)
+#if HAVE_VP9D
     &hal_api_vp9d,
 #endif
-#if defined(CONFIG_RKMPP_JPEGD)
+#if HAVE_JPEGD
     &hal_api_jpegd,
 #endif
-#if defined(CONFIG_RKMPP_AV1D)
+#if HAVE_AV1D
     &hal_api_av1d,
 #endif
     &hal_api_dummy_dec,

@@ -3,6 +3,7 @@
 
 #define __ROCKCHIP_MEDIABASE_HPP_INSIDE__
 #include "mediaVenc.hpp"
+#include "../private.h"
 #undef __ROCKCHIP_MEDIABASE_HPP_INSIDE__
 
 API_BEGIN_NAMESPACE(media)
@@ -24,7 +25,7 @@ MediaVenc::~MediaVenc()
 bool MediaVenc::vencChnStart(int vencChn)
 {
     if ((vencChn < DRM_VENC_CHANNEL_00) || (vencChn >= DRM_VENC_CHANNEL_BUTT)) {
-        printf("invalid vecn channel:[%d]\n", vencChn);
+        mpi_error("invalid vecn channel:[%d]", vencChn);
         return false;
     }
 
@@ -53,18 +54,18 @@ int MediaVenc::destroyVencChn(int vencChn)
 int MediaVenc::createVencChn(int vencChn, drm_venc_chn_attr_t *stVencChnAttr)
 {
     if ((vencChn < DRM_VENC_CHANNEL_00) || (vencChn >= DRM_VENC_CHANNEL_BUTT)) {
-        printf("invalid vecn channel:[%d]\n", vencChn);
+        mpi_error("invalid vecn channel:[%d]", vencChn);
         return -1;
     }
 
     if (mVencChnStarted[vencChn] == true) {
-        printf("vecn channel:[%d] had started\n", vencChn);
+        mpi_error("vecn channel:[%d] had started", vencChn);
         return 0;
     }
 
     int ret = drm_mpi_venc_create_channel(vencChn, stVencChnAttr);
     if (ret) {
-        printf("create vecn channel:[%d] failed, return:[%d]\n", vencChn, ret);
+        mpi_error("create vecn channel:[%d] failed, return:[%d]", vencChn, ret);
         return ret;
     }
 
@@ -75,12 +76,12 @@ int MediaVenc::createVencChn(int vencChn, drm_venc_chn_attr_t *stVencChnAttr)
 int MediaVenc::createVencChn(int vencChn, int bufDepth, size_t frameWidth, size_t frameHeight, drm_image_type_e imageType, drm_codec_type_e enCodecType, drm_venc_rc_mode_e rcMode, size_t frameRate, size_t profile, OutCallbackFunction callback, size_t bitrate, size_t iFrmInterval, int rotation)
 {
     if ((vencChn < DRM_VENC_CHANNEL_00) || (vencChn >= DRM_VENC_CHANNEL_BUTT)) {
-        printf("invalid vecn channel:[%d]\n", vencChn);
+        mpi_error("invalid vecn channel:[%d]", vencChn);
         return -1;
     }
 
     if (mVencChnStarted[vencChn] == true) {
-        printf("vecn channel:[%d] had started\n", vencChn);
+        mpi_error("vecn channel:[%d] had started", vencChn);
         return 0;
     }
 
@@ -132,18 +133,18 @@ int MediaVenc::createVencChn(int vencChn, int bufDepth, size_t frameWidth, size_
 
     ret = drm_mpi_venc_create_channel(vencChn, &stVencChnAttr);
     if (ret) {
-        printf("create vecn channel:[%d] failed, return:[%d]\n", vencChn, ret);
+        mpi_error("create vecn channel:[%d] failed, return:[%d]", vencChn, ret);
         return ret;
     }
 
     ret = drm_mpi_venc_set_rotation(vencChn, (drm_venc_rotation_e)rotation);
     if (ret) {
-        printf("set vecn channel:[%d] rotation:[%d] failed, return:[%d]\n", vencChn, rotation, ret);
+        mpi_error("set vecn channel:[%d] rotation:[%d] failed, return:[%d]", vencChn, rotation, ret);
     }
 
     ret = drm_mpi_system_set_media_buffer_depth(MOD_ID_VENC, vencChn, bufDepth);
     if (ret) {
-        printf("vecn channel:[%d] set buff depth failed, return:[%d]\n", vencChn, ret);
+        mpi_error("vecn channel:[%d] set buff depth failed, return:[%d]", vencChn, ret);
     }
 
     if (callback) {
@@ -154,7 +155,7 @@ int MediaVenc::createVencChn(int vencChn, int bufDepth, size_t frameWidth, size_
 
         ret = drm_mpi_system_register_output_callback((const drm_chn_t *)&stEncChn, (OutCallbackFunction)callback);
         if (ret) {
-            printf("register vecn channel:[%d] output callback failed, return:[%d]\n", vencChn, ret);
+            mpi_error("register vecn channel:[%d] output callback failed, return:[%d]", vencChn, ret);
             return ret;
         }
     }
@@ -166,12 +167,12 @@ int MediaVenc::createVencChn(int vencChn, int bufDepth, size_t frameWidth, size_
 int MediaVenc::createVencChnEx(int vencChn, int bufDepth, size_t frameWidth, size_t frameHeight, drm_image_type_e imageType, drm_codec_type_e enCodecType, drm_venc_rc_mode_e rcMode, size_t frameRate, size_t profile, OutCallbackFunctionEx callback, void *userData, size_t bitrate, size_t iFrmInterval, int rotation)
 {
     if ((vencChn < DRM_VENC_CHANNEL_00) || (vencChn >= DRM_VENC_CHANNEL_BUTT)) {
-        printf("invalid vecn channel:[%d]\n", vencChn);
+        mpi_error("invalid vecn channel:[%d]", vencChn);
         return -1;
     }
 
     if (mVencChnStarted[vencChn] == true) {
-        printf("vecn channel:[%d] had started\n", vencChn);
+        mpi_error("vecn channel:[%d] had started", vencChn);
         return 0;
     }
 
@@ -223,18 +224,18 @@ int MediaVenc::createVencChnEx(int vencChn, int bufDepth, size_t frameWidth, siz
 
     ret = drm_mpi_venc_create_channel(vencChn, &stVencChnAttr);
     if (ret) {
-        printf("create vecn channel:[%d] failed, return:[%d]\n", vencChn, ret);
+        mpi_error("create vecn channel:[%d] failed, return:[%d]", vencChn, ret);
         return ret;
     }
 
     ret = drm_mpi_venc_set_rotation(vencChn, (drm_venc_rotation_e)rotation);
     if (ret) {
-        printf("set vecn channel:[%d] rotation:[%d] failed, return:[%d]\n", vencChn, rotation, ret);
+        mpi_error("set vecn channel:[%d] rotation:[%d] failed, return:[%d]", vencChn, rotation, ret);
     }
 
     ret = drm_mpi_system_set_media_buffer_depth(MOD_ID_VENC, vencChn, bufDepth);
     if (ret) {
-        printf("vecn channel:[%d] set buff depth failed, return:[%d]\n", vencChn, ret);
+        mpi_error("vecn channel:[%d] set buff depth failed, return:[%d]", vencChn, ret);
     }
 
     if (callback) {
@@ -245,7 +246,7 @@ int MediaVenc::createVencChnEx(int vencChn, int bufDepth, size_t frameWidth, siz
 
         ret = drm_mpi_system_register_output_callbackEx((const drm_chn_t *)&stEncChn, (OutCallbackFunctionEx)callback, userData);
         if (ret) {
-            printf("register vecn channel:[%d] output callback failed, return:[%d]\n", vencChn, ret);
+            mpi_error("register vecn channel:[%d] output callback failed, return:[%d]", vencChn, ret);
             return ret;
         }
     }

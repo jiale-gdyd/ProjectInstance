@@ -80,7 +80,7 @@ void _mpp_log(const char *tag, const char *fmt, const char *fname, ...)
 {
     va_list args;
 
-    mpp_logw("warning: use new logx function\n");
+    // mpp_logw("warning: use new logx function\n");
 
     va_start(args, fname);
     __mpp_log(os_log_info, tag, fmt, fname, args);
@@ -91,7 +91,7 @@ void _mpp_err(const char *tag, const char *fmt, const char *fname, ...)
 {
     va_list args;
 
-    mpp_logw("warning: use new logx function\n");
+    // mpp_logw("warning: use new logx function\n");
 
     va_start(args, fname);
     __mpp_log(os_log_error, tag, fmt, fname, args);

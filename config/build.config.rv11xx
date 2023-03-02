@@ -18,10 +18,8 @@ USER_LIB_INCLUDE += $(SDK_INC) \
 USER_LINK_LIB    := -L$(SDK_LIB) \
                     -L$(SELF_LIB)
 
-ifeq ($(APP_NAME),Rv11xxEMSApp)
 USER_LD_LIB      += rknn_runtime OpenVX VSC GAL ArchModelSw NNArchPerf \
-                    opencv_world rockchip_mpp rga
-endif
+                    opencv_world
 
 USER_LINK_LIB         += $(addprefix -l,${USER_LD_LIB})
 USER_PTH_RT_LIB       += -lpthread -lrt -lm -ldl $(USE_STDCPP_VERSION)

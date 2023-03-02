@@ -188,6 +188,7 @@ extern "C" {
 #define DRM_FORMAT_MOD_VENDOR_ARM                       0x08
 #define DRM_FORMAT_MOD_VENDOR_ALLWINNER                 0x09
 #define DRM_FORMAT_MOD_VENDOR_AMLOGIC                   0x0a
+#define DRM_FORMAT_MOD_VENDOR_ROCKCHIP                  0x0b
 
 #define DRM_FORMAT_RESERVED                             ((1ULL << 56) - 1)
 
@@ -203,6 +204,8 @@ extern "C" {
 #define DRM_FORMAT_MOD_LINEAR                           fourcc_mod_code(NONE, 0)
 
 #define DRM_FORMAT_MOD_NONE                             0
+
+#define DRM_FORMAT_MOD_ROCKCHIP_10BITS                  fourcc_mod_code(ROCKCHIP, 1)
 
 #define I915_FORMAT_MOD_X_TILED                         fourcc_mod_code(INTEL, 1)
 #define I915_FORMAT_MOD_Y_TILED                         fourcc_mod_code(INTEL, 2)

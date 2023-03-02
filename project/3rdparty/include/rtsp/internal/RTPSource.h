@@ -20,7 +20,7 @@ enum RTP_FRAME_TYPE {
 };
 
 typedef void (*RTPHandlerFunc)(void *arg, char *trackId, char *buf, int len);
-typedef void (*FrameHandlerFunc)(void *arg, RTP_FRAME_TYPE frame_type, int64_t timestamp, uint8_t *buf, int len);
+typedef void (*FrameHandlerFunc)(void *arg, int frameType, int64_t timestamp, uint8_t *frame, uint32_t frameSize);
 
 class MediaSubsession;
 
@@ -91,9 +91,9 @@ protected:
     RTCPInstance           *fRtcpInstance;
     uint32_t               fSvrAddr;
     time_t                 fLastRtcpSendTime;
-    
+
     uint8_t                *fFrameBuf;
-    int                    fFrameBufPos;
+    uint32_t               fFrameBufPos;
     FrameHandlerFunc       fFrameHandlerFunc;
     void                   *fFrameHandlerFuncData;
 

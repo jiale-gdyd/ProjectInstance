@@ -10,7 +10,7 @@ int AlgoDetector::extract_yolov5s_tensormem_jialelu(std::vector<rknn_tensor_mem>
     std::vector<yolo_layer_t> m_layers = pArgs->yoloAnchors;
 
     if (m_layers.size() == 0) {
-        printf("anchors parameter must be non-empty\n");
+        npu_error("anchors parameter must be non-empty");
         return -1;
     }
 

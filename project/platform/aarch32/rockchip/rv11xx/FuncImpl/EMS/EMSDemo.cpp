@@ -6,6 +6,8 @@ EMSDemoImpl::EMSDemoImpl()
     : mThreadQuit(false),
     mAlgoInitOk(false),
     mUseVdecNotVi(false),
+    pDetector(nullptr),
+    pSimpleServer(nullptr),
     mOriginWidth(1280),
     mOriginHeight(720),
     mOriginChns(3),
@@ -43,8 +45,10 @@ EMSDemoImpl::EMSDemoImpl()
     mPrimaryDispLayers(VO_PLANE_PRIMARY),
     mOverlayDispLayers(VO_PLANE_OVERLAY),
     mVideoVencEnOK(false),
-    mVideoVencChn(DRM_VENC_CHANNEL_00),
-    mVideoVencRgaChn(DRM_RGA_CHANNEL_06),
+    mRtspVencEnOK(false),
+    mRtspVencChn(DRM_VENC_CHANNEL_00),
+    mVideoVencChn(DRM_VENC_CHANNEL_01),
+    mRtspVencRgaChn(DRM_RGA_CHANNEL_06),
     mVideoVencType(DRM_CODEC_TYPE_H264),
     mVideoVencRcMode(VENC_RC_MODE_H264VBR)
 {
@@ -55,7 +59,9 @@ EMSDemoImpl::EMSDemoImpl()
 EMSDemoImpl::~EMSDemoImpl()
 {
     mThreadQuit = true;
+#if defined(CONFIG_XLIB)
     x_main_loop_quit(mMainLoop);
+#endif
 
     if (mVideoVencEnOK) {
         videoEncodeExit();
@@ -88,6 +94,8 @@ int EMSDemoImpl::init()
 {
     int ret = -1;
 
+    rtspClientInit();
+
     if (mEMSConfig.enableThisChannel) {
         ret = mediaInit();
         if (ret) {
@@ -112,10 +120,20 @@ int EMSDemoImpl::init()
     mDrawPostThreadId = std::thread(std::bind(&EMSDemoImpl::drawPostThread, this));
     mInferPostThreadId = std::thread(std::bind(&EMSDemoImpl::inferPostThread, this));
 
+    if (mRtspVencEnOK) {
+        rtspServerInit();
+    }
+
+#if defined(CONFIG_XLIB)
     mMainContex = x_main_context_new();
     mMainLoop = x_main_loop_new(mMainContex, FALSE);
     x_main_loop_run(mMainLoop);
     x_main_loop_unref(mMainLoop);
+#else
+    while (!mThreadQuit) {
+        sleep(10);
+    }
+#endif
 
     return 0;
 }

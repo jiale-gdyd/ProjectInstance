@@ -1407,7 +1407,7 @@ int simple_rtsp_wait_frame_finished(simple_rtsp_handle_t handle)
     }
 
     if (ret == 0) {
-        simple_rtsp_server_warn("select timeout, errstr:[%s]", strerror(errno));
+        // simple_rtsp_server_warn("select timeout, errstr:[%s]", strerror(errno));
         return 0;
     }
 

@@ -15,7 +15,7 @@
  */
 
 #define MODULE_TAG "mpp_info"
-
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -30,12 +30,12 @@ void show_mpp_version(void)
 {
     RK_U32 show_history = 0;
 
-    mpp_env_get_u32("mpp_show_history", &show_history, 0);
+    mpp_env_get_u32("mpp_show_history", &show_history, 1);
 
     if (show_history) {
-        mpp_log("%s\n", mpp_last_commit_message);
+        printf("%s\n", mpp_last_commit_message);
     } else {
-        mpp_log("mpp version: %s\n", mpp_version);
+        printf("mpp version: %s\n", mpp_version);
     }
 }
 

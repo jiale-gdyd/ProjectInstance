@@ -39,7 +39,7 @@ static MediaBuffer alloc_common_memory(size_t size)
         return MediaBuffer();
     }
 
-    DRM_MEDIA_LOGD("func:[%s], ptr:[%p], fd:[%d], handle:[%u], dev_fd:[%d], size:[%u]", __func__, buffer, -1, 0, -1, (unsigned)size);
+    // DRM_MEDIA_LOGD("func:[%s], ptr:[%p], fd:[%d], handle:[%u], dev_fd:[%d], size:[%u]", __func__, buffer, -1, 0, -1, (unsigned)size);
     return MediaBuffer(buffer, size, -1, 0, -1, buffer, free_common_memory);
 }
 
@@ -256,7 +256,7 @@ static MediaBuffer alloc_drm_memory(size_t size, unsigned int flag, bool map = t
             break;
         }
 
-        DRM_MEDIA_LOGD("func:[%s], ptr:[%p], fd:[%d], handle:[%u], dev_fd:[%d], size:[%u]", __func__, db->map_ptr, db->fd, db->handle, db->dev_fd, (unsigned)size);
+        // DRM_MEDIA_LOGD("func:[%s], ptr:[%p], fd:[%d], handle:[%u], dev_fd:[%d], size:[%u]", __func__, db->map_ptr, db->fd, db->handle, db->dev_fd, (unsigned)size);
         return MediaBuffer(db->map_ptr, db->len, db->fd, db->handle, db->dev_fd, db, free_drm_memory);
     } while (false);
 

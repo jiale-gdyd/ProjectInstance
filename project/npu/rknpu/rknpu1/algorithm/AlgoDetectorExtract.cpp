@@ -17,7 +17,7 @@ int AlgoDetector::extract(std::map<int, std::vector<bbox>> &lastResults, std::ve
     } else if (mAlgoAuthor == AUTHOR_JIALELU) {
         ret = extract_jialelu(lastResults, filterClass);
     } else {
-        printf("author:[%d] algorithm not support now", mAlgoAuthor);
+        npu_error("author:[%d] algorithm not support now", mAlgoAuthor);
         return -1;
     }
 

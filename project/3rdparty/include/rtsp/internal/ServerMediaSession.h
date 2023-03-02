@@ -5,8 +5,8 @@
 #include "ClientSocket.h"
 
 namespace rtsp {
-#define STREAM_INFO             "LJLMediaPlayer"
-#define STREAM_DESCRIPTION      "Session streamed by \"LJLMediaPlayer\""
+#define STREAM_INFO             "jiale-gdyd"
+#define STREAM_DESCRIPTION      "Session streamed by \"jiale-gdyd\""
 
 typedef enum {
     STREAM_STATE_STOPPED = 0,
