@@ -30,6 +30,7 @@ enum {
 
 /* 算法作者 */
 enum {
+    AUTHOR_AXERA,                   // 爱芯元智
     AUTHOR_JIALELU,                 // jialelu
     AUTHOR_ROCKCHIP,                // 瑞星微提供
 };

@@ -10,7 +10,7 @@ int AlgoDetector::extract_yolox_tiny_face_non_tensormem_jialelu(rknn_output *out
     std::vector<yolo_layer_t> m_layers = pArgs->yoloAnchors;
 
     if (m_layers.size() == 0) {
-        npu_error("anchors parameter must be non-empty");
+        rknpu_error("anchors parameter must be non-empty");
         return -1;
     }
 
@@ -93,7 +93,7 @@ int AlgoDetector::extract_yolox_nano_face_one_anchor_non_tensormem_jialelu(rknn_
     std::vector<yolo_layer_t> m_layers = pArgs->yoloAnchors;
 
     if (m_layers.size() == 0) {
-        npu_error("anchors parameter must be non-empty");
+        rknpu_error("anchors parameter must be non-empty");
         return -1;
     }
 
@@ -176,7 +176,7 @@ int AlgoDetector::extract_yolox_nano_face_one_anchor_tiny_non_tensormem_jialelu(
     std::vector<yolo_layer_t> m_layers = pArgs->yoloAnchors;
 
     if (m_layers.size() == 0) {
-        npu_error("anchors parameter must be non-empty");
+        rknpu_error("anchors parameter must be non-empty");
         return -1;
     }
 

@@ -3,8 +3,8 @@
 #include <unistd.h>
 
 #define __ROCKCHIP_MEDIABASE_HPP_INSIDE__
+#include "rkmpi.h"
 #include "mediaRga.hpp"
-#include "../private.h"
 #undef __ROCKCHIP_MEDIABASE_HPP_INSIDE__
 
 API_BEGIN_NAMESPACE(media)
@@ -26,7 +26,7 @@ MediaRga::~MediaRga()
 bool MediaRga::rgaChnStart(int rgaChn)
 {
     if ((rgaChn < DRM_RGA_CHANNEL_00) || (rgaChn >= DRM_RGA_CHANNEL_BUTT)) {
-        mpi_error("invalid rga channel:[%d]", rgaChn);
+        rkmpi_error("invalid rga channel:[%d]", rgaChn);
         return false;
     }
 
@@ -55,12 +55,12 @@ int MediaRga::destroyRgaChn(int rgaChn)
 int MediaRga::createRgaChn(int rgaChn, int bufPoolCnt, int bufDepth, drm_image_type_e enInPixFmt, drm_image_type_e enOutPixFmt, int rotation, drm_rga_flip_e enFlip, bool bWH2HW, size_t inWidth, size_t inHeight, size_t inXoffset, size_t inYoffset, size_t outWidth, size_t outHeight, size_t outXoffset, size_t outYoffset)
 {
     if ((rgaChn < DRM_RGA_CHANNEL_00) || (rgaChn >= DRM_RGA_CHANNEL_BUTT)) {
-        mpi_error("invalid rga channel:[%d]", rgaChn);
+        rkmpi_error("invalid rga channel:[%d]", rgaChn);
         return -1;
     }
 
     if (mRgaChnStarted[rgaChn] == true) {
-        mpi_error("rga channel:[%d] had started", rgaChn);
+        rkmpi_error("rga channel:[%d] had started", rgaChn);
         return 0;
     }
 
@@ -89,13 +89,13 @@ int MediaRga::createRgaChn(int rgaChn, int bufPoolCnt, int bufDepth, drm_image_t
 
     ret = drm_mpi_rga_create_channel(rgaChn, &stRgaAttr);
     if (ret) {
-        mpi_error("create rga channel:[%d] failed, return:[%d]", rgaChn, ret);
+        rkmpi_error("create rga channel:[%d] failed, return:[%d]", rgaChn, ret);
         return ret;
     }
 
     ret = drm_mpi_system_set_media_buffer_depth(MOD_ID_RGA, rgaChn, bufDepth);
     if (ret) {
-        mpi_error("rga channel:[%d] set buff depth failed, return:[%d]", rgaChn, ret);
+        rkmpi_error("rga channel:[%d] set buff depth failed, return:[%d]", rgaChn, ret);
     }
 
     mRgaChnStarted[rgaChn] = true;
@@ -105,7 +105,7 @@ int MediaRga::createRgaChn(int rgaChn, int bufPoolCnt, int bufDepth, drm_image_t
 int MediaRga::setRgaChnFrameRate(int rgaChn, int fpsInNum, int fpsInDen, int fpsOutNum, int fpsOutDen)
 {
     if ((rgaChn < DRM_RGA_CHANNEL_00) || (rgaChn >= DRM_RGA_CHANNEL_BUTT)) {
-        mpi_error("invalid rga channel:[%d]", rgaChn);
+        rkmpi_error("invalid rga channel:[%d]", rgaChn);
         return -1;
     }
 
@@ -122,7 +122,7 @@ int MediaRga::setRgaChnFrameRate(int rgaChn, int fpsInNum, int fpsInDen, int fps
 int MediaRga::getRgaChnAttr(int rgaChn, drm_rga_attr_t *pstRgaAttr)
 {
     if ((rgaChn < DRM_RGA_CHANNEL_00) || (rgaChn >= DRM_RGA_CHANNEL_BUTT)) {
-        mpi_error("invalid rga channel:[%d]", rgaChn);
+        rkmpi_error("invalid rga channel:[%d]", rgaChn);
         return -1;
     }
 
@@ -133,7 +133,7 @@ int MediaRga::getRgaChnAttr(int rgaChn, drm_rga_attr_t *pstRgaAttr)
 int MediaRga::setRgnChnAttr(int rgaChn, int rotation, drm_rga_flip_e enFlip, bool bWH2HW, size_t inWidth, size_t inHeight, size_t inXoffset, size_t inYoffset, size_t outWidth, size_t outHeight, size_t outXoffset, size_t outYoffset)
 {
     if ((rgaChn < DRM_RGA_CHANNEL_00) || (rgaChn >= DRM_RGA_CHANNEL_BUTT)) {
-        mpi_error("invalid rga channel:[%d]", rgaChn);
+        rkmpi_error("invalid rga channel:[%d]", rgaChn);
         return -1;
     }
 

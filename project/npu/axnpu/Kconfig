@@ -1,0 +1,14 @@
+#
+# AXERA NPU Kconfig
+# 
+
+menu "AXERA NPU"
+
+config AXNPU
+    bool "Axera NPU"
+    depends on AXERA
+    default n
+    help
+      Axera NPU
+
+endmenu

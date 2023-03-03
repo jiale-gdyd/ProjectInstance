@@ -1,5 +1,5 @@
 #define __AXERA_MEDIABASE_HPP_INSIDE__
-#include "private.h"
+#include "axmpi.h"
 #include "mediaVo.hpp"
 #undef __AXERA_MEDIABASE_HPP_INSIDE__
 

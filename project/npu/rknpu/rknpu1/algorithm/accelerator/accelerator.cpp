@@ -5,9 +5,9 @@
 #include <arm_neon.h>
 #endif
 #include <sys/mman.h>
-#include <npu/private.h>
 #include <libdrm/xf86drm.h>
 #include <libdrm/drm_mode.h>
+#include <npu/rknpu/rknpu.h>
 #include <rockchip/rkrga/drmrga.h>
 #include <rockchip/rkrga/RgaApi.h>
 
@@ -55,7 +55,7 @@ int Accelerator::imageResize(uint64_t dstPhyAddr)
         return rga_image_resize_fast(dstPhyAddr);
     }
 
-    npu_error("mInitFin:[%s], dstPhyAddr:[0x%llX]", mInitFin ? "true" : "false", dstPhyAddr);
+    rknpu_error("mInitFin:[%s], dstPhyAddr:[0x%llX]", mInitFin ? "true" : "false", dstPhyAddr);
     return -1;
 }
 
@@ -73,7 +73,7 @@ int Accelerator::imageResizeEx(void *imageData, void *dstVirAddr)
         return rga_image_resize_slow(dstVirAddr);
     }
 
-    npu_error("mInitFin:[%s], imageData == nullptr:[%s], dstVirAddr == nullptr:[%s]", mInitFin ? "true" : "false", imageData == nullptr ? "true" : "false", dstVirAddr == nullptr ? "true" : "false");
+    rknpu_error("mInitFin:[%s], imageData == nullptr:[%s], dstVirAddr == nullptr:[%s]", mInitFin ? "true" : "false", imageData == nullptr ? "true" : "false", dstVirAddr == nullptr ? "true" : "false");
     return -1;
 }
 
@@ -83,7 +83,7 @@ int Accelerator::imageResize(void *imageData, int dstAddrFd)
         return rga_image_resize(imageData, dstAddrFd, NULL);
     }
 
-    npu_error("mInitFin:[%s], dstAddrFd:[%d], imageData == nullptr:[%s]", mInitFin ? "true" : "false", dstAddrFd, imageData == nullptr ? "true" : "false");
+    rknpu_error("mInitFin:[%s], dstAddrFd:[%d], imageData == nullptr:[%s]", mInitFin ? "true" : "false", dstAddrFd, imageData == nullptr ? "true" : "false");
     return -1;
 }
 
@@ -93,7 +93,7 @@ int Accelerator::imageResize(void *imageData, void *dstVirAddr)
         return rga_image_resize(imageData, -1, dstVirAddr);
     }
 
-    npu_error("mInitFin:[%s], dstVirAddr == nullptr:[%s], imageData == nullptr:[%s]", mInitFin ? "true" : "false", dstVirAddr == nullptr ? "true" : "false", imageData == nullptr ? "true" : "false");
+    rknpu_error("mInitFin:[%s], dstVirAddr == nullptr:[%s], imageData == nullptr:[%s]", mInitFin ? "true" : "false", dstVirAddr == nullptr ? "true" : "false", imageData == nullptr ? "true" : "false");
     return -1;
 }
 
@@ -117,7 +117,7 @@ int Accelerator::imageResize(int src_fd, int src_w, int src_h, int src_fmt, int 
 
     int ret = c_RkRgaBlit(&src, &dst, nullptr);
     if (ret) {
-        npu_error("c_RkRgaBlit error:[%s]", strerror(errno));
+        rknpu_error("c_RkRgaBlit error:[%s]", strerror(errno));
         return -1;
     }
 
@@ -144,7 +144,7 @@ int Accelerator::imageResize(int src_fd, int src_w, int src_h, int src_fmt, void
 
     int ret = c_RkRgaBlit(&src, &dst, nullptr);
     if (ret) {
-        npu_error("c_RkRgaBlit error:[%s]", strerror(errno));
+        rknpu_error("c_RkRgaBlit error:[%s]", strerror(errno));
         return -1;
     }
 
@@ -171,7 +171,7 @@ int Accelerator::imageResize(void *src_buf, int src_w, int src_h, int src_fmt, i
 
     int ret = c_RkRgaBlit(&src, &dst, nullptr);
     if (ret) {
-        npu_error("c_RkRgaBlit error:[%s]", strerror(errno));
+        rknpu_error("c_RkRgaBlit error:[%s]", strerror(errno));
         return -1;
     }
 
@@ -198,7 +198,7 @@ int Accelerator::imageResize(void *src_buf, int src_w, int src_h, int src_fmt, v
 
     int ret = c_RkRgaBlit(&src, &dst, nullptr);
     if (ret) {
-        npu_error("c_RkRgaBlit error:[%s]", strerror(errno));
+        rknpu_error("c_RkRgaBlit error:[%s]", strerror(errno));
         return -1;
     }
 
@@ -216,7 +216,7 @@ int Accelerator::releaseTensorMemory(std::vector<rknn_tensor_mem> &mem)
         return ret;
     }
 
-    npu_error("mInitFin:[%s]", mInitFin ? "true" : "false");
+    rknpu_error("mInitFin:[%s]", mInitFin ? "true" : "false");
     return -1;
 }
 
@@ -227,7 +227,7 @@ int Accelerator::createTensorMemory(std::vector<rknn_tensor_mem> &mem, std::vect
             size_t size = bFloat ? attr[i].size * sizeof(float) : attr[i].size * sizeof(uint8_t);
             int ret = create_tensor_memory(&mem[i], size, i, tag);
             if (ret != 0) {
-                npu_error("rknn_create_memory:[%s - %d] failed, return:[%d]", tag, (int)i, ret);
+                rknpu_error("rknn_create_memory:[%s - %d] failed, return:[%d]", tag, (int)i, ret);
                 return -1;
             }
         }
@@ -235,7 +235,7 @@ int Accelerator::createTensorMemory(std::vector<rknn_tensor_mem> &mem, std::vect
         return 0;
     }
 
-    npu_error("mInitFin:[%s]", mInitFin ? "true" : "false");
+    rknpu_error("mInitFin:[%s]", mInitFin ? "true" : "false");
     return -1;
 }
 
@@ -267,7 +267,7 @@ int Accelerator::create_tensor_memory(rknn_tensor_mem *mem, size_t size, size_t 
     }
 
     mem->logical_addr = drm_buffer_alloc(width, height, channel * mBpp, &mem->fd, &mem->handle, (size_t *)&mem->size);
-    npu_info("[%s memory] index:[%d], logical_addr:[%p], physical_addr:[0x%llX], fd:[%d], handle:[%u], want:[%7d] bytes, try:[%7d] bytes, actual:[%7d] bytes",
+    rknpu_info("[%s memory] index:[%d], logical_addr:[%p], physical_addr:[0x%llX], fd:[%d], handle:[%u], want:[%7d] bytes, try:[%7d] bytes, actual:[%7d] bytes",
         tag, (int)index, mem->logical_addr, mem->physical_addr, mem->fd, mem->handle, size, width * height * channel, mem->size);
 
     return 0;
@@ -290,7 +290,7 @@ void *Accelerator::drm_buffer_alloc(int TexWidth, int TexHeight, int bpp, int *f
     // 获取handle和size
     int ret = drmIoctl(mDrmFd, DRM_IOCTL_MODE_CREATE_DUMB, &alloc_arg);
     if (ret) {
-        npu_error("failed to create dumb buffer:[%s]", strerror(errno));
+        rknpu_error("failed to create dumb buffer:[%s]", strerror(errno));
         return nullptr;
     }
 
@@ -309,7 +309,7 @@ void *Accelerator::drm_buffer_alloc(int TexWidth, int TexHeight, int bpp, int *f
     fd_args.flags = 0;
     ret = drmIoctl(mDrmFd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &fd_args);
     if (ret) {
-        npu_error("drmIoctl failed return:[%d], errstr:[%s], handle:[0x%X]", ret, strerror(errno), fd_args.handle);
+        rknpu_error("drmIoctl failed return:[%d], errstr:[%s], handle:[0x%X]", ret, strerror(errno), fd_args.handle);
         return nullptr;
     }
 
@@ -323,14 +323,14 @@ void *Accelerator::drm_buffer_alloc(int TexWidth, int TexHeight, int bpp, int *f
 
     ret = drmIoctl(mDrmFd, DRM_IOCTL_MODE_MAP_DUMB, &mmap_arg);
     if (ret) {
-        npu_error("failed to create map dumb:[%s]", strerror(errno));
+        rknpu_error("failed to create map dumb:[%s]", strerror(errno));
         vir_addr = nullptr;
         goto destory_dumb;
     }
 
     vir_addr = mmap(0, alloc_arg.size, PROT_READ | PROT_WRITE, MAP_SHARED, mDrmFd, mmap_arg.offset);
     if (vir_addr == MAP_FAILED) {
-        npu_error("failed to mmap buffer:[%s]", strerror(errno));
+        rknpu_error("failed to mmap buffer:[%s]", strerror(errno));
         goto destory_dumb;
     }
 
@@ -341,7 +341,7 @@ destory_dumb:
     destory_arg.handle = alloc_arg.handle;
     ret = drmIoctl(mDrmFd, DRM_IOCTL_MODE_DESTROY_DUMB, &destory_arg);
     if (ret) {
-        npu_error("failed to destory dumb:[%d]", ret);
+        rknpu_error("failed to destory dumb:[%d]", ret);
     }
 
     return nullptr;
@@ -350,7 +350,7 @@ destory_dumb:
 int Accelerator::drm_buffer_release(int buf_fd, int handle, void *drm_buf, size_t size)
 {
     if (drm_buf == nullptr) {
-        npu_error("drm buffer is nullptr");
+        rknpu_error("drm buffer is nullptr");
         return -1;
     }
 
@@ -362,7 +362,7 @@ int Accelerator::drm_buffer_release(int buf_fd, int handle, void *drm_buf, size_
 
     int ret = drmIoctl(mDrmFd, DRM_IOCTL_MODE_DESTROY_DUMB, &destory_arg);
     if (ret) {
-        npu_error("failed to destory dumb:[%d], error:[%s]", ret, strerror(errno));
+        rknpu_error("failed to destory dumb:[%d], error:[%s]", ret, strerror(errno));
     }
 
     if (buf_fd > 0) {
@@ -394,7 +394,7 @@ int Accelerator::rga_image_resize_slow(void *dstVirAddr)
 
     ret = c_RkRgaBlit(&src, &dst, NULL);
     if (ret) {
-        npu_error("c_RkRgaBlit error:[%s]", strerror(errno));
+        rknpu_error("c_RkRgaBlit error:[%s]", strerror(errno));
         return -1;
     }
 
@@ -428,7 +428,7 @@ int Accelerator::rga_image_resize_fast(uint64_t dstPhyAddr)
 
     ret = c_RkRgaBlit(&src, &dst, NULL);
     if (ret) {
-        npu_error("c_RkRgaBlit error:[%s]", strerror(errno));
+        rknpu_error("c_RkRgaBlit error:[%s]", strerror(errno));
         return -1;
     }
 
@@ -462,7 +462,7 @@ int Accelerator::rga_image_resize(void *imageData, int dstFd, void *dstVirAddr)
 
     ret = c_RkRgaBlit(&src, &dst, NULL);
     if (ret) {
-        npu_error("c_RkRgaBlit error:[%s]", strerror(errno));
+        rknpu_error("c_RkRgaBlit error:[%s]", strerror(errno));
         return -1;
     }
 

@@ -2,7 +2,7 @@
 #include <string.h>
 
 #define __ROCKCHIP_MEDIABASE_HPP_INSIDE__
-#include "../private.h"
+#include "rkmpi.h"
 #include "mediaVmix.hpp"
 #undef __ROCKCHIP_MEDIABASE_HPP_INSIDE__
 
@@ -71,12 +71,12 @@ bool MediaVmix::vmixChnStart(int vmixDev, int vmixChn)
 int MediaVmix::createVmixChn(int vmixDev, size_t mixOutFps, size_t mixOutWidth, size_t mixOutHeight, bool bEnableBufPool, size_t bufPoolCnt, drm_image_type_e inImgType, std::vector<vmix_chn_info_t> inInfo, std::vector<vmix_chn_info_t> outInfo, bool bDrawLine, std::vector<vmix_line_info_t> lineInfo)
 {
     if ((vmixDev < DRM_VMIX_DEVICE_00) || (vmixDev >= DRM_VMIX_DEVICE_BUTT)) {
-        mpi_error("invalid vmix device:[%d]", vmixDev);
+        rkmpi_error("invalid vmix device:[%d]", vmixDev);
         return -1;
     }
 
     if ((inInfo.size() != outInfo.size()) || (inInfo.size() == 0) || (outInfo.size() == 0)) {
-        mpi_error("invalid input parameter, inInfo.size:[%u] != outInfo.size:[%u]", inInfo.size(), outInfo.size());
+        rkmpi_error("invalid input parameter, inInfo.size:[%u] != outInfo.size:[%u]", inInfo.size(), outInfo.size());
         return -1;
     }
 
@@ -111,7 +111,7 @@ int MediaVmix::createVmixChn(int vmixDev, size_t mixOutFps, size_t mixOutWidth, 
 
     int ret = drm_mpi_vmix_create_device(vmixDev, &stDevInfo);
     if (ret) {
-        mpi_error("create vmix device:[%d] failed, return:[%d]", vmixDev, ret);
+        rkmpi_error("create vmix device:[%d] failed, return:[%d]", vmixDev, ret);
         return -1;
     }
 
@@ -119,7 +119,7 @@ int MediaVmix::createVmixChn(int vmixDev, size_t mixOutFps, size_t mixOutWidth, 
     for (size_t idx = 0; idx < u16ChnCnt; ++idx) {
         ret = drm_mpi_vmix_enable_channel(vmixDev, idx);
         if (ret) {
-            mpi_error("enable vmix device:[%d] channel:[%u] failed, return:[%d]", vmixDev, idx, ret);
+            rkmpi_error("enable vmix device:[%d] channel:[%u] failed, return:[%d]", vmixDev, idx, ret);
             continue;
         }
 
@@ -144,13 +144,13 @@ int MediaVmix::createVmixChn(int vmixDev, size_t mixOutFps, size_t mixOutWidth, 
 
         ret = drm_mpi_vmix_set_layout_line(vmixDev, stDevInfo.u16ChnCnt - 1, &stVmLine);
         if (ret) {
-            mpi_error("set vmix device:[%d] line info failed, diable area line, return:[%d]", vmixDev, ret);
+            rkmpi_error("set vmix device:[%d] line info failed, diable area line, return:[%d]", vmixDev, ret);
         }
     }
 
     ret = (enableChnCnt > 0 ? 0 : -1);
     if (ret != 0) {
-        mpi_error("enable vmix device:[%d] failed, enableChnCnt:[%d], return:[%d]", vmixDev, enableChnCnt, ret);
+        rkmpi_error("enable vmix device:[%d] failed, enableChnCnt:[%d], return:[%d]", vmixDev, enableChnCnt, ret);
     }
 
     return ret;

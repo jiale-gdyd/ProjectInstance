@@ -4,8 +4,8 @@
 #include <unistd.h>
 
 #define __ROCKCHIP_MEDIABASE_HPP_INSIDE__
+#include "rkmpi.h"
 #include "mediaVo.hpp"
-#include "../private.h"
 #undef __ROCKCHIP_MEDIABASE_HPP_INSIDE__
 
 API_BEGIN_NAMESPACE(media)
@@ -136,7 +136,7 @@ int MediaVo::releaseFrame(media_buffer_t pstFrameInfo)
 bool MediaVo::voChnStart(int voChn)
 {
     if ((voChn < DRM_VO_CHANNEL_00) || (voChn >= DRM_VO_CHANNEL_BUTT)) {
-        mpi_error("invalid vo channel:[%d]", voChn);
+        rkmpi_error("invalid vo channel:[%d]", voChn);
         return false;
     }
 
@@ -146,7 +146,7 @@ bool MediaVo::voChnStart(int voChn)
 int MediaVo::destroyVoChn(int voChn)
 {
     if ((voChn < DRM_VO_CHANNEL_00) || (voChn >= DRM_VO_CHANNEL_BUTT)) {
-        mpi_error("invalid vo channel:[%d]", voChn);
+        rkmpi_error("invalid vo channel:[%d]", voChn);
         return -1;
     }
 
@@ -166,12 +166,12 @@ int MediaVo::destroyVoChn(int voChn)
 int MediaVo::createVoChn(int voChn, int zPOS, drm_plane_type_e enDispLayer, size_t dispWidth, size_t dispHeight, size_t dispXoffset, size_t dispYoffset, bool bWH2HW, drm_image_type_e enPixFmt, const char *dispCard)
 {
     if ((voChn < DRM_VO_CHANNEL_00) || (voChn >= DRM_VO_CHANNEL_BUTT)) {
-        mpi_error("invalid vo channel:[%d]", voChn);
+        rkmpi_error("invalid vo channel:[%d]", voChn);
         return -1;
     }
 
     if (mVoChnStarted[voChn] == true) {
-        mpi_error("vo channel:[%d] had started", voChn);
+        rkmpi_error("vo channel:[%d] had started", voChn);
         return 0;
     }
 
@@ -194,7 +194,7 @@ int MediaVo::createVoChn(int voChn, int zPOS, drm_plane_type_e enDispLayer, size
 
     ret = drm_mpi_vo_create_channel(voChn, (const drm_vo_chn_attr_t *)&stVoAttr);
     if (ret) {
-        mpi_error("create vo channel:[%d] failed, return:[%d]", voChn, ret);
+        rkmpi_error("create vo channel:[%d] failed, return:[%d]", voChn, ret);
         return ret;
     }
 
@@ -245,27 +245,27 @@ int MediaVo::cropZoomVoChn(int voChn, int cropRgaChn, int zoomRgaChn, media_buff
         || ((zoomRgaChn < DRM_RGA_CHANNEL_00) || (zoomRgaChn >= DRM_RGA_CHANNEL_BUTT)))
         || !mediaFrame)
     {
-        mpi_error("invalid input parameter");
+        rkmpi_error("invalid input parameter");
         return -1;
     }
 
     int ret = sendFrame(cropRgaChn, mediaFrame, MOD_ID_RGA);
     if (ret) {
-        mpi_error("send mediaFrame to rga chn:[%d] failed, return:[%d]", cropRgaChn, ret);
+        rkmpi_error("send mediaFrame to rga chn:[%d] failed, return:[%d]", cropRgaChn, ret);
         return ret;
     }
 
     usleep(waitConvUs);
     media_buffer_t mediaBuffer = getFrame(cropRgaChn, s32MilliSec, MOD_ID_RGA);
     if (mediaBuffer == NULL) {
-        mpi_error("get mediaFrame from rga chn:[%d] failed, return NULL", cropRgaChn);
+        rkmpi_error("get mediaFrame from rga chn:[%d] failed, return NULL", cropRgaChn);
         return -1;
     }
 
     ret = sendFrame(zoomRgaChn, mediaBuffer, MOD_ID_RGA);
     if (ret) {
         releaseFrame(mediaBuffer);
-        mpi_error("send mediaFrame to rga chn:[%d] failed, return:[%d]", zoomRgaChn, ret);
+        rkmpi_error("send mediaFrame to rga chn:[%d] failed, return:[%d]", zoomRgaChn, ret);
 
         return ret;
     }
@@ -277,7 +277,7 @@ int MediaVo::cropZoomVoChn(int voChn, int cropRgaChn, int zoomRgaChn, media_buff
 
     mediaBuffer = getFrame(zoomRgaChn, s32MilliSec, MOD_ID_RGA);
     if (mediaBuffer == NULL) {
-        mpi_error("get mediaFrame from rga chn:[%d] failed, return NULL", zoomRgaChn);
+        rkmpi_error("get mediaFrame from rga chn:[%d] failed, return NULL", zoomRgaChn);
         return -2;
     }
 
@@ -294,7 +294,7 @@ int MediaVo::sendZoomVoChnWithBind(media_buffer_t mediaFrame, int voChn, int cro
         || ((zoomRgaChn < DRM_RGA_CHANNEL_00) || (zoomRgaChn >= DRM_RGA_CHANNEL_BUTT)))
         || !mediaFrame)
     {
-        mpi_error("invalid input parameter");
+        rkmpi_error("invalid input parameter");
         return -1;
     }
 
@@ -318,7 +318,7 @@ int MediaVo::sendZoomVoChnWithBind(media_buffer_t mediaFrame, int voChn, int cro
         stDstChn.s32DevId = 0;
         ret = drm_mpi_system_bind((const drm_chn_t *)&stSrcChn, (const drm_chn_t *)&stDstChn);
         if (ret < 0) {
-            mpi_error("bind rga chn:[%d] and rga chn:[%d] failed, return:[%d]", cropRgaChn, zoomRgaChn, ret);
+            rkmpi_error("bind rga chn:[%d] and rga chn:[%d] failed, return:[%d]", cropRgaChn, zoomRgaChn, ret);
             return ret;
         }
     }
@@ -333,7 +333,7 @@ int MediaVo::sendZoomVoChnWithBind(media_buffer_t mediaFrame, int voChn, int cro
         stDstChn.s32DevId = 0;
         ret = drm_mpi_system_bind((const drm_chn_t *)&stSrcChn, (const drm_chn_t *)&stDstChn);
         if (ret < 0) {
-            mpi_error("bind rga chn:[%d] and vo chn:[%d] failed, return:[%d]", zoomRgaChn, voChn, ret);
+            rkmpi_error("bind rga chn:[%d] and vo chn:[%d] failed, return:[%d]", zoomRgaChn, voChn, ret);
             return ret;
         }
     }
@@ -351,7 +351,7 @@ int MediaVo::sendZoomRgaVmixVoChnWithBind(media_buffer_t mediaFrame, int vmixDev
         || ((vmixChn < DRM_VMIX_CHANNEL_00) || (vmixChn >= DRM_VMIX_CHANNEL_BUTT))
         || !mediaFrame)
     {
-        mpi_error("invalid input parameter");
+        rkmpi_error("invalid input parameter");
         return -1;
     }
 
@@ -376,7 +376,7 @@ int MediaVo::sendZoomRgaVmixVoChnWithBind(media_buffer_t mediaFrame, int vmixDev
         stDstChn.s32DevId = 0;
         ret = drm_mpi_system_bind((const drm_chn_t *)&stSrcChn, (const drm_chn_t *)&stDstChn);
         if (ret < 0) {
-            mpi_error("bind vmix dev:[%d] chn:[%d] to vo chn:[%d] failed, return:[%d]", 0, vmixChn, voChn, ret);
+            rkmpi_error("bind vmix dev:[%d] chn:[%d] to vo chn:[%d] failed, return:[%d]", 0, vmixChn, voChn, ret);
             return ret;
         }
     }
@@ -392,7 +392,7 @@ int MediaVo::sendZoomRgaVmixVoChnWithBind(media_buffer_t mediaFrame, int vmixDev
         stDstChn.s32DevId = vmixDev;
         ret = drm_mpi_system_bind((const drm_chn_t *)&stSrcChn, (const drm_chn_t *)&stDstChn);
         if (ret < 0) {
-            mpi_error("bind rga chn:[%d] to vmix dev:[%d] chn:[%d] failed, return:[%d]", zoomRgaChn, 0, vmixChn, ret);
+            rkmpi_error("bind rga chn:[%d] to vmix dev:[%d] chn:[%d] failed, return:[%d]", zoomRgaChn, 0, vmixChn, ret);
             return ret;
         }
     }
@@ -408,7 +408,7 @@ int MediaVo::sendZoomRgaVmixVoChnWithBind(media_buffer_t mediaFrame, int vmixDev
         stDstChn.s32DevId = 0;
         ret = drm_mpi_system_bind((const drm_chn_t *)&stSrcChn, (const drm_chn_t *)&stDstChn);
         if (ret < 0) {
-            mpi_error("bind rga chn:[%d] to rga chn:[%d] failed, return:[%d]", cropRgaChn, zoomRgaChn, ret);
+            rkmpi_error("bind rga chn:[%d] to rga chn:[%d] failed, return:[%d]", cropRgaChn, zoomRgaChn, ret);
             return ret;
         }
     }

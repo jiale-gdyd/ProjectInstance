@@ -5,7 +5,7 @@
 #include <numeric>
 #include <algorithm>
 
-#include <npu/private.h>
+#include <npu/rknpu/rknpu.h>
 #include <opencv2/opencv.hpp>
 
 #include "private.hpp"

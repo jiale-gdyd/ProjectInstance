@@ -31,7 +31,7 @@ function ax620a_media_ems()
 
     export SOC=ax620a
     export Platform=axera
-    export APP_NAME=GstAiApp
+    export APP_NAME=Ax620aEMSApp
     export USE_STDCPP_VERSION=-std=gnu++17
     generate_gitcommit
 

@@ -2,7 +2,7 @@
 #include <unistd.h>
 
 #define __ROCKCHIP_MEDIABASE_HPP_INSIDE__
-#include "../private.h"
+#include "rkmpi.h"
 #include "mediaRegion.hpp"
 #undef __ROCKCHIP_MEDIABASE_HPP_INSIDE__
 
@@ -44,7 +44,7 @@ int MediaRegion::registerFontLibraries(std::unordered_map<int, std::string> font
 void MediaRegion::initMediaFrame(media_buffer_t &mediaFrame, size_t width, size_t height, uint8_t channels)
 {
     if (!mInitFin || !mediaFrame || (width == 0) || (height == 0) || ((channels != 1) && (channels != 2) && (channels != 3))) {
-        mpi_error("font library not initialized or invalid parameters");
+        rkmpi_error("font library not initialized or invalid parameters");
         return;
     }
 

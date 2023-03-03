@@ -2,9 +2,8 @@
 #define ALGORITHM_SORT_KALMANTRACKER_HPP
 
 #include <utils/export.h>
+#include <npu/AiStruct.hpp>
 #include <opencv2/video/tracking.hpp>
-
-#include "../AiStruct.hpp"
 
 #define StateType   cv::Rect_<float>
 

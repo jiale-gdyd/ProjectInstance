@@ -6,8 +6,8 @@
 #include <algorithm>
 
 #include <stdbool.h>
-#include <npu/private.h>
 #include <utils/export.h>
+#include <npu/rknpu/rknpu.h>
 #include <opencv2/opencv.hpp>
 #include <rknn/rknn_runtime.h>
 

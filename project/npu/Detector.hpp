@@ -2,6 +2,7 @@
 #define AARCH32_ROCKCHIP_RKNPU_DETECTOR_HPP
 
 #include <vector>
+#include <memory>
 #include <stdbool.h>
 #include "AiStruct.hpp"
 
@@ -32,12 +33,12 @@ public:
      * 输出参数: 无
      * 返回说明: 成功返回0，其他则失败
      */
-    int init(std::string modelFile, size_t imageWidth, size_t imageHeight, size_t classCount, float confThreshold, float nmsThreshold, int algoType = YOLOV5S, int algoAuthor = AUTHOR_ROCKCHIP);
+    int init(std::string modelFile, size_t imageWidth, size_t imageHeight, size_t classCount, float confThreshold, float nmsThreshold, int algoType = YOLOV5S, int algoAuthor = AUTHOR_JIALELU);
 
     /**
      * 函数名称: forward
      * 功能描述: 仅将图像送入算法进行推理，不获取推理输出数据
-     * 输入参数: mediaFrame --> 原始多媒体数据帧(RGB888)
+     * 输入参数: mediaFrame --> 原始多媒体数据帧
      * 输出参数: 无
      * 返回说明: 成功返回0，其他则失败
      */
@@ -46,7 +47,7 @@ public:
     /**
      * 函数名称: forward
      * 功能描述: 将图像送入算法进行推理，同时获取推理处理后的检测目标框集
-     * 输入参数: mediaFrame --> 原始多媒体数据帧(RGB888)
+     * 输入参数: mediaFrame --> 原始多媒体数据帧
      * 输出参数: lastResult --> 推理后处理完后的检测目标框集
      * 返回说明: 成功返回0，其他则失败
      */
@@ -55,7 +56,7 @@ public:
     /**
      * 函数名称: forward
      * 功能描述: 将图像送入算法进行推理，同时获取推理后处理完以及过滤设定分类后的检测目标框集
-     * 输入参数: mediaFrame  --> 原始多媒体数据帧(RGB888)
+     * 输入参数: mediaFrame  --> 原始多媒体数据帧
      *          filterClass --> 需要过滤的分类类别号
      * 输出参数: lastResult  --> 推理后处理完以及过滤设定分类后的检测目标框集
      * 返回说明: 成功返回0，其他则失败

@@ -4,9 +4,8 @@
 #include <map>
 #include <vector>
 #include <functional>
+#include <npu/AiStruct.hpp>
 #include <rknn/rknn_runtime.h>
-
-#include "../AiStruct.hpp"
 
 API_BEGIN_NAMESPACE(Ai)
 

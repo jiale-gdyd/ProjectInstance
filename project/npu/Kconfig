@@ -4,6 +4,7 @@
 
 menu "Algorithm NPU"
 
+source "project/npu/axnpu/Kconfig"
 source "project/npu/rknpu/Kconfig"
 
 endmenu

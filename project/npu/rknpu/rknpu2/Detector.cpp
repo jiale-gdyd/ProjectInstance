@@ -1,5 +1,5 @@
-#include "../Detector.hpp"
-#include "../../tracker/ObjectTracker.hpp"
+#include <npu/Detector.hpp>
+#include <npu/tracker/ObjectTracker.hpp>
 
 API_BEGIN_NAMESPACE(Ai)
 

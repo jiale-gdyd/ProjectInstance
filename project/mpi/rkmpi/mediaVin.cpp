@@ -2,8 +2,8 @@
 #include <string.h>
 
 #define __ROCKCHIP_MEDIABASE_HPP_INSIDE__
+#include "rkmpi.h"
 #include "mediaVin.hpp"
-#include "../private.h"
 #undef __ROCKCHIP_MEDIABASE_HPP_INSIDE__
 
 API_BEGIN_NAMESPACE(media)
@@ -25,7 +25,7 @@ MediaVin::~MediaVin()
 bool MediaVin::viChnStarted(int vinChn)
 {
     if ((vinChn < DRM_VI_CHANNEL_00) || (vinChn >= DRM_VI_CHANNEL_BUTT)) {
-        mpi_error("invalid vin channel:[%d]", vinChn);
+        rkmpi_error("invalid vin channel:[%d]", vinChn);
         return false;
     }
 
@@ -55,12 +55,12 @@ int MediaVin::destroyViChn(int vinChn)
 int MediaVin::createViChn(int vinChn, int bufPoolCnt, int bufDepth, const char *devNode, size_t capWidth, size_t capHeight, drm_image_type_e enPixFmt, bool bAllocWithDMA)
 {
     if ((vinChn < DRM_VI_CHANNEL_00) || (vinChn >= DRM_VI_CHANNEL_BUTT)) {
-        mpi_error("invalid vin channel:[%d]", vinChn);
+        rkmpi_error("invalid vin channel:[%d]", vinChn);
         return -1;
     }
 
     if (mViChnStarted[vinChn] == true) {
-        mpi_error("vin channel:[%d] had started", vinChn);
+        rkmpi_error("vin channel:[%d] had started", vinChn);
         return 0;
     }
 
@@ -82,19 +82,19 @@ int MediaVin::createViChn(int vinChn, int bufPoolCnt, int bufDepth, const char *
 
     drm_mpi_vi_set_channel_attribute(vinChn, (const drm_vi_chn_attr_t *)&stViAttr);
     if (ret) {
-        mpi_error("set vin channel:[%d] attribute failed, return:[%d]", vinChn, ret);
+        rkmpi_error("set vin channel:[%d] attribute failed, return:[%d]", vinChn, ret);
         return ret;
     }
 
     ret = drm_mpi_vi_enable_channel(vinChn);
     if (ret) {
-        mpi_error("enable vin channel:[%d] failed, return:[%d]", vinChn, ret);
+        rkmpi_error("enable vin channel:[%d] failed, return:[%d]", vinChn, ret);
         return ret;
     }
 
     ret = drm_mpi_system_set_media_buffer_depth(MOD_ID_VI, vinChn, bufDepth);
     if (ret) {
-        mpi_error("vin channel:[%d] set buff depth failed, return:[%d]", vinChn, ret);
+        rkmpi_error("vin channel:[%d] set buff depth failed, return:[%d]", vinChn, ret);
     }
 
     mViChnStarted[vinChn] = true;
@@ -150,34 +150,34 @@ int MediaVin::startViChnStream(int vinChn)
 int MediaVin::getViChnCaptureStatus(int vinChn)
 {
     if ((vinChn < DRM_VI_CHANNEL_00) || (vinChn >= DRM_VI_CHANNEL_BUTT)) {
-        mpi_error("invalid vin channel:[%d]", vinChn);
+        rkmpi_error("invalid vin channel:[%d]", vinChn);
         return -1;
     }
 
     if (mViChnStarted[vinChn] == false) {
-        mpi_error("vin channel:[%d] not start", vinChn);
+        rkmpi_error("vin channel:[%d] not start", vinChn);
         return -1;
     }
 
-    mpi_error("not supported vin channel:[%d] capture status", vinChn);
+    rkmpi_error("not supported vin channel:[%d] capture status", vinChn);
     return -1;
 }
 
 int MediaVin::getViChnStatus(int vinChn, size_t timeoutS)
 {
     if ((vinChn < DRM_VI_CHANNEL_00) || (vinChn >= DRM_VI_CHANNEL_BUTT)) {
-        mpi_error("invalid vin channel:[%d]", vinChn);
+        rkmpi_error("invalid vin channel:[%d]", vinChn);
         return -1;
     }
 
     if (mViChnStarted[vinChn] == false) {
-        mpi_error("vin channel:[%d] not start", vinChn);
+        rkmpi_error("vin channel:[%d] not start", vinChn);
         return -1;
     }
 
     int ret = drm_mpi_vi_get_status(vinChn);
     if (ret == 3) {
-        mpi_warn("vin channel:[%d] timeout", vinChn);
+        rkmpi_warn("vin channel:[%d] timeout", vinChn);
         return timeoutS;
     }
 
@@ -187,7 +187,7 @@ int MediaVin::getViChnStatus(int vinChn, size_t timeoutS)
 int MediaVin::setViRgnBitmap(int vinChn, const drm_osd_region_info_t *pstRgnInfo, const drm_bitmap_t *pstBitmap)
 {
     if ((vinChn < DRM_VI_CHANNEL_00) || (vinChn >= DRM_VI_CHANNEL_BUTT)) {
-        mpi_error("invalid vin channel:[%d]", vinChn);
+        rkmpi_error("invalid vin channel:[%d]", vinChn);
         return -1;
     }
 
@@ -197,7 +197,7 @@ int MediaVin::setViRgnBitmap(int vinChn, const drm_osd_region_info_t *pstRgnInfo
 int MediaVin::setViRgnCover(int vinChn, const drm_osd_region_info_t *pstRgnInfo, const drm_cover_info_t *pstCoverInfo)
 {
     if ((vinChn < DRM_VI_CHANNEL_00) || (vinChn >= DRM_VI_CHANNEL_BUTT)) {
-        mpi_error("invalid vin channel:[%d]", vinChn);
+        rkmpi_error("invalid vin channel:[%d]", vinChn);
         return -1;
     }
 

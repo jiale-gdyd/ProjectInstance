@@ -16,6 +16,11 @@ CONFIG_MPI=y
 CONFIG_AXERA_MPI=y
 
 #
+# npu
+#
+CONFIG_AXNPU=y
+
+#
 # hardware platform
 #
 CONFIG_AXERA=y

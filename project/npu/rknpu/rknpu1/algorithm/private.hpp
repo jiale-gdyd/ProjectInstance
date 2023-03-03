@@ -4,8 +4,8 @@
 #include <vector>
 #include <sys/types.h>
 #include <utils/export.h>
+#include <npu/AiStruct.hpp>
 #include <rknn/rknn_runtime.h>
-#include "../../AiStruct.hpp"
 
 API_BEGIN_NAMESPACE(Ai)
 

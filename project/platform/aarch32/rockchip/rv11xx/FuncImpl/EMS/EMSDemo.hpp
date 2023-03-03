@@ -16,9 +16,9 @@
 #include <sys/sysinfo.h>
 
 #include <xlib/xlib.h>
+#include <npu/Detector.hpp>
 #include <opencv2/opencv.hpp>
 #include <utils/RingBuffer.hpp>
-#include <npu/rknpu/Detector.hpp>
 #include <mpi/rkmpi/mediaBase.hpp>
 
 #include <rtsp/rtsp.hpp>

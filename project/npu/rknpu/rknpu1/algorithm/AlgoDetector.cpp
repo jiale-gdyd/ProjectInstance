@@ -50,18 +50,18 @@ int AlgoDetector::init()
 {
     pAccelerator = new hardware::Accelerator();
     if (pAccelerator == nullptr) {
-        npu_error("new accelerator failed");
+        rknpu_error("new accelerator failed");
         return -1;
     }
 
     if (pAiEngine == nullptr) {
-        npu_error("new AiEngine failed");
+        rknpu_error("new AiEngine failed");
         return -2;
     }
 
     int ret = pAiEngine->init(mModelFile);
     if (ret != 0) {
-        npu_error("AiEngine init failed");
+        rknpu_error("AiEngine init failed");
         return -3;
     }
 
@@ -80,13 +80,13 @@ int AlgoDetector::init()
         mInputWidth = mRealWidth = mModelInputChnAttr[0].dims[0];
         mInputHeight = mRealHeight = mModelInputChnAttr[0].dims[1];
     } else {
-        npu_error("unknow tensor format");
+        rknpu_error("unknow tensor format");
         return -4;
     }
 
     if (mZeroCopy) {
         if (pAccelerator->init(mInputWidth, mInputHeight, mImageWidth, mImageHeight, mModelChns) != 0) {
-            npu_error("pAccelerator init failed");
+            rknpu_error("pAccelerator init failed");
             return -5;
         }
     }
@@ -109,7 +109,7 @@ int AlgoDetector::init()
         ret = pAccelerator->createTensorMemory(mInputsTensorMem, mModelInputChnAttr, false, "input ");
         if (ret != 0) {
             mZeroCopy = false;
-            npu_error("pAccelerator->createTensorMemory[I] failed");
+            rknpu_error("pAccelerator->createTensorMemory[I] failed");
             return -8;
         }
 
@@ -117,7 +117,7 @@ int AlgoDetector::init()
         if (ret != 0) {
             mZeroCopy = false;
             pAccelerator->releaseTensorMemory(mInputsTensorMem);
-            npu_error("pAccelerator->createTensorMemory[O] failed");
+            rknpu_error("pAccelerator->createTensorMemory[O] failed");
             return -9;
         }
 
@@ -152,7 +152,7 @@ void AlgoDetector::getResizeRealWidthHeight(size_t &width, size_t &height)
 int AlgoDetector::processInferImage(void *mediaFrame, cv::Mat &inferMat, unsigned char *virtualCache)
 {
     if (!virtualCache) {
-        npu_error("virtualCache NULL");
+        rknpu_error("virtualCache NULL");
         return -1;
     }
 
@@ -197,7 +197,7 @@ int AlgoDetector::processInferImage(void *mediaFrame, cv::Mat &inferMat, unsigne
     if (ret != IM_STATUS_NOERROR) {
         if (!bPrintErr) {
             bPrintErr = true;
-            npu_error("execute failed, return:[%d]", ret);
+            rknpu_error("execute failed, return:[%d]", ret);
         }
 
         return -2;
@@ -266,7 +266,7 @@ int AlgoDetector::processInferImage(cv::Mat rawRGBImage, cv::Mat &inferMat, unsi
     if (ret != IM_STATUS_NOERROR) {
         if (!bPrintErr) {
             bPrintErr = true;
-            npu_error("execute failed, return:[%d]", ret);
+            rknpu_error("execute failed, return:[%d]", ret);
         }
 
         return -2;

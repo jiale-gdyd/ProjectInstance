@@ -47,7 +47,7 @@ int AlgoDetector::extract_jialelu(std::map<int, std::vector<bbox>> &lastResults,
         } else if (mAlgoType == YOLOX_NANO_FACE_TINY) {
             ret = extract_yolox_nano_face_one_anchor_tiny_tensormem_jialelu(mOutputsTensorMem, (void *)&args, localResults);
         } else {
-            npu_error("jialelu algorithm type:[%d] not support now", mAlgoType);
+            rknpu_error("jialelu algorithm type:[%d] not support now", mAlgoType);
             return -1;
         }
     } else {
@@ -62,7 +62,7 @@ int AlgoDetector::extract_jialelu(std::map<int, std::vector<bbox>> &lastResults,
         } else if (mAlgoType == YOLOX_NANO_FACE_TINY) {
             ret = pAiEngine->extract(extract_yolox_nano_face_one_anchor_tiny_non_tensormem_jialelu, pAiEngine->nms, (void *)&args, localResults);
         } else {
-            npu_error("jialelu algorithm type:[%d] not support now", mAlgoType);
+            rknpu_error("jialelu algorithm type:[%d] not support now", mAlgoType);
             return -1;
         }
     }

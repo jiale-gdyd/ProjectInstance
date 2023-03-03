@@ -1,11 +1,12 @@
-#ifndef MPI_AXMPI_PRIVATE_H
-#define MPI_AXMPI_PRIVATE_H
+#ifndef MPI_AXMPI_AXMPI_H
+#define MPI_AXMPI_AXMPI_H
 
 #if !defined(__AXERA_MEDIABASE_HPP_INSIDE__)
 #error "Only <mediaBase.hpp> can be included directly."
 #endif
 
-#include "../private.h"
+#include <stdio.h>
+#include <stdarg.h>
 
 #include <ax_adec_api.h>
 #include <ax_aenc_api.h>
@@ -88,5 +89,25 @@
 #include <tinyalsa/plugin.h>
 #include <tinyalsa/asoundlib.h>
 #include <tinyalsa/attributes.h>
+
+#ifndef axmpi_print
+#define axmpi_print(msg, ...)               fprintf(stderr, msg, ##__VA_ARGS__);
+#endif
+
+#ifndef axmpi_error
+#define axmpi_error(msg, ...)               axmpi_print("\033[1;31m[AXMPI][E]: " msg "\033[0m\n", ##__VA_ARGS__)
+#endif
+
+#ifndef axmpi_warn
+#define axmpi_warn(msg, ...)                axmpi_print("\033[1;33m[AXMPI][W]: " msg "\033[0m\n", ##__VA_ARGS__)
+#endif
+
+#ifndef axmpi_info
+#define axmpi_info(msg, ...)                axmpi_print("\033[1;32m[AXMPI][I]: " msg "\033[0m\n", ##__VA_ARGS__)
+#endif
+
+#ifndef axmpi_debug
+#define axmpi_debug(msg, ...)               axmpi_print("\033[1;34m[AXMPI][D]: " msg "\033[0m\n", ##__VA_ARGS__)
+#endif
 
 #endif

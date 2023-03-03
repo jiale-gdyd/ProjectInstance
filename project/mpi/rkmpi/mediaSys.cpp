@@ -9,8 +9,8 @@
 #include <sys/prctl.h>
 
 #define __ROCKCHIP_MEDIABASE_HPP_INSIDE__
+#include "rkmpi.h"
 #include "mediaSys.hpp"
-#include "../private.h"
 #undef __ROCKCHIP_MEDIABASE_HPP_INSIDE__
 
 API_BEGIN_NAMESPACE(media)
