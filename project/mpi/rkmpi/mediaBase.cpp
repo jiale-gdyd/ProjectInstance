@@ -4,8 +4,7 @@
 
 API_BEGIN_NAMESPACE(media)
 
-media::MediaRegion *MediaBase::mRegion = nullptr;
-media::MediaInterface *MediaBase::mIMedia = nullptr;
+media::MediaApi *MediaBase::mMediaApi = nullptr;
 
 MediaBase::MediaBase()
 {
@@ -14,35 +13,21 @@ MediaBase::MediaBase()
 
 MediaBase::~MediaBase()
 {
-    if (mIMedia) {
-        mIMedia->getSys().deinit();
-        delete mIMedia;
-        mIMedia = nullptr;
-    }
-
-    if (mRegion) {
-        delete mRegion;
-        mRegion = nullptr;
+    if (mMediaApi) {
+        mMediaApi->getSys().deinit();
+        delete mMediaApi;
+        mMediaApi = nullptr;
     }
 }
 
-media::MediaInterface *MediaBase::getMedia()
+media::MediaApi *MediaBase::getApi()
 {
-    if (mIMedia == nullptr) {
-        mIMedia = new media::MediaInterface();
-        mIMedia->getSys().init();
+    if (mMediaApi == nullptr) {
+        mMediaApi = new media::MediaApi();
+        mMediaApi->getSys().init();
     }
 
-    return mIMedia;
-}
-
-media::MediaRegion *MediaBase::getRegion()
-{
-    if (mRegion == nullptr) {
-        mRegion = new media::MediaRegion();
-    }
-
-    return mRegion;
+    return mMediaApi;
 }
 
 API_END_NAMESPACE(media)

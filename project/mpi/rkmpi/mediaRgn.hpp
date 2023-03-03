@@ -1,5 +1,5 @@
-#ifndef ROCKCHIP_MEDIA_REGION_HPP
-#define ROCKCHIP_MEDIA_REGION_HPP
+#ifndef ROCKCHIP_MEDIA_RGN_HPP
+#define ROCKCHIP_MEDIA_RGN_HPP
 
 #if !defined(__ROCKCHIP_MEDIABASE_HPP_INSIDE__)
 #error "Only <mediaBase.hpp> can be included directly."
@@ -46,14 +46,14 @@ enum {
     MARK_TRIANGLE_DOWN = 6          // 一个向下指向的三角形标记形状
 };
 
-class API_HIDDEN MediaRegion {
+class API_HIDDEN MediaRgn {
 public:
-    MediaRegion();
-    ~MediaRegion();
+    MediaRgn();
+    ~MediaRgn();
 
     int registerFontLibraries(std::unordered_map<int, std::string> fonts);
 
-    void initMediaFrame(media_buffer_t &mediaFrame, size_t width, size_t height, uint8_t channels);
+    void initFrame(media_buffer_t &mediaFrame, size_t width, size_t height, uint8_t channels);
 
     void drawImage(cv::Mat image, cv::Point startPos, size_t width, size_t height);
 

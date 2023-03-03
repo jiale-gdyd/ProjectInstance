@@ -62,8 +62,8 @@ void EMSDemoImpl::saveEncVideoToTFCardProcessThread()
 
     while (!mThreadQuit) {
         if (!mVideoVencFrame.isEmpty() && mVideoVencFrame.remove(mediaFrame)) {
-            dataPtr = getMedia()->getSys().getFrameData(mediaFrame);
-            frameSize = getMedia()->getSys().getFrameSize(mediaFrame);
+            dataPtr = getApi()->getSys().getFrameData(mediaFrame);
+            frameSize = getApi()->getSys().getFrameSize(mediaFrame);
 
             if (!mSaveVideoFileName.isEmpty() && mSaveVideoFileName.remove(saveEncFile)) {
 
@@ -95,7 +95,7 @@ void EMSDemoImpl::saveEncVideoToTFCardProcessThread()
             }
 FREE_FRAMELF:
             if (dataPtr && (frameSize > 0)) {
-                getMedia()->getVenc().releaseFrame(mediaFrame);
+                getApi()->getVenc().releaseFrame(mediaFrame);
             } else {
                 static uint64_t count = 0;
                 printf("======= leak frame count:[%llu], frameSize:[%u]\n", ++count, frameSize);
@@ -135,7 +135,7 @@ void EMSDemoImpl::videoEncodeProcessCallback(media_buffer_t mediaFrame, void *us
     static const size_t tfcardTotalMinCapLimitMBDiv4 = tfcardTotalMinCapLimitMB / 4;
 
     if (me->mVideoEncodeQuit) {
-        me->getMedia()->getSys().releaseFrame(mediaFrame);
+        me->getApi()->getSys().releaseFrame(mediaFrame);
         return;
     }
 
@@ -158,7 +158,7 @@ void EMSDemoImpl::videoEncodeProcessCallback(media_buffer_t mediaFrame, void *us
         }
 
         if (!me->mVideoVencFrame.insert(mediaFrame)) {
-            me->getMedia()->getSys().releaseFrame(mediaFrame);
+            me->getApi()->getSys().releaseFrame(mediaFrame);
             return;
         }
 
@@ -188,7 +188,7 @@ void EMSDemoImpl::videoEncodeProcessCallback(media_buffer_t mediaFrame, void *us
     me->mVideoEncodeStart = false;
     bLockFileName = false;
 
-    me->getMedia()->getSys().releaseFrame(mediaFrame);
+    me->getApi()->getSys().releaseFrame(mediaFrame);
 }
 
 API_END_NAMESPACE(EMS)

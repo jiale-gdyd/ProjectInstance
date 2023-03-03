@@ -4,6 +4,7 @@
   * 实现在帧上绘制操作
   * AX620A库先简化(去除gstreamer)
   * 调整日志信息，调整NPU目录结构，将共性的提取出来共用，避免冗余
+  * 修改MPI的接口，将Region合入MediaApi中，统一抽象接口
 
 ## 2023-03-02
   * v4l-utils增加rockchip的补丁，同时其插件支持libv4l-rkmpp

@@ -19,7 +19,7 @@ void EMSDemoImpl::drawPostThread()
 
     while (!mThreadQuit) {
         if (!mDispRawFrameRing.isEmpty() && mDispRawFrameRing.remove(mediaFrame)) {
-            getRegion()->initMediaFrame(mediaFrame, mOriginWidth, mOriginHeight, mOriginChns);
+            getApi()->getRgn().initFrame(mediaFrame, mOriginWidth, mOriginHeight, mOriginChns);
 
             if (!mAlgExtractResultRing.isEmpty() && mAlgExtractResultRing.remove(lastResult)) {
                 prevResult = lastResult;
@@ -37,7 +37,7 @@ void EMSDemoImpl::drawPostThread()
             }
 
             if (!mSendDrawFrameRing.insert(mediaFrame)) {
-                getMedia()->getRga().releaseFrame(mediaFrame);
+                getApi()->getRga().releaseFrame(mediaFrame);
             }
         } else {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));

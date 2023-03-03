@@ -27,15 +27,15 @@ void EMSDemoImpl::rtspEncodeProcessCallback(media_buffer_t mediaFrame, void *use
     if (mediaFrame) {
         if (me->pSimpleServer) {
 #if defined(CONFIG_SIMPLE_RTSP_SERVER)
-            uint32_t dataSize = me->getMedia()->getSys().getFrameSize(mediaFrame);
-            uint64_t timestamp = me->getMedia()->getSys().getFrameTimestamp(mediaFrame);
-            const uint8_t *data = (const uint8_t *)me->getMedia()->getSys().getFrameData(mediaFrame);
+            uint32_t dataSize = me->getApi()->getSys().getFrameSize(mediaFrame);
+            uint64_t timestamp = me->getApi()->getSys().getFrameTimestamp(mediaFrame);
+            const uint8_t *data = (const uint8_t *)me->getApi()->getSys().getFrameData(mediaFrame);
 
             me->pSimpleServer->sendFrame(data, dataSize, timestamp);
 #endif
         }
 
-        me->getMedia()->getSys().releaseFrame(mediaFrame);
+        me->getApi()->getSys().releaseFrame(mediaFrame);
     }
 }
 

@@ -14,10 +14,10 @@
 
 API_BEGIN_NAMESPACE(media)
 
-class API_HIDDEN MediaInterface {
+class API_HIDDEN MediaApi {
 public:
-    MediaInterface() = default;
-    ~MediaInterface() = default;
+    MediaApi() = default;
+    ~MediaApi() = default;
 
 public:
     MediaVo &getVo() {
@@ -71,10 +71,10 @@ public:
     // virtual int init() = 0;
 
 public:
-    media::MediaInterface *getMedia();
+    media::MediaApi *getApi();
 
 private:
-    static media::MediaInterface *mIMedia;
+    static media::MediaApi *mMediaApi;
 };
 
 API_END_NAMESPACE(media)

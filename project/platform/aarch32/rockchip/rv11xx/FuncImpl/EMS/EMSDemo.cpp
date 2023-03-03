@@ -55,7 +55,15 @@ EMSDemoImpl::EMSDemoImpl()
     parseApplicationConfigParam(APPLF_CONFIG_JSONFILE);
     parseVideoDecodeParam(VIDEO_DECODE_JSONFILE);
 
-    getMedia()->getSys().setupEnableRGAFlushCache(mEMSConfig.enableRGAFlushCache);
+    getApi()->getSys().setupEnableRGAFlushCache(mEMSConfig.enableRGAFlushCache);
+
+    std::unordered_map<int, std::string> fonts;
+    fonts.insert(std::make_pair(0, "/opt/aure/fonts/simhei.ttf"));
+    getApi()->getRgn().registerFontLibraries(fonts);
+
+    if (access("/opt/aure/ARM.png", F_OK) == 0) {
+        mBlendImage = cv::imread("/opt/aure/ARM.png");
+    }
 }
 
 EMSDemoImpl::~EMSDemoImpl()
@@ -113,14 +121,6 @@ int EMSDemoImpl::init()
         videoEncodeInit();
     }
 
-    std::unordered_map<int, std::string> fonts;
-    fonts.insert(std::make_pair(0, "/opt/aure/fonts/simhei.ttf"));
-    getRegion()->registerFontLibraries(fonts);
-
-    if (access("/opt/aure/ARM.png", F_OK) == 0) {
-        mBlendImage = cv::imread("/opt/aure/ARM.png");
-    }
-
     std::thread(std::bind(&EMSDemoImpl::algoInitThread, this)).detach();
 
     mDispFrameCapThreadId = std::thread(std::bind(&EMSDemoImpl::dispStreamCaptureThread, this));
@@ -161,10 +161,10 @@ void EMSDemoImpl::dispStreamCaptureThread()
     pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
 
     while (!mThreadQuit) {
-        media_buffer_t mediaFrame = getMedia()->getRga().getFrame(mDispPrevRgaChn, 100);
+        media_buffer_t mediaFrame = getApi()->getRga().getFrame(mDispPrevRgaChn, 100);
         if (mediaFrame) {
             if (!mDispRawFrameRing.insert(mediaFrame)) {
-                getMedia()->getRga().releaseFrame(mediaFrame);
+                getApi()->getRga().releaseFrame(mediaFrame);
             }
         }
 
@@ -194,7 +194,7 @@ void EMSDemoImpl::inferStreamCaptureThread()
     }
 
     while (!mThreadQuit) {
-        media_buffer_t mediaFrame = getMedia()->getRga().getFrame(mInferRgaChn, 500);
+        media_buffer_t mediaFrame = getApi()->getRga().getFrame(mInferRgaChn, 500);
         if (mediaFrame) {
             abortCount = 0;
 
@@ -207,7 +207,7 @@ void EMSDemoImpl::inferStreamCaptureThread()
             }
 #endif
             if (mediaFrame) {
-                getMedia()->getRga().releaseFrame(mediaFrame);
+                getApi()->getRga().releaseFrame(mediaFrame);
             }
         } else {
             abortCount++;

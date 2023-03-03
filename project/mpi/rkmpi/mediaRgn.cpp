@@ -3,22 +3,22 @@
 
 #define __ROCKCHIP_MEDIABASE_HPP_INSIDE__
 #include "rkmpi.h"
-#include "mediaRegion.hpp"
+#include "mediaRgn.hpp"
 #undef __ROCKCHIP_MEDIABASE_HPP_INSIDE__
 
 API_BEGIN_NAMESPACE(media)
 
-MediaRegion::MediaRegion() : mInitFin(false)
+MediaRgn::MediaRgn() : mInitFin(false)
 {
 
 }
 
-MediaRegion::~MediaRegion()
+MediaRgn::~MediaRgn()
 {
     mInitFin = false;
 }
 
-int MediaRegion::registerFontLibraries(std::unordered_map<int, std::string> fonts)
+int MediaRgn::registerFontLibraries(std::unordered_map<int, std::string> fonts)
 {
     if (fonts.size() == 0) {
         return 0;
@@ -41,7 +41,7 @@ int MediaRegion::registerFontLibraries(std::unordered_map<int, std::string> font
     return validFonts;
 }
 
-void MediaRegion::initMediaFrame(media_buffer_t &mediaFrame, size_t width, size_t height, uint8_t channels)
+void MediaRgn::initFrame(media_buffer_t &mediaFrame, size_t width, size_t height, uint8_t channels)
 {
     if (!mInitFin || !mediaFrame || (width == 0) || (height == 0) || ((channels != 1) && (channels != 2) && (channels != 3))) {
         rkmpi_error("font library not initialized or invalid parameters");
@@ -51,9 +51,9 @@ void MediaRegion::initMediaFrame(media_buffer_t &mediaFrame, size_t width, size_
     mImgFrame = cv::Mat(height, width, CV_8UC(channels), drm_mpi_mb_get_ptr(mediaFrame));
 }
 
-void MediaRegion::putText(int fontType, std::string text, cv::Point pos, uint16_t fontHeight, cv::Scalar color, int thickness, int lineStyle, bool bottomLeftOrigin)
+void MediaRgn::putText(int fontType, std::string text, cv::Point pos, uint16_t fontHeight, cv::Scalar color, int thickness, int lineStyle, bool bottomLeftOrigin)
 {
-    if (!findFont(fontType) || mImgFrame.empty()) {
+    if (!mInitFin || !findFont(fontType) || mImgFrame.empty()) {
         return;
     }
 
@@ -64,9 +64,9 @@ void MediaRegion::putText(int fontType, std::string text, cv::Point pos, uint16_
     mFontHandler[fontType]->putText(mImgFrame, text, pos, fontHeight, color, thickness, lineStyle, bottomLeftOrigin);
 }
 
-void MediaRegion::drawImage(cv::Mat image, cv::Point startPos, size_t width, size_t height)
+void MediaRgn::drawImage(cv::Mat image, cv::Point startPos, size_t width, size_t height)
 {
-    if (mImgFrame.empty() || image.empty()) {
+    if (!mInitFin || mImgFrame.empty() || image.empty()) {
         return;
     }
 
@@ -96,9 +96,9 @@ void MediaRegion::drawImage(cv::Mat image, cv::Point startPos, size_t width, siz
     }
 }
 
-void MediaRegion::drawLine(cv::Point pos1, cv::Point pos2, cv::Scalar color, int thickness, int lineType, int shift)
+void MediaRgn::drawLine(cv::Point pos1, cv::Point pos2, cv::Scalar color, int thickness, int lineType, int shift)
 {
-    if (mImgFrame.empty()) {
+    if (!mInitFin || mImgFrame.empty()) {
         return;
     }
 
@@ -113,9 +113,9 @@ void MediaRegion::drawLine(cv::Point pos1, cv::Point pos2, cv::Scalar color, int
     cv::line(mImgFrame, pos1, pos2, color, thickness, mapLineType(lineType), shift);
 }
 
-void MediaRegion::drawArrowedLine(cv::Point pos1, cv::Point pos2, cv::Scalar color, int thickness, int lineType, int shift, double tipLength)
+void MediaRgn::drawArrowedLine(cv::Point pos1, cv::Point pos2, cv::Scalar color, int thickness, int lineType, int shift, double tipLength)
 {
-    if (mImgFrame.empty()) {
+    if (!mInitFin || mImgFrame.empty()) {
         return;
     }
 
@@ -130,9 +130,9 @@ void MediaRegion::drawArrowedLine(cv::Point pos1, cv::Point pos2, cv::Scalar col
     cv::arrowedLine(mImgFrame, pos1, pos2, color, thickness, mapLineType(lineType), shift, tipLength);
 }
 
-void MediaRegion::drawRect(cv::Point leftTop, cv::Point rightBottom, cv::Scalar color, int thickness, int lineType, int shift)
+void MediaRgn::drawRect(cv::Point leftTop, cv::Point rightBottom, cv::Scalar color, int thickness, int lineType, int shift)
 {
-    if (mImgFrame.empty()) {
+    if (!mInitFin || mImgFrame.empty()) {
         return;
     }
 
@@ -147,9 +147,9 @@ void MediaRegion::drawRect(cv::Point leftTop, cv::Point rightBottom, cv::Scalar 
     cv::rectangle(mImgFrame, leftTop, rightBottom, color, thickness, mapLineType(lineType), shift);
 }
 
-void MediaRegion::drawCircle(cv::Point center, int radius, cv::Scalar color, int thickness, int lineType, int shift)
+void MediaRgn::drawCircle(cv::Point center, int radius, cv::Scalar color, int thickness, int lineType, int shift)
 {
-    if (mImgFrame.empty()) {
+    if (!mInitFin || mImgFrame.empty()) {
         return;
     }
 
@@ -164,9 +164,9 @@ void MediaRegion::drawCircle(cv::Point center, int radius, cv::Scalar color, int
     cv::circle(mImgFrame, center, radius, color, thickness, mapLineType(lineType), shift);
 }
 
-void MediaRegion::drawEllipse(cv::Point center, cv::Size axes, double angle, double startAngle, double endAngle, cv::Scalar color, int thickness, int lineType, int shift)
+void MediaRgn::drawEllipse(cv::Point center, cv::Size axes, double angle, double startAngle, double endAngle, cv::Scalar color, int thickness, int lineType, int shift)
 {
-    if (mImgFrame.empty()) {
+    if (!mInitFin || mImgFrame.empty()) {
         return;
     }
 
@@ -177,18 +177,18 @@ void MediaRegion::drawEllipse(cv::Point center, cv::Size axes, double angle, dou
     cv::ellipse(mImgFrame, center, axes, angle, startAngle, endAngle, color, thickness, mapLineType(lineType), shift);
 }
 
-void MediaRegion::drawPolygon(const cv::Point **pts, int npts, int ncontours, cv::Scalar color, int lineType, int shift, cv::Point offset)
+void MediaRgn::drawPolygon(const cv::Point **pts, int npts, int ncontours, cv::Scalar color, int lineType, int shift, cv::Point offset)
 {
-    if (mImgFrame.empty()) {
+    if (!mInitFin || mImgFrame.empty()) {
         return;
     }
 
     cv::fillPoly(mImgFrame, pts, (const int *)&npts, ncontours, color, mapLineType(lineType), shift, offset);
 }
 
-void MediaRegion::drawMarker(cv::Point pos, cv::Scalar color, int markerType, int markerSize, int thickness, int lineType)
+void MediaRgn::drawMarker(cv::Point pos, cv::Scalar color, int markerType, int markerSize, int thickness, int lineType)
 {
-    if (mImgFrame.empty()) {
+    if (!mInitFin || mImgFrame.empty()) {
         return;
     }
 
@@ -199,7 +199,7 @@ void MediaRegion::drawMarker(cv::Point pos, cv::Scalar color, int markerType, in
     cv::drawMarker(mImgFrame, pos, color, mapMarkerType(markerType), markerSize, thickness, mapLineType(lineType));
 }
 
-int MediaRegion::mapFontFace(int fontFace)
+int MediaRgn::mapFontFace(int fontFace)
 {
     switch (fontFace) {
         case FONT_FACE_SIMPLEX:
@@ -234,7 +234,7 @@ int MediaRegion::mapFontFace(int fontFace)
     }
 }
 
-int MediaRegion::mapLineType(int lineStyle)
+int MediaRgn::mapLineType(int lineStyle)
 {
     switch (lineStyle) {
         case LINE_STYLE_FILLED:
@@ -254,7 +254,7 @@ int MediaRegion::mapLineType(int lineStyle)
     }
 }
 
-int MediaRegion::mapMarkerType(int markerType)
+int MediaRgn::mapMarkerType(int markerType)
 {
     switch (markerType) {
         case MARK_CROSS:
@@ -283,7 +283,7 @@ int MediaRegion::mapMarkerType(int markerType)
     }
 }
 
-bool MediaRegion::findFont(int fontType)
+bool MediaRgn::findFont(int fontType)
 {
     return !(mFontLibs.find(fontType) == mFontLibs.end());
 }

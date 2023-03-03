@@ -5,21 +5,21 @@
 #include "mediaVo.hpp"
 #include "mediaVin.hpp"
 #include "mediaRga.hpp"
+#include "mediaRgn.hpp"
 #include "mediaSys.hpp"
 #include "mediaVenc.hpp"
 #include "mediaVdec.hpp"
 #include "mediaVmix.hpp"
-#include "mediaRegion.hpp"
 
 #include <media/drm_media_api.h>
 #undef __ROCKCHIP_MEDIABASE_HPP_INSIDE__
 
 API_BEGIN_NAMESPACE(media)
 
-class API_HIDDEN MediaInterface {
+class API_HIDDEN MediaApi {
 public:
-    MediaInterface() = default;
-    ~MediaInterface() = default;
+    MediaApi() = default;
+    ~MediaApi() = default;
 
 public:
     MediaVo &getVo() {
@@ -32,6 +32,10 @@ public:
 
     MediaRga &getRga() {
         return mMediaRga;
+    }
+
+    MediaRgn &getRgn() {
+        return mMediaRgn;
     }
 
     MediaSys &getSys() {
@@ -54,6 +58,7 @@ private:
     MediaVo   mMediaVo;
     MediaVin  mMediaVin;
     MediaRga  mMediaRga;
+    MediaRgn  mMediaRgn;
     MediaSys  mMediaSys;
     MediaVenc mMediaVenc;
     MediaVdec mMediaVdec;
@@ -68,12 +73,10 @@ public:
     virtual int init() = 0;
 
 public:
-    media::MediaRegion *getRegion();
-    media::MediaInterface *getMedia();
+    media::MediaApi *getApi();
 
 private:
-    static media::MediaRegion *mRegion;
-    static media::MediaInterface *mIMedia;
+    static media::MediaApi *mMediaApi;
 };
 
 API_END_NAMESPACE(media)
