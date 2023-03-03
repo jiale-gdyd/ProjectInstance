@@ -1,4 +1,4 @@
-ifeq ($(APP_NAME),GstAiApp)
+ifeq ($(APP_NAME),Ax620aEMSApp)
 VERSION = 0
 PATCHLEVEL = 0
 SUBLEVEL = 0

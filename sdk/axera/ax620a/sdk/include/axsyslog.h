@@ -6,7 +6,7 @@
 #include <stdarg.h>
 
 /* This file defines _AXPATH_LOG.  */
-#include "axsyslog-path.h"
+// #include "axsyslog-path.h"
 
 #define	_AXPATH_LOG	"/dev/axlog"
 

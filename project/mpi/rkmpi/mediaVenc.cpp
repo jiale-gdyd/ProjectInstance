@@ -2,8 +2,8 @@
 #include <string.h>
 
 #define __ROCKCHIP_MEDIABASE_HPP_INSIDE__
-#include "mediaVenc.hpp"
 #include "../private.h"
+#include "mediaVenc.hpp"
 #undef __ROCKCHIP_MEDIABASE_HPP_INSIDE__
 
 API_BEGIN_NAMESPACE(media)

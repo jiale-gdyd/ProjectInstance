@@ -11,7 +11,7 @@
 
 #ifndef _AX_SYS_LOG_H_
 #define _AX_SYS_LOG_H_
-#include <axsyslog.h>
+#include "axsyslog.h"
 #include "ax_base_type.h"
 #include "ax_global_type.h"
 

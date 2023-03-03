@@ -11,5 +11,6 @@ config MPI
       Media Process Interface
 
 source "project/mpi/rkmpi/Kconfig"
+source "project/mpi/axmpi/Kconfig"
 
 endmenu

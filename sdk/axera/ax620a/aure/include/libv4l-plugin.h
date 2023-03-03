@@ -32,6 +32,7 @@ struct libv4l_dev_ops {
     int (*ioctl)(void *dev_ops_priv, int fd, unsigned long int request, void *arg);
     ssize_t (*read)(void *dev_ops_priv, int fd, void *buffer, size_t n);
     ssize_t (*write)(void *dev_ops_priv, int fd, const void *buffer, size_t n);
+    void * (*mmap)(void *dev_ops_priv, void *start, size_t length, int prot, int flags, int fd, int64_t offset);
     /* For future plugin API extension, plugins implementing the current API
        must set these all to NULL, as future versions may check for these */
     void (*reserved1)(void);

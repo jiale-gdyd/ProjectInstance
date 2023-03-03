@@ -13,9 +13,9 @@
    ./build.sh rv11xx_media_ems          最终生成Rv11xxEMSApp可执行文件，可通过修改build.rv11xx.version中对应名字的版本号
    ```
 ### 构建基于爱心元智AX620A的应用
-+ 构建基于爱心元智AX620A soc的gstreamer+ai项目
++ 构建基于爱心元智AX620A soc的简单EMS应用
    ```shell
-   ./build.sh ax620a_gst_api            最终生成GstAiApp可执行文件，可通过修改build.ax620a.version中对应名字的版本号
+   ./build.sh ax620a_media_ems          最终生成Ax620aEMSApp可执行文件，可通过修改build.ax620a.version中对应名字的版本号
    ```
 
 ### 工程清理与帮助

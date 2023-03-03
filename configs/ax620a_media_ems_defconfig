@@ -1,0 +1,24 @@
+#
+# Automatically generated file; DO NOT EDIT.
+# Application Configuration
+#
+
+#
+# process
+#
+# CONFIG_CHILD_PROCESS is not set
+CONFIG_PARENT_PROCESS=y
+
+#
+# mpi
+#
+CONFIG_MPI=y
+CONFIG_AXERA_MPI=y
+
+#
+# hardware platform
+#
+CONFIG_AXERA=y
+CONFIG_AX620A=y
+CONFIG_CORTEX_A7=y
+CONFIG_AARCH32=y

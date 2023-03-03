@@ -76,7 +76,7 @@ endchoice
 
 endmenu
 
-source "project/platform/board/Kconfig"
+source "project/platform/vendor/Kconfig"
 
 if X86_64
 source "project/platform/x86_64/Kconfig"

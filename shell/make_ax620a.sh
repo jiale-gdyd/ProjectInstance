@@ -3,7 +3,7 @@
 source ${TOPSHELL}/shell/buildFunc.sh
 source ${TOPSHELL}/shell/buildConf.sh
 
-AX620A_GST_AI_CONFIG=ax620a_gst_ai_defconfig
+AX620A_MEDIA_EMS_CONFIG=ax620a_media_ems_defconfig
 
 if [ -e /opt/toolchain/gcc-linaro-7.5.0-2019.12-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++ ]; then
     AX620A_CROSS_COMPILE=/opt/toolchain/gcc-linaro-7.5.0-2019.12-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
@@ -13,11 +13,11 @@ fi
 
 function ax620a_clean()
 {
-    rm -rf GstAiApp
+    rm -rf Ax620aEMSApp
     remove_gitcommit
 }
 
-function ax620a_gst_api()
+function ax620a_media_ems()
 {
     begin=`get_timestamp`
     type=$(uname)
@@ -35,7 +35,7 @@ function ax620a_gst_api()
     export USE_STDCPP_VERSION=-std=gnu++17
     generate_gitcommit
 
-    make ${AX620A_GST_AI_CONFIG} && make ARCH=arm CROSS_COMPILE=${AX620A_CROSS_COMPILE} -j$[$(nproc)-1]
+    make ${AX620A_MEDIA_EMS_CONFIG} && make ARCH=arm CROSS_COMPILE=${AX620A_CROSS_COMPILE} -j$[$(nproc)-1]
     if [ $? -ne 0 ]; then
         error_exit "Unfortunately, build ${PROJECT_NAME} failed"
     fi

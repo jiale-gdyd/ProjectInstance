@@ -1,0 +1,14 @@
+#
+# AXERA MPI Kconfig
+#
+
+menu "AXERA Media Process Interface"
+
+config AXERA_MPI
+    bool "axera platform media process interface"
+    default n
+    depends on AXERA
+    help
+      Axera platform media process interface
+
+endmenu

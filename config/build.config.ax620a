@@ -27,14 +27,11 @@ USER_LINK_LIB    := -L$(SDK_LIB) \
                     -L$(SELF_LIB) \
                     -L$(SELF_LIB)/gstreamer-1.0
 
-ifeq ($(APP_NAME),GstAiApp)
 USER_LD_LIB      += ai_kit_release ax_3a ax_audio_3a ax_audio ax_channel ax_cipher axdl20 ax_dma_hal \
                     ax_efuse ax_interpreter_external ax_interpreter ax_ives ax_ivps ax_mipi ax_npu_cv_kit \
                     ax_nt_ctrl ax_nt_stream ax_proton ax_run_joint ax_skel axsyslog ax_sys ax_vdec ax_venc \
                     ax_vo lens_dciris sns_dummy sns_gc4653 sns_os04a10_master sns_os04a10_slave sns_os04a10 \
-                    drm tinyalsa samplerate \
-                    mcvsdk_framework mcvsdk_service mcvsdk_video megsearch
-endif
+                    drm tinyalsa samplerate mcvsdk_framework mcvsdk_service mcvsdk_video megsearch
 
 USER_LINK_LIB         += $(addprefix -l,${USER_LD_LIB})
 USER_PTH_RT_LIB       += -lpthread -lrt -lm -ldl $(USE_STDCPP_VERSION)
