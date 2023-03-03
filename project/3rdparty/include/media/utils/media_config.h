@@ -214,6 +214,9 @@ int video_encoder_set_gop_mode(std::shared_ptr<Flow> &enc_flow, DrmEncGopModePar
 int video_encoder_set_userdata(std::shared_ptr<Flow> &enc_flow, void *data, int len, int all_frames = 0);
 int video_encoder_enable_statistics(std::shared_ptr<Flow> &enc_flow, int enable);
 int jpeg_encoder_set_qfactor(std::shared_ptr<Flow> &enc_flow, int qfactor);
+
+bool get_rga_flush_cache();
+void set_rga_flush_cache(bool status);
 }
 
 #endif

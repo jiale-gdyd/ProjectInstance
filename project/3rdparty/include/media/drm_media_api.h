@@ -83,6 +83,9 @@ int drm_mpi_rga_get_channel_region_luma(int channel, const drm_video_region_info
 int drm_mpi_rga_region_set_cover(int channel, const drm_osd_region_info_t *pstRgnInfo, const drm_cover_info_t *pstCoverInfo);
 int drm_mpi_rga_region_set_bitmap(int channel, const drm_osd_region_info_t *pstRgnInfo, const drm_bitmap_t *pstBitmap);
 
+int drm_mpi_rga_get_flush_cache();
+int drm_mpi_rga_set_flush_cache(bool bEnable);
+
 int drm_mpi_vmix_destroy_device(int device);
 int drm_mpi_vmix_create_device(int device, drm_vmix_dev_info_t *pstDevInfo);
 

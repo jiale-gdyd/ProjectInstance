@@ -314,6 +314,7 @@ const xchar *x_strerror(xint errnum)
             msg = x_locale_to_utf8(msg, -1, NULL, NULL, &error);
             if (error) {
                 x_print("%s\n", error->message);
+                x_error_free(error);
             }
         } else if (msg == (const xchar *)buf) {
             msg = x_strdup(buf);

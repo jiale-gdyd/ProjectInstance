@@ -10,6 +10,7 @@
 #include <fstream>
 #include <algorithm>
 #include <functional>
+#include <unordered_map>
 
 #include <unistd.h>
 #include <sys/sysinfo.h>
@@ -38,7 +39,7 @@ public:
     virtual int init();
 
 private:
-    int dispObjects(media_buffer_t &mediaFrame, std::vector<Ai::bbox> lastResult);
+    int dispObjects(std::vector<Ai::bbox> lastResult);
 
 private:
     int mediaInit();
@@ -191,6 +192,8 @@ private:
     std::shared_ptr<rtsp::SimpleRTSPServer>  pSimpleServer;                  // RTSP服务器句柄
 
     std::shared_ptr<rtsp::RTSPClient>        pRTSPClient;                    // RTSP客户端
+
+    cv::Mat                                  mBlendImage;                    // 混合图片
 };
 
 API_END_NAMESPACE(EMS)

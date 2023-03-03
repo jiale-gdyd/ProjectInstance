@@ -2,15 +2,19 @@
 
 API_BEGIN_NAMESPACE(EMS)
 
-int EMSDemoImpl::dispObjects(media_buffer_t &mediaFrame, std::vector<Ai::bbox> lastResult)
+int EMSDemoImpl::dispObjects(std::vector<Ai::bbox> lastResult)
 {
-    if (!mediaFrame || (lastResult.size() == 0)) {
-        return -1;
+    getRegion()->putText(0, "有目标啦 - ^_^", cv::Point(20, 50), 50, CV_RGB(255, 0, 255));
+    for (auto item : lastResult) {
+        getRegion()->drawRect(cv::Point(item.left, item.top), cv::Point(item.right, item.bottom), CV_RGB(255, 0, 0), 3);
     }
 
-    cv::Mat frame = cv::Mat(mOriginHeight, mOriginWidth, CV_8UC(mOriginChns), getMedia()->getSys().getFrameData(mediaFrame));
-    for (auto item : lastResult) {
-        cv::rectangle(frame, cv::Point2f(item.left, item.top), cv::Point2f(item.right, item.bottom), CV_RGB(255, 0, 0), 3);
+    if (!mBlendImage.empty()) {
+        int iconW = mBlendImage.cols;
+        int iconH = mBlendImage.rows;
+        int startX = (mOriginWidth - iconW) / 2;
+        int startY = (mOriginHeight - iconH) / 2;
+        getRegion()->drawImage(mBlendImage, cv::Point(startX, startY), iconW, iconH);
     }
 
     return 0;

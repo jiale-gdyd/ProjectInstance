@@ -2791,6 +2791,17 @@ int drm_mpi_vmix_destroy_device(int device)
     return 0;
 }
 
+int drm_mpi_rga_get_flush_cache()
+{
+    return libdrm::get_rga_flush_cache() ? 1 : 0;
+}
+
+int drm_mpi_rga_set_flush_cache(bool bEnable)
+{
+    libdrm::set_rga_flush_cache(bEnable);
+    return 0;
+}
+
 int drm_mpi_vmix_create_device(int device, drm_vmix_dev_info_t *pstDevInfo)
 {
     uint16_t u16Rotaion;

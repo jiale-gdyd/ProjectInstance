@@ -846,7 +846,8 @@ int MediaSys::registerMediaOutCbEx(drm_chn_t stChn, OutCallbackFunctionEx callba
 
 bool MediaSys::setupEnableRGAFlushCache(bool bEnable)
 {
-    return false;
+    drm_mpi_rga_set_flush_cache(bEnable);
+    return drm_mpi_rga_get_flush_cache();
 }
 
 API_END_NAMESPACE(media)

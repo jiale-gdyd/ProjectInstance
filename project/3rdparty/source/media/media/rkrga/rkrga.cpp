@@ -1,3 +1,4 @@
+#include <mutex>
 #include <vector>
 #include <assert.h>
 
@@ -8,6 +9,20 @@
 
 namespace libdrm {
 RockchipRga RgaFilter::gRkRga;
+
+static std::mutex gRgaFlushMutex;
+static bool g_bLockCPUCache = false;
+
+bool get_rga_flush_cache()
+{
+    return g_bLockCPUCache;
+}
+
+void set_rga_flush_cache(bool status)
+{
+    std::lock_guard<std::mutex> lock(gRgaFlushMutex);
+    g_bLockCPUCache = status;
+}
 
 struct RgaRotationMap {
     int rkRotation;
@@ -455,8 +470,10 @@ int rga_blit(std::shared_ptr<ImageBuffer> src, std::shared_ptr<ImageBuffer> dst,
     // dummp_rga_info(dst_info, "DstInfo");
 
     // flush cache,  2688x1520 NV12 cost 1399us, 1080P cost 905us
-    // src->BeginCPUAccess(false);
-    // src->EndCPUAccess(false);
+    if (g_bLockCPUCache) {
+        src->BeginCPUAccess(false);
+        src->EndCPUAccess(false);
+    }
 
     int ret;
     if (hide) {
@@ -523,8 +540,10 @@ int rga_blit(std::shared_ptr<ImageBuffer> src, std::shared_ptr<ImageBuffer> dst,
     }
 
     // invalidate cache, 2688x1520 NV12 cost  1072us, 1080P cost 779us
-    // dst->BeginCPUAccess(true);
-    // dst->EndCPUAccess(true);
+    if (g_bLockCPUCache) {
+        dst->BeginCPUAccess(true);
+        dst->EndCPUAccess(true);
+    }
 
     if (region_luma && region_luma->region_num > 0) {
         int x, y, w, h;

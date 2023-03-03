@@ -9,6 +9,7 @@
 #include "mediaVenc.hpp"
 #include "mediaVdec.hpp"
 #include "mediaVmix.hpp"
+#include "mediaRegion.hpp"
 
 #include <media/drm_media_api.h>
 #undef __ROCKCHIP_MEDIABASE_HPP_INSIDE__
@@ -67,10 +68,12 @@ public:
     virtual int init() = 0;
 
 public:
+    media::MediaRegion *getRegion();
     media::MediaInterface *getMedia();
 
 private:
-    static media::MediaInterface *mInstance;
+    static media::MediaRegion *mRegion;
+    static media::MediaInterface *mIMedia;
 };
 
 API_END_NAMESPACE(media)

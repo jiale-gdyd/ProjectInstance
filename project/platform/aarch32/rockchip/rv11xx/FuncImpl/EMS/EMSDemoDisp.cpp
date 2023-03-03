@@ -19,6 +19,8 @@ void EMSDemoImpl::drawPostThread()
 
     while (!mThreadQuit) {
         if (!mDispRawFrameRing.isEmpty() && mDispRawFrameRing.remove(mediaFrame)) {
+            getRegion()->initMediaFrame(mediaFrame, mOriginWidth, mOriginHeight, mOriginChns);
+
             if (!mAlgExtractResultRing.isEmpty() && mAlgExtractResultRing.remove(lastResult)) {
                 prevResult = lastResult;
                 usePrevResultCount = 0;
@@ -30,8 +32,8 @@ void EMSDemoImpl::drawPostThread()
                 }
             }
 
-            if (lastResult.size() > 0) {
-                dispObjects(mediaFrame, lastResult);
+            if (mediaFrame && (lastResult.size() > 0)) {
+                dispObjects(lastResult);
             }
 
             if (!mSendDrawFrameRing.insert(mediaFrame)) {

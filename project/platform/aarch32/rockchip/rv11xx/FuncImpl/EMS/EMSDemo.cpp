@@ -54,6 +54,8 @@ EMSDemoImpl::EMSDemoImpl()
 {
     parseApplicationConfigParam(APPLF_CONFIG_JSONFILE);
     parseVideoDecodeParam(VIDEO_DECODE_JSONFILE);
+
+    getMedia()->getSys().setupEnableRGAFlushCache(mEMSConfig.enableRGAFlushCache);
 }
 
 EMSDemoImpl::~EMSDemoImpl()
@@ -109,6 +111,14 @@ int EMSDemoImpl::init()
 
     if (mVideoVencEnOK) {
         videoEncodeInit();
+    }
+
+    std::unordered_map<int, std::string> fonts;
+    fonts.insert(std::make_pair(0, "/opt/aure/fonts/simhei.ttf"));
+    getRegion()->registerFontLibraries(fonts);
+
+    if (access("/opt/aure/ARM.png", F_OK) == 0) {
+        mBlendImage = cv::imread("/opt/aure/ARM.png");
     }
 
     std::thread(std::bind(&EMSDemoImpl::algoInitThread, this)).detach();
