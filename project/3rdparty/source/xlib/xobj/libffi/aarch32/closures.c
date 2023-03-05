@@ -587,12 +587,13 @@ static int execfd = -1;
 static size_t execsize = 0;
 
 #ifdef HAVE_MEMFD_CREATE
+extern int memfd_create (const char *__name, unsigned int __flags);
 /* Open a temporary file name, and immediately unlink it.  */
 static int
 open_temp_exec_file_memfd (const char *name)
 {
   int fd;
-  fd = memfd_create (name, MFD_CLOEXEC);
+  fd = memfd_create (name, /*MFD_CLOEXEC*/1u);
   return fd;
 }
 #endif

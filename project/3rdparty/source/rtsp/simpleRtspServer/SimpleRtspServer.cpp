@@ -1,4 +1,4 @@
-#include "simpleRtspServer.h"
+#include <rtsp/simpleRtspServer.h>
 #include <rtsp/SimpleRtspServer.hpp>
 
 namespace rtsp {
@@ -29,7 +29,7 @@ int SimpleRTSPServer::init(std::string path, uint16_t port, int codecFlag)
         return -1;
     }
 
-    mRtspServerSession = simple_create_rtsp_session(mRtspServerHandle, path.c_str(), (enum rtspCodecFlags)codecFlag);
+    mRtspServerSession = simple_create_rtsp_session(mRtspServerHandle, path.c_str(), codecFlag);
     if (mRtspServerSession == NULL) {
         return -2;
     }

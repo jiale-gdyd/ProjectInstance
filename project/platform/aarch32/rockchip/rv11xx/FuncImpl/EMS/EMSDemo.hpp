@@ -50,7 +50,7 @@ private:
     static void rtspEncodeProcessCallback(media_buffer_t mediaFrame, void *user_data);
 
     int rtspClientInit();
-    static void rtspClientFrameHandler(void *arg, int frameType, int64_t timestamp, uint8_t *frame, uint32_t frameSize);
+    static void rtspClientFrameHandler(void *arg, const char *tag, int frameType, int64_t timestamp, uint8_t *frame, uint32_t frameSize);
 
 private:
     void videoEncodeInit();

@@ -10,6 +10,11 @@
 CONFIG_PARENT_PROCESS=y
 
 #
+# EMS
+#
+CONFIG_AX620A_EMS=y
+
+#
 # mpi
 #
 CONFIG_MPI=y
@@ -19,6 +24,11 @@ CONFIG_AXERA_MPI=y
 # npu
 #
 CONFIG_AXNPU=y
+
+#
+# xlib
+#
+CONFIG_XLIB=y
 
 #
 # hardware platform

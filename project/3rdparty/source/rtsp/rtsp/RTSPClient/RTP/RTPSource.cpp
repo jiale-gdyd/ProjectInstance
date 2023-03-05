@@ -12,7 +12,8 @@ RTPSource::RTPSource(int streamType, MediaSubsession &subsession, TaskScheduler 
     : fStreamType(streamType), fRecvBuf(NULL), fRTPPayloadFormat(subsession.rtpPayloadFormat()), fTimestampFrequency(subsession.rtpTimestampFrequency()),
     fSSRC(rand()), fTask(&task), fSvrAddr(0), fRtspSock(NULL), fRtcpChannelId(subsession.rtcpChannelId), fCodecName(NULL),
     fReceptionStatsDB(NULL), fRtcpInstance(NULL),
-    fFrameHandlerFunc(NULL), fFrameHandlerFuncData(NULL), fIsStartFrame(false), fBeginFrame(false), fExtraData(NULL), fExtraDataSize(0),
+    fFrameHandlerFunc(NULL), fFrameHandlerFuncData(NULL), fFrameHandlerFuncTag(NULL), 
+    fIsStartFrame(false), fBeginFrame(false), fExtraData(NULL), fExtraDataSize(0),
     fRtpHandlerFunc(NULL), fRtpHandlerFuncData(NULL), fRtcpHandlerFunc(NULL), fRtcpHandlerFuncData(NULL), fFrameType(FRAME_TYPE_ETC)
 {
     fReorderingBuffer = new ReorderingPacketBuffer();
@@ -99,10 +100,11 @@ RTPSource::~RTPSource()
     DELETE_OBJECT(fReorderingBuffer);
 }
 
-void RTPSource::startNetworkReading(FrameHandlerFunc frameHandler, void *frameHandlerData, RTPHandlerFunc rtpHandler, void *rtpHandlerData, RTPHandlerFunc rtcpHandler, void *rtcpHandlerData)
+void RTPSource::startNetworkReading(FrameHandlerFunc frameHandler, void *frameHandlerData, const char *tag, RTPHandlerFunc rtpHandler, void *rtpHandlerData, RTPHandlerFunc rtcpHandler, void *rtcpHandlerData)
 {
     fFrameHandlerFunc = frameHandler;
     fFrameHandlerFuncData = frameHandlerData;
+    fFrameHandlerFuncTag = tag;
 
     fRtpHandlerFunc = rtpHandler;
     fRtpHandlerFuncData = rtpHandlerData;
@@ -131,6 +133,7 @@ void RTPSource::stopNetworkReading()
 
     fFrameHandlerFunc = NULL;
     fFrameHandlerFuncData = NULL;
+    fFrameHandlerFuncTag = NULL;
 
     fRtpHandlerFunc = NULL;
     fRtpHandlerFuncData = NULL;
@@ -255,7 +258,7 @@ void RTPSource::processFrame(RTPPacketBuffer *packet)
 
     if ((packet->markerBit() == 1) || (fLastTimestamp != packet->timestamp())) {
         if (fFrameHandlerFunc) {
-            fFrameHandlerFunc(fFrameHandlerFuncData, fFrameType, media_timestamp, fFrameBuf, fFrameBufPos);
+            fFrameHandlerFunc(fFrameHandlerFuncData, fFrameHandlerFuncTag, fFrameType, media_timestamp, fFrameBuf, fFrameBufPos);
         }
 
         resetFrameBuf();

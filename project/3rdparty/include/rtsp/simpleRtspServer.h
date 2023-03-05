@@ -7,11 +7,6 @@
 extern "C" {
 #endif
 
-enum rtspCodecFlags {
-    RTSP_CODEC_FLAGS_H264 = 0,
-    RTSP_CODEC_FLAGS_H265
-};
-
 enum rtspCodecIdEnum {
     RTSP_CODEC_ID_NONE        = 0,
     RTSP_CODEC_ID_VIDEO_H264  = 0x0001,     /* codec_data为SPS + PPS帧 */
@@ -65,7 +60,7 @@ int simple_rtsp_wait_frame_finished(simple_rtsp_handle_t handle);
  * 输出参数: 无
  * 返回说明: 成功返回RTSP会话句柄，否则返回NULL
  */
-simple_rtsp_session_t simple_create_rtsp_session(simple_rtsp_handle_t handle, const char *path, enum rtspCodecFlags encoder_flags);
+simple_rtsp_session_t simple_create_rtsp_session(simple_rtsp_handle_t handle, const char *path, int encoder_flags);
 
 /**
  * 函数名称: simple_rtsp_set_video

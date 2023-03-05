@@ -33,7 +33,7 @@ USER_LIB_INCLUDE_FLAG := $(addprefix -I,${USER_LIB_INCLUDE})
 export USER_LIB_INCLUDE_FLAG USER_LINK_LIB USER_PTH_RT_LIB
 
 KBUILD_CFLAGS   := -D__arm__ -D__ARM_NEON -D__ARM_NEON__ -DLINUX -D_GNU_SOURCE -DBLUEZ_USE -Wno-psabi -fdata-sections -ffunction-sections
-KBUILD_CFLAGS   := -mfloat-abi=hard -mcpu=cortex-a7 -mfpu=neon-vfpv4
+KBUILD_CFLAGS   := -mfloat-abi=hard -mcpu=cortex-a7 -mfpu=neon-vfpv4 -DCHIP_AX620
 
 KBUILD_CPPFLAGS := -D_GNU_SOURCE -Wno-psabi -Wno-write-strings -Wno-pointer-arith -fdata-sections -ffunction-sections
 KBUILD_CPPFLAGS += -DRAPIDJSON_HAS_STDSTRING -D__arm__ -D__ARM_NEON -DLINUX

@@ -1,66 +1,34 @@
 #ifndef AXERA_MEDIABASE_HPP
 #define AXERA_MEDIABASE_HPP
 
+#include <thread>
+#include <functional>
+
 #define __AXERA_MEDIABASE_HPP_INSIDE__
-#include "mediaVo.hpp"
-#include "mediaVin.hpp"
-#include "mediaSys.hpp"
-#include "mediaIsp.hpp"
-#include "mediaVdec.hpp"
-#include "mediaVenc.hpp"
-#include "mediaIpvs.hpp"
-#include "mediaIves.hpp"
+#include "pipeline/axpipe.hpp"
+#include "common/common_camera.hpp"
+#include "common/common_function.hpp"
 #undef __AXERA_MEDIABASE_HPP_INSIDE__
 
 API_BEGIN_NAMESPACE(media)
 
 class API_HIDDEN MediaApi {
 public:
-    MediaApi() = default;
-    ~MediaApi() = default;
+    MediaApi();
+    ~MediaApi();
 
-public:
-    MediaVo &getVo() {
-        return mMediaVo;
-    }
-
-    MediaVin &getVi() {
-        return mMediaVin;
-    }
-
-    MediaSys &getSys() {
-        return mMediaSys;
-    }
-
-    MediaIsp &getIsp() {
-        return mMediaIsp;
-    }
-
-    MediaVdec &getVdec() {
-        return mMediaVdec;
-    }
-
-    MediaVenc &getVenc() {
-        return mMediaVenc;
-    }
-
-    MediaIpvs &getIpvs() {
-        return mMediaIpvs;
-    }
-
-    MediaIves &getIves() {
-        return mMediaIves;
-    }
+    int init(int sysCase = SYS_CASE_SINGLE_GC4653, int hdrMode = AX_SNS_LINEAR_MODE, int snsType = GALAXYCORE_GC4653, int frameRate = 25);
 
 private:
-    MediaVo   mMediaVo;
-    MediaVin  mMediaVin;
-    MediaSys  mMediaSys;
-    MediaIsp  mMediaIsp;
-    MediaVdec mMediaVdec;
-    MediaVenc mMediaVenc;
-    MediaIpvs mMediaIpvs;
-    MediaIves mMediaIves;
+    void ispRunThread(int camId);
+
+private:
+    std::vector<std::thread> mIspThreadId;
+
+private:
+    bool                     mIspLoopOut;
+    axsys_args_t             mCommonAgrs;
+    axcam_t                  mCamers[MAX_CAMERAS];
 };
 
 class API_EXPORT MediaBase {
@@ -68,7 +36,7 @@ public:
     MediaBase();
     virtual ~MediaBase();
 
-    // virtual int init() = 0;
+    virtual int init() = 0;
 
 public:
     media::MediaApi *getApi();

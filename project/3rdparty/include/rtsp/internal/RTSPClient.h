@@ -23,7 +23,7 @@ public:
     void closeURL();
     int openURL(const char *url, int streamType, int timeout = 2, bool rtpOnly = false);
 
-    int playURL(FrameHandlerFunc func, void *funcData, 
+    int playURL(FrameHandlerFunc func, void *funcData, const char *tag, 
         OnCloseFunc onCloseFunc, void *onCloseFuncData,
         OnPacketReceiveFunc onRTPReceiveFunc = NULL, void *onRTPReceiveFuncData = NULL,
         OnPacketReceiveFunc onRTCPReceiveFunc = NULL, void *onRTCPReceiveFuncData = NULL);

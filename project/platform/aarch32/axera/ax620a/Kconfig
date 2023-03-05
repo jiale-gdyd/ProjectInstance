@@ -1,8 +1,20 @@
 #
-# AXera ax620a Application Kconfig
+# Axera AX620A Application Kconfig
 # 
 
-menu "AXera ax620a Application"
+menu "AXERA AX620A Application"
 
+choice
+prompt "AXERA AX620A Application Implementation"
+depends on AXERA && AX620A
+default AX620A_EMS
+
+config AX620A_EMS
+    bool "Electronic rearview mirror system"
+    depends on AXERA_MPI
+
+config AX620A_UNKNOWN
+    bool "Unknown Application"
+endchoice
 
 endmenu

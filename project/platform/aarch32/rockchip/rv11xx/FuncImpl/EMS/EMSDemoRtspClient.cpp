@@ -15,7 +15,7 @@ int EMSDemoImpl::rtspClientInit()
         return -2;
     }
 
-    if (pRTSPClient->playURL(rtspClientFrameHandler, this, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr) != 0) {
+    if (pRTSPClient->playURL(rtspClientFrameHandler, this, "tag", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr) != 0) {
         return -3;
     }
 #endif
@@ -23,7 +23,7 @@ int EMSDemoImpl::rtspClientInit()
     return 0;
 }
 
-void EMSDemoImpl::rtspClientFrameHandler(void *arg, int frameType, int64_t timestamp, uint8_t *frame, uint32_t frameSize)
+void EMSDemoImpl::rtspClientFrameHandler(void *arg, const char *tag, int frameType, int64_t timestamp, uint8_t *frame, uint32_t frameSize)
 {
     EMSDemoImpl *me = reinterpret_cast<EMSDemoImpl *>(arg);
 
@@ -31,7 +31,7 @@ void EMSDemoImpl::rtspClientFrameHandler(void *arg, int frameType, int64_t times
         case rtsp::FRAME_TYPE_VIDEO: {
             /* 这里可以将数据发送到解码器进行解码 */
             if (frameSize > 0) {
-                printf("[video]: recv from rtsp client frame size:[%d]\n", frameSize);
+                printf("[video]: tag:[%s], recv from rtsp client frame size:[%d]\n", tag, frameSize);
             }
 
             break;

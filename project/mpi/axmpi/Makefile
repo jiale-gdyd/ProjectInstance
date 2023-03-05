@@ -1,9 +1,4 @@
-obj-y += mediaVo.o
-obj-y += mediaVin.o
-obj-y += mediaSys.o
-obj-y += mediaIsp.o
-obj-y += mediaVdec.o
-obj-y += mediaVenc.o
-obj-y += mediaIpvs.o
-obj-y += mediaIves.o
+obj-y += common/
+obj-y += pipeline/
+
 obj-y += mediaBase.o

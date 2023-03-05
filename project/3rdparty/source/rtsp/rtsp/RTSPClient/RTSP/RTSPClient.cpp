@@ -1611,7 +1611,7 @@ int RTSPClient::openURL(const char *url, int streamType, int timeout, bool rtpOn
     return 0;
 }
 
-int RTSPClient::playURL(FrameHandlerFunc func, void *funcData, OnCloseFunc onCloseFunc, void *onCloseFuncData, OnPacketReceiveFunc onRTPReceiveFunc, void *onRTPReceiveFuncData, OnPacketReceiveFunc onRTCPReceiveFunc, void *onRTCPReceiveFuncData)
+int RTSPClient::playURL(FrameHandlerFunc func, void *funcData, const char *tag, OnCloseFunc onCloseFunc, void *onCloseFuncData, OnPacketReceiveFunc onRTPReceiveFunc, void *onRTPReceiveFuncData, OnPacketReceiveFunc onRTCPReceiveFunc, void *onRTCPReceiveFuncData)
 {
     if (!fMediaSession) {
         return -1;
@@ -1635,7 +1635,7 @@ int RTSPClient::playURL(FrameHandlerFunc func, void *funcData, OnCloseFunc onClo
 
     while ((subsession = iter->next()) != NULL) {
         if (subsession->fRTPSource) {
-            subsession->fRTPSource->startNetworkReading(func, funcData, rtpHandlerCallback, this, rtcpHandlerCallback, this);
+            subsession->fRTPSource->startNetworkReading(func, funcData, tag, rtpHandlerCallback, this, rtcpHandlerCallback, this);
         }
     }
 

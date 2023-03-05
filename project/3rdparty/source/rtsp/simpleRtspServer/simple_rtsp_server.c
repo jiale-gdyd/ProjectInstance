@@ -13,7 +13,7 @@
 #include "rtp_enc.h"
 #include "rtsp_msg.h"
 #include "stream_queue.h"
-#include "simpleRtspServer.h"
+#include <rtsp/simpleRtspServer.h>
 
 #define SOCKET_ERROR            (-1)
 #define INVALID_SOCKET          (-1)
@@ -431,14 +431,14 @@ simple_rtsp_handle_t simple_create_rtsp_server(uint16_t port)
     return simple_rtsp_new(port);
 }
 
-simple_rtsp_session_t simple_create_rtsp_session(simple_rtsp_handle_t handle, const char *path, enum rtspCodecFlags encoder_flags)
+simple_rtsp_session_t simple_create_rtsp_session(simple_rtsp_handle_t handle, const char *path, int encoder_flags)
 {
     simple_rtsp_session_t session;
 
     session = simple_rtsp_new_session(handle, path);
-    if (encoder_flags == RTSP_CODEC_FLAGS_H264) {
+    if (encoder_flags == 0) {
         simple_rtsp_set_video(session, RTSP_CODEC_ID_VIDEO_H264, NULL, 0);
-    } else if (encoder_flags == RTSP_CODEC_FLAGS_H265) {
+    } else if (encoder_flags == 1) {
         simple_rtsp_set_video(session, RTSP_CODEC_ID_VIDEO_H265, NULL, 0);
     }
 

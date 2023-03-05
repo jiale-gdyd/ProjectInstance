@@ -8,11 +8,6 @@
 #include <stdbool.h>
 
 namespace rtsp {
-enum {
-    RTSP_SERVER_CODEC_H264 = 0,
-    RTSP_SERVER_CODEC_H265
-};
-
 using rtsp_server_handler_t = void *;
 using rtsp_server_session_t = void *;
 
@@ -21,7 +16,7 @@ public:
     SimpleRTSPServer();
     ~SimpleRTSPServer();
 
-    int init(std::string path, uint16_t port = 554, int codecFlag = RTSP_SERVER_CODEC_H264);
+    int init(std::string path, uint16_t port = 554, int codecFlag = 0);
     int sendFrame(const uint8_t *frame, uint32_t frameSize, uint64_t timestamp);
 
 private:
