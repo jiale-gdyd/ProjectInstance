@@ -78,7 +78,7 @@ protected:
     uint16_t               fLastSeqNum, fLastSeqNum2;
     char                   *fCodecName;
     char                   *fTrackId;
-    RTP_FRAME_TYPE         fFrameType;
+    int                    fFrameType;
 
     int                    fStreamType;
 

@@ -34,7 +34,7 @@ void AC3RTPSource::processFrame(RTPPacketBuffer *packet)
 
     if (packet->markerBit() || (FT == 0)) {
         if (fFrameHandlerFunc) {
-            fFrameHandlerFunc(fFrameHandlerFuncData, fFrameType, media_timestamp, fFrameBuf, fFrameBufPos);
+            fFrameHandlerFunc(fFrameHandlerFuncData, fFrameHandlerFuncTag, fFrameType, media_timestamp, fFrameBuf, fFrameBufPos);
         }
 
         resetFrameBuf();

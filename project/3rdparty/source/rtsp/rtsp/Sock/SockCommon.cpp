@@ -30,7 +30,7 @@ void socketErr(char *lpszFormat,...)
 
     vsprintf(buffer, lpszFormat, args);
 
-    fprintf(stdout, buffer);
+    fprintf(stdout, "%s", buffer);
     fprintf(stdout, "%d\n", WSAGetLastError());
 
     free(buffer);

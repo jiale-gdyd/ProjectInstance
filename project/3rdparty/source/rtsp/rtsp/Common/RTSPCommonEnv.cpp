@@ -42,7 +42,7 @@ void RTSPCommonEnv::DebugPrint(char *lpszFormat, ...)
     memcpy(buffer, prefix, prefix_len);
 
     vsprintf(&buffer[prefix_len], lpszFormat, args);
-    fprintf(stdout, buffer);
+    fprintf(stdout, "%s", buffer);
 
     free(buffer);
 }

@@ -46,7 +46,7 @@ int RTSPLiveStreamer::run()
         return -1;
     }
 
-    if (m_pRtspClient->playURL(NULL, NULL, NULL, NULL, onRtpReceived, this, onRtcpReceived, this) < 0) {
+    if (m_pRtspClient->playURL(NULL, NULL, NULL, NULL, NULL, onRtpReceived, this, onRtcpReceived, this) < 0) {
         return -1;
     }
 

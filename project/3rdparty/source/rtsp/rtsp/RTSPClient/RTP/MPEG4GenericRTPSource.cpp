@@ -79,7 +79,7 @@ void MPEG4GenericRTPSource::processFrame(RTPPacketBuffer *packet)
         ptr += fAUHeaders[i].size;
 
         if (fFrameHandlerFunc) {
-            fFrameHandlerFunc(fFrameHandlerFuncData, fFrameType, media_timestamp, fFrameBuf, fFrameBufPos);
+            fFrameHandlerFunc(fFrameHandlerFuncData, fFrameHandlerFuncTag, fFrameType, media_timestamp, fFrameBuf, fFrameBufPos);
         }
 
         resetFrameBuf();
