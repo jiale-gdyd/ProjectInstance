@@ -9,35 +9,40 @@ EMSDemoImpl::EMSDemoImpl() : mThreadFin(false)
 
 EMSDemoImpl::~EMSDemoImpl()
 {
+    getApi()->stop();
     mThreadFin = true;
-#if defined(CONFIG_XLIB)
-    x_main_loop_quit(mMainLoop);
-#endif
-
     mediaDeinit();
 }
 
 int EMSDemoImpl::init()
 {
-    if (getApi()->init() != 0) {
+    media::axsys_init_params_t sysParams;
+#if 0
+    sysParams.enableCamera = true;
+    sysParams.sysCameraCase = media::SYS_CASE_SINGLE_GC4653;
+    sysParams.sysCameraHdrMode = media::SNS_MODE_NONE;
+    sysParams.sysCameraSnsType = media::GALAXYCORE_GC4653;
+    sysParams.cameraIvpsFrameRate = 25;
+#else
+    sysParams.enableCamera = false;
+    media::axsys_pool_cfg_t poolcfg[] = {
+        {1920, 1088, 1920, AX_YUV420_SEMIPLANAR, 10},
+    };
+    sysParams.sysCommonArgs.poolCfgCount = 1;
+    sysParams.sysCommonArgs.poolCfg = poolcfg;
+#endif
+
+    if (getApi()->init(&sysParams) != 0) {
         return -1;
     }
+
+    /* NPU初始化 */
 
     if (mediaInit()) {
         return -2;
     }
 
-#if defined(CONFIG_XLIB)
-    mMainContex = x_main_context_new();
-    mMainLoop = x_main_loop_new(mMainContex, FALSE);
-    x_main_loop_run(mMainLoop);
-    x_main_loop_unref(mMainLoop);
-#else
-    while (!mThreadFin) {
-        sleep(10);
-    }
-#endif
-
+    getApi()->run();
     return 0;
 }
 

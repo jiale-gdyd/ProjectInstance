@@ -10,14 +10,13 @@ API_BEGIN_NAMESPACE(media)
 MediaApi::MediaApi()
 {
     mIspLoopOut = false;
-    memset(mCamers, 0, sizeof(mCamers));
-    memset(&mCommonAgrs, 0, sizeof(mCommonAgrs));
+    memset(mCamers, 0x00, sizeof(mCamers));
 }
 
 MediaApi::~MediaApi()
 {
     mIspLoopOut = true;
-    for (int i = 0; i < mCommonAgrs.camCount; ++i) {
+    for (int i = 0; i < mSysInitParam.sysCommonArgs.camCount; ++i) {
         if (!mCamers[i].bOpen) {
             continue;
         }
@@ -28,41 +27,69 @@ MediaApi::~MediaApi()
         }
     }
 
-    axcam_deinit();
+    if (mSysInitParam.enableCamera) {
+        axcam_deinit();
+    }
+
     axsys_deinit();
 }
 
-int MediaApi::init(int sysCase, int hdrMode, int snsType, int frameRate)
+int MediaApi::init(axsys_init_params_t *param)
 {
-    int ret = axcam_setup(mCamers, sysCase, hdrMode, &snsType, &mCommonAgrs, frameRate);
-    if (ret != 0) {
+    if (!param) {
         return -1;
     }
 
-    ret = axsys_init(&mCommonAgrs);
-    if (ret != 0) {
-        return -2;
+    int ret = -1;
+    memcpy(&mSysInitParam, param, sizeof(axsys_init_params_t));
+
+    if (mSysInitParam.enableCamera) {
+        ret = axcam_setup(mCamers, mSysInitParam.sysCameraCase, mSysInitParam.sysCameraHdrMode, (int *)&mSysInitParam.sysCameraSnsType, &mSysInitParam.sysCommonArgs, mSysInitParam.cameraIvpsFrameRate);
+        if (ret != 0) {
+            return -2;
+        }
     }
 
-    ret = axcam_init();
+    ret = axsys_init(&(mSysInitParam.sysCommonArgs));
     if (ret != 0) {
-        axsys_deinit();
         return -3;
     }
 
-    for (int i = 0; i < mCommonAgrs.camCount; ++i) {
-        ret = axcam_open(&mCamers[i]);
+    return 0;
+}
+
+int MediaApi::run()
+{
+    if (mSysInitParam.enableCamera) {
+        int ret = axcam_init();
         if (ret != 0) {
-            axcam_deinit();
             axsys_deinit();
-            return -4;
+            return -1;
         }
 
-        mCamers[i].bOpen = true;
-        mIspThreadId[i] = std::thread(std::bind(&MediaApi::ispRunThread, this, i));
+        for (int i = 0; i < mSysInitParam.sysCommonArgs.camCount; ++i) {
+            ret = axcam_open(&mCamers[i]);
+            if (ret != 0) {
+                axcam_deinit();
+                axsys_deinit();
+                return -2;
+            }
+
+            mCamers[i].bOpen = true;
+            mIspThreadId[i] = std::thread(std::bind(&MediaApi::ispRunThread, this, i));
+        }
+    }
+
+    while (!mIspLoopOut) {
+        sleep(3);
     }
 
     return 0;
+}
+
+void MediaApi::stop()
+{
+    mIspLoopOut = true;
 }
 
 void MediaApi::ispRunThread(int camId)

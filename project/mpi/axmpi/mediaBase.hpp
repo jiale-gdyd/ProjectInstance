@@ -5,6 +5,7 @@
 #include <functional>
 
 #define __AXERA_MEDIABASE_HPP_INSIDE__
+#include "mediaIvps.hpp"
 #include "pipeline/axpipe.hpp"
 #include "common/common_camera.hpp"
 #include "common/common_function.hpp"
@@ -12,23 +13,41 @@
 
 API_BEGIN_NAMESPACE(media)
 
+typedef struct {
+    bool         enableCamera;         // 是否启用摄像头
+    uint32_t     sysCameraCase;        // enableCamera启用时有效
+    uint32_t     sysCameraHdrMode;     // enableCamera启用时有效
+    uint32_t     sysCameraSnsType;     // enableCamera启用时有效
+    uint32_t     cameraIvpsFrameRate;  // enableCamera启用时有效
+    axsys_args_t sysCommonArgs;        // 系统通用参数(enableCamera启用时，则不需要关心)
+} axsys_init_params_t;
+
 class API_HIDDEN MediaApi {
 public:
     MediaApi();
     ~MediaApi();
 
-    int init(int sysCase = SYS_CASE_SINGLE_GC4653, int hdrMode = AX_SNS_LINEAR_MODE, int snsType = GALAXYCORE_GC4653, int frameRate = 25);
+    int init(axsys_init_params_t *param);
+
+    int run();
+    void stop();
+
+public:
+    MediaIvps &getIvps() {
+        return mMediaIvps;
+    }
 
 private:
     void ispRunThread(int camId);
 
 private:
+    bool                     mIspLoopOut;
+    axsys_init_params_t      mSysInitParam;
+    axcam_t                  mCamers[MAX_CAMERAS];
     std::vector<std::thread> mIspThreadId;
 
 private:
-    bool                     mIspLoopOut;
-    axsys_args_t             mCommonAgrs;
-    axcam_t                  mCamers[MAX_CAMERAS];
+    MediaIvps                mMediaIvps;
 };
 
 class API_EXPORT MediaBase {

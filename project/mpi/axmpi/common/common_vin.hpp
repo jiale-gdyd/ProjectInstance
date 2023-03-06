@@ -10,6 +10,7 @@
 #include <ax_mipi_api.h>
 #include <ax_base_type.h>
 #include <ax_isp_3a_api.h>
+#include <ax_isp_common.h>
 #include <ax_interpreter_external_api.h>
 
 #include "common_config.h"
@@ -60,6 +61,15 @@ enum {
     COMM_ISP_YUV_SUB1,
     COMM_ISP_YUV_SUB2,
     COMM_ISP_BUF_MAX
+};
+
+enum {
+    SNS_MODE_NONE   = 0,
+    SNS_LINEAR_MODE = 1,
+    SNS_HDR_2X_MODE = 2,
+    SNS_HDR_3X_MODE = 3,
+    SNS_HDR_4X_MODE = 4,
+    SNS_HDR_MODE_BUTT
 };
 
 typedef AX_DEV_ATTR_T axisp_dev_attr_t;

@@ -6,7 +6,7 @@
 
 API_BEGIN_NAMESPACE(media)
 
-static axsys_pool_cfg_t gtSysCommPoolSingleOs04a10Sdr[] = {
+axsys_pool_cfg_t gtSysCommPoolSingleOs04a10Sdr[] = {
     {2688, 1520, 2688, AX_FORMAT_BAYER_RAW_10BPP, 15},
     {2688, 1520, 2688, AX_FORMAT_BAYER_RAW_16BPP, 4},
     {2688, 1520, 2688, AX_YUV420_SEMIPLANAR,      5},
@@ -14,7 +14,7 @@ static axsys_pool_cfg_t gtSysCommPoolSingleOs04a10Sdr[] = {
     {1280, 720,  1280,  AX_YUV420_SEMIPLANAR,     4},
 };
 
-static axsys_pool_cfg_t gtSysCommPoolSingleOs04a10OnlineSdr[] = {
+axsys_pool_cfg_t gtSysCommPoolSingleOs04a10OnlineSdr[] = {
     {2688, 1520, 2688, AX_FORMAT_BAYER_RAW_10BPP, 3},
     {2688, 1520, 2688, AX_FORMAT_BAYER_RAW_16BPP, 4},
     {2688, 1520, 2688, AX_YUV420_SEMIPLANAR,      3},
@@ -22,7 +22,7 @@ static axsys_pool_cfg_t gtSysCommPoolSingleOs04a10OnlineSdr[] = {
     {1280, 720,  1280, AX_YUV420_SEMIPLANAR,      2},
 };
 
-static axsys_pool_cfg_t gtSysCommPoolSingleOs04a10Hdr[] = {
+axsys_pool_cfg_t gtSysCommPoolSingleOs04a10Hdr[] = {
     {2688, 1520, 2688, AX_FORMAT_BAYER_RAW_10BPP, 17},
     {2688, 1520, 2688, AX_FORMAT_BAYER_RAW_16BPP, 5},
     {2688, 1520, 2688, AX_YUV420_SEMIPLANAR,      6},
@@ -30,7 +30,7 @@ static axsys_pool_cfg_t gtSysCommPoolSingleOs04a10Hdr[] = {
     {720,  576,  720,  AX_YUV420_SEMIPLANAR,      6},
 };
 
-static axsys_pool_cfg_t gtSysCommPoolSingleOs04a10OnlineHdr[] = {
+axsys_pool_cfg_t gtSysCommPoolSingleOs04a10OnlineHdr[] = {
     {2688, 1520, 2688, AX_FORMAT_BAYER_RAW_10BPP, 6},
     {2688, 1520, 2688, AX_FORMAT_BAYER_RAW_16BPP, 4},
     {2688, 1520, 2688, AX_YUV420_SEMIPLANAR,     3},
@@ -38,7 +38,7 @@ static axsys_pool_cfg_t gtSysCommPoolSingleOs04a10OnlineHdr[] = {
     {720,  576,  720,  AX_YUV420_SEMIPLANAR,     2},
 };
 
-static axsys_pool_cfg_t gtSysCommPoolSingleImx334Sdr[] = {
+axsys_pool_cfg_t gtSysCommPoolSingleImx334Sdr[] = {
     {3840, 2160, 3840, AX_FORMAT_BAYER_RAW_12BPP, 15},
     {3840, 2160, 3840, AX_FORMAT_BAYER_RAW_16BPP, 5},
     {3840, 2160, 3840, AX_YUV420_SEMIPLANAR,      6},
@@ -46,7 +46,7 @@ static axsys_pool_cfg_t gtSysCommPoolSingleImx334Sdr[] = {
     {960,  540,  960,  AX_YUV420_SEMIPLANAR,      3},
 };
 
-static axsys_pool_cfg_t gtSysCommPoolSingleImx334Hdr[] = {
+axsys_pool_cfg_t gtSysCommPoolSingleImx334Hdr[] = {
     {3840, 2160, 3840, AX_FORMAT_BAYER_RAW_10BPP, 17},
     {3840, 2160, 3840, AX_FORMAT_BAYER_RAW_16BPP, 5},
     {3840, 2160, 3840, AX_YUV420_SEMIPLANAR,      6},
@@ -54,7 +54,7 @@ static axsys_pool_cfg_t gtSysCommPoolSingleImx334Hdr[] = {
     {960,  540,  960,  AX_YUV420_SEMIPLANAR,      6},
 };
 
-static axsys_pool_cfg_t gtSysCommPoolSingleGc4653[] = {
+axsys_pool_cfg_t gtSysCommPoolSingleGc4653[] = {
     {2560, 1440, 2560, AX_FORMAT_BAYER_RAW_10BPP, 3},
     {2560, 1440, 2560, AX_FORMAT_BAYER_RAW_16BPP, 4},
     {2560, 1440, 2560, AX_YUV420_SEMIPLANAR,      2},
@@ -62,7 +62,7 @@ static axsys_pool_cfg_t gtSysCommPoolSingleGc4653[] = {
     {640,  360,  640,  AX_YUV420_SEMIPLANAR,      2},
 };
 
-static axsys_pool_cfg_t gtSysCommPoolDoubleOs04a10[] = {
+axsys_pool_cfg_t gtSysCommPoolDoubleOs04a10[] = {
     {2688, 1520, 2688, AX_FORMAT_BAYER_RAW_10BPP, 15 * 2},
     {2688, 1520, 2688, AX_FORMAT_BAYER_RAW_16BPP, 5 * 2},
     {2688, 1520, 2688, AX_YUV420_SEMIPLANAR,      6 * 2},
@@ -70,7 +70,7 @@ static axsys_pool_cfg_t gtSysCommPoolDoubleOs04a10[] = {
     {1344, 760,  1344, AX_YUV420_SEMIPLANAR,      3 * 2},
 };
 
-static axsys_pool_cfg_t gtSysCommPoolSingleOs08a20Sdr[] = {
+axsys_pool_cfg_t gtSysCommPoolSingleOs08a20Sdr[] = {
     {3840, 2160, 3840, AX_FORMAT_BAYER_RAW_12BPP, 15},
     {3840, 2160, 3840, AX_FORMAT_BAYER_RAW_16BPP, 5},
     {3840, 2160, 3840, AX_YUV420_SEMIPLANAR,      6},
@@ -78,7 +78,7 @@ static axsys_pool_cfg_t gtSysCommPoolSingleOs08a20Sdr[] = {
     {960,  540,  960,  AX_YUV420_SEMIPLANAR,      3},
 };
 
-static axsys_pool_cfg_t gtSysCommPoolSingleOs08a20Hdr[] = {
+axsys_pool_cfg_t gtSysCommPoolSingleOs08a20Hdr[] = {
     {3840, 2160, 3840, AX_FORMAT_BAYER_RAW_10BPP, 17},
     {3840, 2160, 3840, AX_FORMAT_BAYER_RAW_16BPP, 5},
     {3840, 2160, 3840, AX_YUV420_SEMIPLANAR,      6},
@@ -86,13 +86,13 @@ static axsys_pool_cfg_t gtSysCommPoolSingleOs08a20Hdr[] = {
     {960,  540,  960,  AX_YUV420_SEMIPLANAR,      6},
 };
 
-static axsys_pool_cfg_t gtSysCommPoolSingleDVP[] = {
+axsys_pool_cfg_t gtSysCommPoolSingleDVP[] = {
     {1600, 300, 1600, AX_FORMAT_BAYER_RAW_8BPP,   40},
     {1600, 300, 1600, AX_FORMAT_BAYER_RAW_16BPP,  5},
     {1600, 300, 1600, AX_YUV422_INTERLEAVED_UYVY, 6},
 };
 
-static axsys_pool_cfg_t gtSysCommPoolBT601[] = {
+axsys_pool_cfg_t gtSysCommPoolBT601[] = {
     {2688, 1520, 2688, AX_FORMAT_BAYER_RAW_10BPP,  40},
     {2688, 1520, 2688, AX_FORMAT_BAYER_RAW_16BPP,  5},
     {2688, 1520, 2688, AX_YUV422_INTERLEAVED_YUYV, 6},
@@ -100,7 +100,7 @@ static axsys_pool_cfg_t gtSysCommPoolBT601[] = {
     {1280, 720,  1280, AX_YUV422_INTERLEAVED_YUYV, 3},
 };
 
-static axsys_pool_cfg_t gtSysCommPoolBT656[] = {
+axsys_pool_cfg_t gtSysCommPoolBT656[] = {
     {2688, 1520, 2688, AX_FORMAT_BAYER_RAW_10BPP,  40},
     {2688, 1520, 2688, AX_FORMAT_BAYER_RAW_16BPP,  5},
     {2688, 1520, 2688, AX_YUV422_INTERLEAVED_YUYV, 6},
@@ -108,7 +108,7 @@ static axsys_pool_cfg_t gtSysCommPoolBT656[] = {
     {1280, 720,  1280, AX_YUV422_INTERLEAVED_YUYV, 3},
 };
 
-static axsys_pool_cfg_t gtSysCommPoolBT1120[] = {
+axsys_pool_cfg_t gtSysCommPoolBT1120[] = {
     {2688, 1520, 2688, AX_FORMAT_BAYER_RAW_10BPP,  40},
     {2688, 1520, 2688, AX_FORMAT_BAYER_RAW_16BPP,  5},
     {2688, 1520, 2688, AX_YUV422_INTERLEAVED_YUYV, 6},
@@ -116,7 +116,7 @@ static axsys_pool_cfg_t gtSysCommPoolBT1120[] = {
     {1280, 720,  1280, AX_YUV422_INTERLEAVED_YUYV, 3},
 };
 
-static axsys_pool_cfg_t gtSysCommPoolMIPI_YUV[] = {
+axsys_pool_cfg_t gtSysCommPoolMIPI_YUV[] = {
     {3840, 2160, 3840, AX_FORMAT_BAYER_RAW_16BPP, 40},
 };
 

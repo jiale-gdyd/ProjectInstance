@@ -94,7 +94,7 @@ typedef struct {
     void     *userData;                     // 用户数据
 } axpipe_buffer_t;
 
-using axpipe_frame_t = std::function<void (axpipe_buffer_t *buff)>;
+using axpipe_frame_t = std::function<void (axpipe_buffer_t *buff, void *user_data)>;
 
 typedef struct {
     bool                 bEnable;           // 是否启用
@@ -109,6 +109,7 @@ typedef struct {
     axpipe_venc_config_t vencConfig;        // 视频编码配置
     axpipe_ivps_config_t ivpsConfig;        // IVPS配置
     axpipe_frame_t       frameCallback;     // 帧回调函数
+    void                 *userData;         // 用户数据
 } axpipe_t;
 
 /**
