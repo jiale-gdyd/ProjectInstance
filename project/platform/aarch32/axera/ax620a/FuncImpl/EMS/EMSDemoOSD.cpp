@@ -34,6 +34,10 @@ void EMSDemoImpl::osdProcessThread()
 
                     /* 画图: 之后需要封装画图函数 */
                     cv::Mat frameImage = cv::Mat(imgOverlay.height, imgOverlay.width, CV_8UC4, imgOverlay.data);
+                    for (int i = 0; i < lastResult.objectSize; ++i) {
+                        cv::rectangle(frameImage, cv::Rect(lastResult.objects[i].bbox.x, lastResult.objects[i].bbox.y, lastResult.objects[i].bbox.w, lastResult.objects[i].bbox.h),
+                            cv::Scalar(255, 0, 255, 0), 2);
+                    }
 
                     display.nNum = 1;
                     display.tChnAttr.nAlpha = 1024;
@@ -43,10 +47,8 @@ void EMSDemoImpl::osdProcessThread()
                     display.tChnAttr.nBitColor.bEnable = AX_FALSE;
                     display.tChnAttr.nBitColor.nColorInv = 0xFF;
                     display.tChnAttr.nBitColor.nColorInvThr = 0xA0A0A0;
-
                     display.arrDisp[0].bShow = AX_TRUE;
                     display.arrDisp[0].eType = AX_IVPS_RGN_TYPE_OSD;
-
                     display.arrDisp[0].uDisp.tOSD.bEnable = AX_TRUE;
                     display.arrDisp[0].uDisp.tOSD.enRgbFormat = AX_FORMAT_RGBA8888;
                     display.arrDisp[0].uDisp.tOSD.u32Zindex = 1;
@@ -59,6 +61,8 @@ void EMSDemoImpl::osdProcessThread()
                     display.arrDisp[0].uDisp.tOSD.u32DstYoffset = osdPipe->outType == media::AXPIPE_OUTPUT_VO_SIPEED_SCREEN ? 32 : 0;
                     display.arrDisp[0].uDisp.tOSD.u64PhyAddr = 0;
                     display.arrDisp[0].uDisp.tOSD.pBitmap = imgOverlay.data;
+
+                    getApi()->getIvps().updateRegion(osdPipe->ivpsConfig.osdRgnHandle[0], &display);
                 }
             }
         }
