@@ -45,6 +45,18 @@ int AiDetector::init(std::string modelFile, size_t imageWidth, size_t imageHeigh
     return 0;
 }
 
+int AiDetector::getModelInputWidthHeight(int &width, int &height, int &colorSpace) const
+{
+    if (!mInitFin) {
+        rknpu_error("detector not init or with null mediaFrame");
+        return -1;
+    }
+
+    width = mInputWidth;
+    height = mInputHeight;
+    return 0;
+}
+
 void AiDetector::setYoloAnchor(std::vector<yolo_layer_t> anchor)
 {
     if (mDetector) {

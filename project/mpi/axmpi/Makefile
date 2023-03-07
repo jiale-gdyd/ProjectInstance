@@ -1,4 +1,3 @@
-obj-y += maix/
 obj-y += common/
 obj-y += pipeline/
 

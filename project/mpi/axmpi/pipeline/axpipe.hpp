@@ -94,6 +94,7 @@ typedef struct {
     void     *userData;                     // 用户数据
 } axpipe_buffer_t;
 
+// typedef void (*axpipe_frame_t)(axpipe_buffer_t *buff, void *user_data);
 using axpipe_frame_t = std::function<void (axpipe_buffer_t *buff, void *user_data)>;
 
 typedef struct {

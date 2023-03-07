@@ -33,7 +33,7 @@ public:
      * 输出参数: 无
      * 返回说明: 成功返回0，其他则失败
      */
-    int init(std::string modelFile, size_t imageWidth, size_t imageHeight, size_t classCount, float confThreshold, float nmsThreshold, int algoType = YOLOV5S, int algoAuthor = AUTHOR_JIALELU);
+    int init(std::string modelFile, size_t imageWidth, size_t imageHeight, size_t classCount, float confThreshold, float nmsThreshold, int algoType, int algoAuthor);
 
     /**
      * 函数名称: forward
@@ -52,6 +52,7 @@ public:
      * 返回说明: 成功返回0，其他则失败
      */
     int forward(void *mediaFrame, std::vector<bbox> &lastResult);
+    int forward(void *mediaFrame, axdl_result_t *lastResult);
 
     /**
      * 函数名称: forward
@@ -62,6 +63,7 @@ public:
      * 返回说明: 成功返回0，其他则失败
      */
     int forward(void *mediaFrame, std::vector<bbox> &lastResult, std::vector<int> filterClass);
+    int forward(void *mediaFrame, axdl_result_t *lastResult, std::vector<int> filterClass);
 
     /**
      * 函数名称: extract
@@ -89,6 +91,8 @@ public:
      * 返回说明: 无
      */
     void setYoloAnchor(std::vector<yolo_layer_t> anchor);
+
+    int getModelInputWidthHeight(int &width, int &height, int &colorSpace) const;
 
 private:
     bool                                        mInitFin;           // 初始化完成

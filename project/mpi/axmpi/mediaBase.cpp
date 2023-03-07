@@ -44,7 +44,9 @@ int MediaApi::init(axsys_init_params_t *param)
     memcpy(&mSysInitParam, param, sizeof(axsys_init_params_t));
 
     if (mSysInitParam.enableCamera) {
-        ret = axcam_setup(mCamers, mSysInitParam.sysCameraCase, mSysInitParam.sysCameraHdrMode, (int *)&mSysInitParam.sysCameraSnsType, &mSysInitParam.sysCommonArgs, mSysInitParam.cameraIvpsFrameRate);
+        ret = axcam_setup(mCamers, mSysInitParam.cameraInfo.sysCameraCase,
+            mSysInitParam.cameraInfo.sysCameraHdrMode, (int *)&mSysInitParam.cameraInfo.sysCameraSnsType,
+            &mSysInitParam.sysCommonArgs, mSysInitParam.cameraInfo.cameraIvpsFrameRate);
         if (ret != 0) {
             return -2;
         }
@@ -53,6 +55,17 @@ int MediaApi::init(axsys_init_params_t *param)
     ret = axsys_init(&(mSysInitParam.sysCommonArgs));
     if (ret != 0) {
         return -3;
+    }
+
+    if (mSysInitParam.enableNPU) {
+        AX_NPU_SDK_EX_ATTR_T sNpuAttr;
+        sNpuAttr.eHardMode = (AX_NPU_SDK_EX_HARD_MODE_T)mSysInitParam.npuInitInfo.npuHdrMode;
+        ret = AX_NPU_SDK_EX_Init_with_attr(&sNpuAttr);
+        if (ret != 0) {
+            axcam_deinit();
+            axsys_deinit();
+            return -4;
+        }
     }
 
     return 0;

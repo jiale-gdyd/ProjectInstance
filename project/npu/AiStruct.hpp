@@ -5,18 +5,20 @@
 #include <vector>
 #include <utils/export.h>
 
+#include "axnpu/AxStruct.hpp"
+
 API_BEGIN_NAMESPACE(Ai)
 
 /* 算法结果结构 */
 typedef struct {
-    float       left;               // 检测框左上角坐标X
-    float       top;                // 检测框左上角坐标Y
-    float       right;              // 检测框右下角坐标X
-    float       bottom;             // 检测框右下角坐标Y
-    float       score;              // 检测框置信度
-    int         classify;           // 检测目标分类号
-    int         trackerId;          // 检测目标跟踪ID
-    float       prob;               // 检测框置信度
+    float left;                     // 检测框左上角坐标X
+    float top;                      // 检测框左上角坐标Y
+    float right;                    // 检测框右下角坐标X
+    float bottom;                   // 检测框右下角坐标Y
+    float score;                    // 检测框置信度
+    int   classify;                 // 检测目标分类号
+    int   trackerId;                // 检测目标跟踪ID
+    float prob;                     // 检测框置信度
 } bbox;
 
 /* 算法类型 */
