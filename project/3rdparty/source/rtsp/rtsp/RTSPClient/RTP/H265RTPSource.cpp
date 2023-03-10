@@ -2,6 +2,8 @@
 #include <rtsp/internal/RTSPCommonEnv.h>
 #include <rtsp/internal/H265RTPSource.h>
 
+#include "../../../private.h"
+
 namespace rtsp {
 H265RTPSource::H265RTPSource(int connType, MediaSubsession &subsession, TaskScheduler &task)
     : H264RTPSource(connType, subsession, task)
@@ -27,7 +29,7 @@ void H265RTPSource::processFrame(RTPPacketBuffer *packet)
     uint8_t nalUnitType = (headerStart[0] & 0x7E) >> 1;
 
     if (RTSPCommonEnv::nDebugFlag & DEBUG_FLAG_RTP_PAYLOAD) {
-        DPRINTF("nal_type: %d, size: %d\n", nalUnitType, len);
+        rtsp_info("nal_type:[%d], size:[%d]", nalUnitType, len);
     }
 
     switch (nalUnitType) {
@@ -38,7 +40,7 @@ void H265RTPSource::processFrame(RTPPacketBuffer *packet)
             while (len > 3) {
                 uint16_t nalUSize = (buf_ptr[0] << 8) | (buf_ptr[1]);
                 if (nalUSize > len) {
-                    DPRINTF("Aggregation Packet process error, staplen: %d, len\n", nalUSize, len);
+                    rtsp_error("Aggregation Packet process error, nalUSize:[%d], len:[%d]", nalUSize, len);
                     break;
                 }
 

@@ -2,6 +2,8 @@
 #include <rtsp/internal/TaskScheduler.h>
 #include <rtsp/internal/RTSPCommonEnv.h>
 
+#include "../../private.h"
+
 namespace rtsp {
 void *DoEventThread(void *lpParam)
 {
@@ -88,7 +90,7 @@ int TaskScheduler::startEventLoop()
     fTaskLoop = 1;
     THREAD_CREATE(&fThread, DoEventThread, this);
     if (!fThread) {
-        DPRINTF("failed to create event loop thread\n");
+        rtsp_error("failed to create event loop thread");
         fTaskLoop = 0;
         return -1;
     }
@@ -147,9 +149,9 @@ void TaskScheduler::SingleStep()
 
     while ((handler = iter.next()) != NULL) {
         if (FD_ISSET(handler->socketNum, &readSet) && FD_ISSET(handler->socketNum, &fReadSet) && (handler->handlerProc != NULL)) {
-                fLastHandledSocketNum = handler->socketNum;
-                (*handler->handlerProc)(handler->clientData, SOCKET_READABLE);
-                break;
+            fLastHandledSocketNum = handler->socketNum;
+            (*handler->handlerProc)(handler->clientData, SOCKET_READABLE);
+            break;
         }
     }
 
@@ -158,9 +160,9 @@ void TaskScheduler::SingleStep()
 
         while ((handler = iter.next()) != NULL) {
             if (FD_ISSET(handler->socketNum, &readSet) && FD_ISSET(handler->socketNum, &fReadSet) && (handler->handlerProc != NULL)) {
-                    fLastHandledSocketNum = handler->socketNum;
-                    (*handler->handlerProc)(handler->clientData, SOCKET_READABLE);
-                    break;
+                fLastHandledSocketNum = handler->socketNum;
+                (*handler->handlerProc)(handler->clientData, SOCKET_READABLE);
+                break;
             }
         }
 

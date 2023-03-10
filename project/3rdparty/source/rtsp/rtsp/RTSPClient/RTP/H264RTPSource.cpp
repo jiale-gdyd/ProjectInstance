@@ -3,6 +3,8 @@
 #include <rtsp/internal/H264RTPSource.h>
 #include <rtsp/internal/RTSPCommonEnv.h>
 
+#include "../../../private.h"
+
 namespace rtsp {
 H264RTPSource::H264RTPSource(int connType, MediaSubsession &subsession, TaskScheduler &task)
     : RTPSource(connType, subsession, task)
@@ -39,7 +41,7 @@ void H264RTPSource::processFrame(RTPPacketBuffer *packet)
     uint8_t nalUnitType = (buf[0]&0x1F);
 
     if (RTSPCommonEnv::nDebugFlag & DEBUG_FLAG_RTP_PAYLOAD) {
-        DPRINTF("nal_type: %d, size: %d\n", nalUnitType, len);
+        rtsp_info("nal_type:[%d], size:[%d]", nalUnitType, len);
     }
 
     if (!fIsStartFrame) {
@@ -100,7 +102,7 @@ void H264RTPSource::processFrame(RTPPacketBuffer *packet)
             while (len > 3) {
                 uint16_t staplen = (buf_ptr[0] << 8) | (buf_ptr[1]);
                 if (staplen > len) {
-                    DPRINTF("STAP-A process error, staplen: %d, len\n", staplen, len);
+                    rtsp_error("STAP-A process error, staplen:[%d], len:[%d]", staplen, len);
                     break;
                 }
 

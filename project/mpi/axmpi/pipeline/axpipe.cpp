@@ -3,7 +3,7 @@
 #include <vector>
 #include <cstring>
 #include <algorithm>
-#include <rtsp/simpleRtspServer.h>
+#include <rtsp/rtspServerWrapper.hpp>
 
 #define __AXERA_PIPELINE_HPP_INSIDE__
 #include "private.hpp"
@@ -15,15 +15,15 @@ API_BEGIN_NAMESPACE(media)
 #define DEFAULT_RTSP_SERVER_PORT        8554
 
 typedef struct {
-    std::map<int, axpipe_t *>            pipeIdPipe;
-    bool                                 bMaxi3Init = false;
-    bool                                 bUserVoInit = false;
-    simple_rtsp_handle_t                 rtspServerHandler;
-    std::map<int, simple_rtsp_session_t> rtspServerSessions;
-    std::vector<std::string>             rtspEndPoint;
-    std::vector<int>                     ivpsGroup;
-    std::vector<int>                     vdecGroup;
-    std::vector<int>                     vencChannel;
+    std::map<int, axpipe_t *>           pipeIdPipe;
+    bool                                bMaxi3Init = false;
+    bool                                bUserVoInit = false;
+    rtsp::rtsp_server_t                 rtspServerHandler;
+    std::map<int, rtsp::rtsp_session_t> rtspServerSessions;
+    std::vector<std::string>            rtspEndPoint;
+    std::vector<int>                    ivpsGroup;
+    std::vector<int>                    vdecGroup;
+    std::vector<int>                    vencChannel;
 } axpipe_internal_t;
 
 static axpipe_internal_t sg_axPipeHandler;
@@ -79,12 +79,12 @@ bool checkRtspSessionPipeId(int pipeId)
     return contain(sg_axPipeHandler.rtspServerSessions, pipeId);
 }
 
-simple_rtsp_handle_t getRtspServerHandler()
+rtsp::rtsp_server_t getRtspServerHandler()
 {
     return sg_axPipeHandler.rtspServerHandler;
 }
 
-simple_rtsp_session_t getRtspServerSession(int pipeId)
+rtsp::rtsp_session_t getRtspServerSession(int pipeId)
 {
     return sg_axPipeHandler.rtspServerSessions[pipeId];
 }
@@ -298,18 +298,12 @@ int axpipe_create(axpipe_t *pipe)
 
             if ((pipe->outType == AXPIPE_OUTPUT_RTSP_H264) || (pipe->outType == AXPIPE_OUTPUT_RTSP_H265)) {
                 if (!sg_axPipeHandler.rtspServerHandler) {
-                    sg_axPipeHandler.rtspServerHandler = simple_create_rtsp_server(pipe->vencConfig.rtspPort ? pipe->vencConfig.rtspPort : DEFAULT_RTSP_SERVER_PORT);
+                    sg_axPipeHandler.rtspServerHandler = rtsp::rtsp_new_server(pipe->vencConfig.rtspPort ? pipe->vencConfig.rtspPort : DEFAULT_RTSP_SERVER_PORT);
                 }
 
                 std::string url = pipe->vencConfig.endPoint;
-                if (url.length()) {
-                    if (url[0] != '/') {
-                        url = "/" + url;
-                    }
-                }
-
                 if (!media::contain(sg_axPipeHandler.rtspEndPoint, url) && !media::contain(sg_axPipeHandler.rtspServerSessions, pipe->pipeId)) {
-                    auto rtspSession = simple_create_rtsp_session(sg_axPipeHandler.rtspServerHandler, url.c_str(), pipe->outType == AXPIPE_OUTPUT_RTSP_H264 ? 0 : 1);
+                    auto rtspSession = rtsp::rtsp_new_session(sg_axPipeHandler.rtspServerHandler, url.c_str(), pipe->outType == AXPIPE_OUTPUT_RTSP_H264 ? 0 : 1);
                     sg_axPipeHandler.rtspServerSessions[pipe->pipeId] = rtspSession;
                     sg_axPipeHandler.rtspEndPoint.push_back(url);
                 } else {
@@ -440,7 +434,7 @@ int axpipe_release(axpipe_t *pipe)
                 }
 
                 if (media::contain(sg_axPipeHandler.rtspServerSessions, pipe->pipeId)) {
-                    simple_rtsp_delete_session(sg_axPipeHandler.rtspServerSessions[pipe->pipeId]);
+                    rtsp::rtsp_release_session(sg_axPipeHandler.rtspServerHandler, sg_axPipeHandler.rtspServerSessions[pipe->pipeId]);
                     media::erase(sg_axPipeHandler.rtspServerSessions, pipe->pipeId);
                 }
 
@@ -449,7 +443,7 @@ int axpipe_release(axpipe_t *pipe)
                 }
 
                 if (sg_axPipeHandler.rtspServerSessions.size() == 0) {
-                    simple_rtsp_delete_handle(sg_axPipeHandler.rtspServerHandler);
+                    rtsp::rtsp_release_server(&(sg_axPipeHandler.rtspServerHandler));
                     sg_axPipeHandler.rtspServerHandler = NULL;
                 }
             }

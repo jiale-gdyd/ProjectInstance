@@ -1,6 +1,6 @@
 #include <string.h>
 #include <unistd.h>
-#include <rtsp/simpleRtspServer.h>
+#include <rtsp/rtspServerWrapper.hpp>
 
 #define __AXERA_PIPELINE_HPP_INSIDE__
 #include "private.hpp"
@@ -10,8 +10,8 @@
 API_BEGIN_NAMESPACE(media)
 
 extern bool checkRtspSessionPipeId(int pipeId);
-extern simple_rtsp_handle_t getRtspServerHandler();
-extern simple_rtsp_session_t getRtspServerSession(int pipeId);
+extern rtsp::rtsp_server_t getRtspServerHandler();
+extern rtsp::rtsp_session_t getRtspServerSession(int pipeId);
 
 static void *vencGetFrameThread(void *arg)
 {
@@ -34,7 +34,12 @@ static void *vencGetFrameThread(void *arg)
                 case AXPIPE_OUTPUT_RTSP_H264:
                 case AXPIPE_OUTPUT_RTSP_H265: {
                     if (checkRtspSessionPipeId(pipe->pipeId)) {
-                        simple_rtsp_server_send_video(getRtspServerHandler(), getRtspServerSession(pipe->pipeId), stStream.stPack.pu8Addr, stStream.stPack.u32Len, stStream.stPack.u64PTS);
+                        rtsp::rtsp_buff_t buff = {0};
+                        buff.vsize = stStream.stPack.u32Len;
+                        buff.vbuff = stStream.stPack.pu8Addr;
+                        buff.vtimstamp = stStream.stPack.u64PTS;
+
+                        rtsp::rtsp_push(getRtspServerHandler(), getRtspServerSession(pipe->pipeId), &buff);
                     }
 
                     break;

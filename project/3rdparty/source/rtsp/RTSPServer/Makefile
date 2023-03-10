@@ -1,3 +1,4 @@
-obj-y += RTSPServer.o
-obj-y += RTSPFramedSource.o
-obj-y += RTSPLiveServerMediaSession.o
+obj-y += net/
+obj-y += xop/
+
+obj-y += rtspServerWrapper.o

@@ -3,6 +3,8 @@
 #include <rtsp/internal/RTSPCommonEnv.h>
 #include <rtsp/internal/MPEG4GenericRTPSource.h>
 
+#include "../../../private.h"
+
 namespace rtsp {
 struct AUHeader {
     unsigned size;
@@ -15,7 +17,7 @@ MPEG4GenericRTPSource::MPEG4GenericRTPSource(int streamType, MediaSubsession &su
 {
     fMode = strDup(mode);
     if ((mode == NULL) || ((strcmp(mode, "aac-hbr") != 0) && (strcmp(mode, "generic") != 0))) {
-        DPRINTF("MPEG4GenericRTPSource Warning: Unknown or unsupported \"mode\": %s\n", mode);
+        rtsp_warn("MPEG4GenericRTPSource Warning: Unknown or unsupported mode:[%s]", mode);
     }
 }
 

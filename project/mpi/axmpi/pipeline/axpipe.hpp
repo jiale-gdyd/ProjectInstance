@@ -102,7 +102,7 @@ typedef struct {
     int                  pipeId;            // pipeline的ID号，不可重复
     int                  inType;            // 输入类型
     int                  outType;           // 输出类型
-    volatile bool        bThreadQuit;       // 如果又线程，则可以控制线程退出
+    volatile bool        bThreadQuit;       // 如果有线程，则可以控制线程退出
     int                  vinPipe;           // 输入管道
     int                  vinChn;            // 输入通道
     axpipe_vo_config_t   voConfig;          // 显示设备配置

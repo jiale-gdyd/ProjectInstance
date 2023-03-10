@@ -4,6 +4,8 @@
 #include <rtsp/internal/RTSPCommonEnv.h>
 #include <rtsp/internal/rtcp_from_spec.h>
 
+#include "../../../private.h"
+
 namespace rtsp {
 class RTCPMemberDatabase {
 public:
@@ -99,7 +101,7 @@ RTCPInstance::RTCPInstance(unsigned totSessionBW, unsigned char const *cname, RT
     fHaveJustSentPacket(false), fLastPacketSentSize(0)
 {
     if (fTotSessionBW == 0) {
-        DPRINTF("RTCPInstance::RTCPInstance error: totSessionBW parameter should not be zero!\n");
+        rtsp_error("RTCPInstance::RTCPInstance error: totSessionBW parameter should not be zero");
         fTotSessionBW = 1;
     }
 
@@ -188,7 +190,7 @@ void RTCPInstance::rtcpPacketHandler(char *buf, int len)
 
         unsigned rtcpHdr = ntohl(*(unsigned*)pkt);
         if ((rtcpHdr & 0xE0FE0000) != (0x80000000 | (RTCP_PT_SR << 16))) {
-            DPRINTF("rejected bad RTCP packet: header 0x%08x\n", rtcpHdr);
+            rtsp_error("rejected bad RTCP packet: header:[0x%08X]", rtcpHdr);
             break;
         }
 

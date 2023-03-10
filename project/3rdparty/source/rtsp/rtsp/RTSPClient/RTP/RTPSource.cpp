@@ -7,6 +7,8 @@
 #include <rtsp/internal/RTSPCommonEnv.h>
 #include <rtsp/internal/rtcp_from_spec.h>
 
+#include "../../../private.h"
+
 namespace rtsp {
 RTPSource::RTPSource(int streamType, MediaSubsession &subsession, TaskScheduler &task)
     : fStreamType(streamType), fRecvBuf(NULL), fRTPPayloadFormat(subsession.rtpPayloadFormat()), fTimestampFrequency(subsession.rtpTimestampFrequency()),
@@ -45,7 +47,7 @@ RTPSource::RTPSource(int streamType, MediaSubsession &subsession, TaskScheduler 
         fRtpSock.setupDatagramSock(subsession.clientPortNum(), true);
         unsigned requestSize = 1024 * 1024;
         if (fRtpSock.setReceiveBufferTo(requestSize) != requestSize) {
-            DPRINTF("RTPSource failed to setReceiveBufferTo(%d)\n", requestSize);
+            rtsp_error("RTPSource failed to setReceiveBufferTo requestSize:[%d]", requestSize);
         }
 
         fRtcpSock.setupDatagramSock(subsession.clientPortNum()+1, true);
@@ -58,25 +60,25 @@ RTPSource::RTPSource(int streamType, MediaSubsession &subsession, TaskScheduler 
 
         if (subsession.isSSM()) {
             if (!fRtpSock.joinGroupSSM(tempAddr.s_addr, subsession.parentSession().sourceFilterAddr().s_addr)) {
-                DPRINTF("SSM join failed\n");
+                rtsp_error("SSM join failed");
                 if (!fRtpSock.joinGroup(tempAddr.s_addr)) {
-                    DPRINTF("failed to join group\n");
+                    rtsp_error("failed to join group");
                 }
             }
 
             if (!fRtcpSock.joinGroupSSM(tempAddr.s_addr, subsession.parentSession().sourceFilterAddr().s_addr)) {
-                DPRINTF("RTCP SSM join failed\n");
+                rtsp_error("RTCP SSM join failed");
                 if (!fRtcpSock.joinGroup(tempAddr.s_addr)) {
-                    DPRINTF("RTCP failed to join group\n");
+                    rtsp_error("RTCP failed to join group");
                 }
             }
         } else {
             if (!fRtpSock.joinGroup(tempAddr.s_addr)) {
-                DPRINTF("failed to join group\n");
+                rtsp_error("failed to join group");
             }
 
             if (!fRtcpSock.joinGroup(tempAddr.s_addr)) {
-                DPRINTF("RTCP failed to join group\n");
+                rtsp_error("RTCP failed to join group");
             }
         }
     }
@@ -160,7 +162,7 @@ void RTPSource::rtpReadHandler(char *buf, int len, struct sockaddr_in &fromAddre
     packet->reset();
 
     if (!packet->packetHandler((uint8_t *)buf, len)) {
-        DPRINTF("invalid rtp packet, discard this packet\n");
+        rtsp_error("invalid rtp packet, discard this packet");
         delete packet;
         return;
     }
@@ -172,15 +174,15 @@ void RTPSource::rtpReadHandler(char *buf, int len, struct sockaddr_in &fromAddre
     unsigned int rtpSSRC = packet->ssrc();
 
     if (fRTPPayloadFormat != pt) {
-        DPRINTF("rtp payload type error, pt: %d, expected pt: %d\n", pt, fRTPPayloadFormat);
+        rtsp_error("rtp payload type error, pt:[%d], expected pt:[%d]", pt, fRTPPayloadFormat);
         goto skip;
     }
 
     if (RTSPCommonEnv::nDebugFlag & DEBUG_FLAG_RTP) {
         if (ts == fLastTimestamp) {
-            DPRINTF("pt: %d, seqnum: %u, ts: %u, mk: %u, len: %d\n", pt, seqnum, ts, mk, len);
+            rtsp_info("pt:[%d], seqnum:[%u], ts:[%u], mk:[%u], len:[%d]", pt, seqnum, ts, mk, len);
         } else {
-            DPRINTF("pt: %d, seqnum: %u, ts: %u, mk: %u, ts diff: %u, len: %d\n", pt, seqnum, ts, mk, ts-fLastTimestamp, len);
+            rtsp_info("pt:[%d], seqnum:[%u], ts:[%u], mk:[%u], ts diff:[%u], len:[%d]", pt, seqnum, ts, mk, ts - fLastTimestamp, len);
         }
     }
 
@@ -217,7 +219,7 @@ void RTPSource::processNextPacket()
             } else if ((fLastSeqNum + 1) == seqnum) {
 
             } else {
-                DPRINTF("pt: %d, rtp sequence error: %u, prev: %u\n", nextPacket->payloadType(), seqnum, fLastSeqNum);
+                rtsp_error("pt:[%d], rtp sequence:[%u], prev:[%u]", nextPacket->payloadType(), seqnum, fLastSeqNum);
             }
         }
 
@@ -280,7 +282,7 @@ void RTPSource::incomingRtpPacketHandler1()
 
     bytesRead = fRtpSock.readSocket1(fRecvBuf, len, fromAddress);
     if (bytesRead <= 0) {
-        DPRINTF("rtp recvfrom error %d\n", WSAGetLastError());
+        rtsp_error("rtp recvfrom error, errno:[%d]", WSAGetLastError());
         fTask->turnOffBackgroundReadHandling(fRtpSock.sock());
         return;
     }
@@ -303,7 +305,7 @@ void RTPSource::incomingRtcpPacketHandler1()
 
     bytesRead = fRtcpSock.readSocket1(fRecvBuf, len, fromAddress);
     if (bytesRead <= 0) {
-        DPRINTF("rtcp recvfrom error %d\n", WSAGetLastError());
+        rtsp_error("rtcp recvfrom error, errno[%d]", WSAGetLastError());
         fTask->turnOffBackgroundReadHandling(fRtcpSock.sock());
         return;
     }
@@ -359,7 +361,7 @@ void RTPSource::sendRtcpReport(char *buf, int len)
 void RTPSource::copyToFrameBuffer(uint8_t *buf, int len)
 {
     if ((fFrameBufPos + len) >= FRAME_BUFFER_SIZE) {
-        DPRINTF("RTP Frame Buffer overflow %s\n", fCodecName);
+        rtsp_warn("RTP Frame Buffer overflow, codecName:[%s]", fCodecName);
         fFrameBufPos = 0;
     }
 

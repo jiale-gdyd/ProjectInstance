@@ -15,14 +15,13 @@
 #include <unistd.h>
 #include <sys/sysinfo.h>
 
-#include <xlib/xlib.h>
 #include <npu/Detector.hpp>
 #include <opencv2/opencv.hpp>
 #include <utils/RingBuffer.hpp>
 #include <mpi/rkmpi/mediaBase.hpp>
 
 #include <rtsp/rtsp.hpp>
-#include <rtsp/SimpleRtspServer.hpp>
+#include <rtsp/rtspServerWrapper.hpp>
 
 #include "EMSDemoMacros.h"
 #include "EMSDemoParam.hpp"
@@ -47,6 +46,8 @@ private:
 
 private:
     int rtspServerInit();
+    void rtspServerDeinit();
+
     static void rtspEncodeProcessCallback(media_buffer_t mediaFrame, void *user_data);
 
     int rtspClientInit();
@@ -179,9 +180,6 @@ private:
     bool                                     mUseVdecNotVi;                  // 使用视频解码作为视频源
     std::vector<media_vdec_param_t>          mVdecParameter;                 // 解码参数信息
 
-    XMainLoop                                *mMainLoop;                     // 事件循环句柄
-    XMainContext                             *mMainContex;                   // 程序上下文句柄
-
     static ems_config_t                      mEMSConfig;                     // 应用配置参数
 
     std::shared_ptr<Ai::AiDetector>          pDetector;                      // 算法检测类
@@ -189,7 +187,8 @@ private:
     bool                                     mRtspVencEnOK;                  // 视频编码通道使能成功
     int                                      mRtspVencChn;                   // 视频编码通道
     int                                      mRtspVencRgaChn;                // 视频编码RGA通道
-    std::shared_ptr<rtsp::SimpleRTSPServer>  pSimpleServer;                  // RTSP服务器句柄
+    rtsp::rtsp_session_t                     mRtspSession;                   // RTSP服务会话句柄
+    rtsp::rtsp_server_t                      pRtspServer;                    // RTSP服务器句柄
 
     std::shared_ptr<rtsp::RTSPClient>        pRTSPClient;                    // RTSP客户端
 

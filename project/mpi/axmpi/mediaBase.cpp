@@ -93,16 +93,14 @@ int MediaApi::run()
         }
     }
 
-    while (!mIspLoopOut) {
-        sleep(3);
-    }
-
+    mSemaphore.wait();
     return 0;
 }
 
 void MediaApi::stop()
 {
     mIspLoopOut = true;
+    mSemaphore.post(2);
 }
 
 void MediaApi::ispRunThread(int camId)

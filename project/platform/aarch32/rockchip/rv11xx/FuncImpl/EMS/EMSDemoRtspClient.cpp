@@ -10,7 +10,7 @@ int EMSDemoImpl::rtspClientInit()
         return -1;
     }
 
-    std::string rtspURL = "http://admin:a123456@192.168.1.100:554/h264/main_stream";
+    std::string rtspURL = "rtsp://admin:a123456@192.168.1.100";
     if (pRTSPClient->openURL(rtspURL.c_str(), 1, 2, false) != 0) {
         return -2;
     }

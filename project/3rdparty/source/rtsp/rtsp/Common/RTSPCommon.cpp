@@ -7,6 +7,8 @@
 #include <rtsp/internal/RTSPCommon.h>
 #include <rtsp/internal/RTSPCommonEnv.h>
 
+#include "../../private.h"
+
 namespace rtsp {
 #define initializeWinsockIfNecessary()      1
 
@@ -379,7 +381,7 @@ bool parseRTSPURL(const char *url, unsigned &address, unsigned short &port, char
         char const *prefix = "rtsp://";
         unsigned const prefixLength = 7;
         if (_strcasecmp(url, prefix, prefixLength) != 0) {
-            DPRINTF("URL is not of the form %s ", prefix);
+            rtsp_error("URL is not of the form:[%s]", prefix);
             break;
         }
 
@@ -414,11 +416,10 @@ bool parseRTSPURL(const char *url, unsigned &address, unsigned short &port, char
         }
 
         if (i == parseBufferSize) {
-            DPRINTF0("URL is too long");
+            rtsp_warn("URL is too long");
             break;
         }
 
-        printf("parseBuffer:[%s]\n", parseBuffer);
         if (isValidIpAddress(parseBuffer)) {
             address = inet_addr(parseBuffer);
         } else {
@@ -447,12 +448,12 @@ bool parseRTSPURL(const char *url, unsigned &address, unsigned short &port, char
         if (nextChar == ':') {
             int portNumInt;
             if (sscanf(++from, "%d", &portNumInt) != 1) {
-                DPRINTF0("No port number follows  : ");
+                rtsp_error("No port number follows");
                 break;
             }
 
             if ((portNumInt < 1) || (portNumInt > 65535)) {
-                DPRINTF0("Bad port number ");
+                rtsp_error("Bad port number:[%d]", portNumInt);
                 break;
             }
 
@@ -547,7 +548,7 @@ int trimStartCode(uint8_t *buf, int len)
         }
 
         if (*ptr != 0x01) {
-            DPRINTF("invalid stream, 0x%02x\n", *ptr);
+            rtsp_error("invalid stream:[0x%02X]", *ptr);
             ptr = buf;
         } else {
             ptr++;

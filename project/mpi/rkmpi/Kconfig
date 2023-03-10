@@ -11,4 +11,14 @@ config ROCKCHIP_MPI
     help
       Rockchip platform media process interface
 
+config ROCKCHIP_PIPELINE
+    bool "rockchip platform media process interface pipeline"
+    default n
+    depends on ROCKCHIP
+    select MEDIA_API
+    select RTSP
+    select RTSP_SERVER
+    help
+      Rockchip platform media process interface pipeline
+
 endmenu

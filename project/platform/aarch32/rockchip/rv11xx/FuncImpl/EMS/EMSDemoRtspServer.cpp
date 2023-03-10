@@ -4,15 +4,14 @@ API_BEGIN_NAMESPACE(EMS)
 
 int EMSDemoImpl::rtspServerInit()
 {
-#if defined(CONFIG_SIMPLE_RTSP_SERVER)
-    pSimpleServer = std::make_shared<rtsp::SimpleRTSPServer>();
-    if (pSimpleServer == nullptr) {
+#if defined(CONFIG_RTSP_SERVER)
+    pRtspServer = rtsp::rtsp_new_server(mEMSConfig.videoRtspServerParam.serverPort);
+    if (pRtspServer == NULL) {
         return -1;
     }
 
-    if (pSimpleServer->init(mEMSConfig.videoRtspServerParam.streamPath,
-        mEMSConfig.videoRtspServerParam.serverPort, mVideoVencType == DRM_CODEC_TYPE_H264 ? 0 : 1))
-    {
+    mRtspSession = rtsp::rtsp_new_session(pRtspServer, mEMSConfig.videoRtspServerParam.streamPath.c_str(), mVideoVencType == DRM_CODEC_TYPE_H264 ? 0 : 1);
+    if (mRtspSession < 0) {
         return -2;
     }
 #endif
@@ -20,18 +19,30 @@ int EMSDemoImpl::rtspServerInit()
     return 0;
 }
 
+void EMSDemoImpl::rtspServerDeinit()
+{
+    if (mRtspSession > 0) {
+        rtsp::rtsp_release_session(pRtspServer, mRtspSession);
+    }
+
+    if (pRtspServer) {
+        rtsp::rtsp_release_server(&pRtspServer);
+    }
+}
+
 void EMSDemoImpl::rtspEncodeProcessCallback(media_buffer_t mediaFrame, void *user_data)
 {
     static EMSDemoImpl *me = reinterpret_cast<EMSDemoImpl *>(user_data);
 
     if (mediaFrame) {
-        if (me->pSimpleServer) {
-#if defined(CONFIG_SIMPLE_RTSP_SERVER)
-            uint32_t dataSize = me->getApi()->getSys().getFrameSize(mediaFrame);
-            uint64_t timestamp = me->getApi()->getSys().getFrameTimestamp(mediaFrame);
-            const uint8_t *data = (const uint8_t *)me->getApi()->getSys().getFrameData(mediaFrame);
+        if (me->pRtspServer) {
+#if defined(CONFIG_RTSP_SERVER)
+            rtsp::rtsp_buff_t buff = {0};
+            buff.vsize = me->getApi()->getSys().getFrameSize(mediaFrame);
+            buff.vbuff = me->getApi()->getSys().getFrameData(mediaFrame);
+            buff.vtimstamp = me->getApi()->getSys().getFrameTimestamp(mediaFrame);
 
-            me->pSimpleServer->sendFrame(data, dataSize, timestamp);
+            rtsp::rtsp_push(me->pRtspServer, me->mRtspSession, &buff);
 #endif
         }
 

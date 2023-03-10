@@ -7,7 +7,8 @@ EMSDemoImpl::EMSDemoImpl()
     mAlgoInitOk(false),
     mUseVdecNotVi(false),
     pDetector(nullptr),
-    pSimpleServer(nullptr),
+    mRtspSession(0),
+    pRtspServer(nullptr),
     mOriginWidth(1280),
     mOriginHeight(720),
     mOriginChns(3),
@@ -69,9 +70,8 @@ EMSDemoImpl::EMSDemoImpl()
 EMSDemoImpl::~EMSDemoImpl()
 {
     mThreadQuit = true;
-#if defined(CONFIG_XLIB)
-    x_main_loop_quit(mMainLoop);
-#endif
+
+    rtspServerDeinit();
 
     if (mVideoVencEnOK) {
         videoEncodeExit();
@@ -98,6 +98,7 @@ EMSDemoImpl::~EMSDemoImpl()
     }
 
     mediaDeinit();
+    getApi()->stop();
 }
 
 int EMSDemoImpl::init()
@@ -134,17 +135,7 @@ int EMSDemoImpl::init()
         rtspServerInit();
     }
 
-#if defined(CONFIG_XLIB)
-    mMainContex = x_main_context_new();
-    mMainLoop = x_main_loop_new(mMainContex, FALSE);
-    x_main_loop_run(mMainLoop);
-    x_main_loop_unref(mMainLoop);
-#else
-    while (!mThreadQuit) {
-        sleep(10);
-    }
-#endif
-
+    getApi()->run();
     return 0;
 }
 

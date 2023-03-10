@@ -9,6 +9,8 @@
 #include <rtsp/internal/MPEG4ESRTPSource.h>
 #include <rtsp/internal/MPEG4GenericRTPSource.h>
 
+#include "../../../private.h"
+
 namespace rtsp {
 static pthread_mutex_t hMutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -145,7 +147,7 @@ bool MediaSession::initializeWithSDP(char const *sdpDescription)
     while (sdpLine != NULL)  {
         MediaSubsession *subsession = new MediaSubsession(*this);
         if (subsession == NULL) {
-            DPRINTF("Unable to create new MediaSubsession\n");
+            rtsp_error("Unable to create new MediaSubsession");
             return false;
         }
 
@@ -173,7 +175,7 @@ bool MediaSession::initializeWithSDP(char const *sdpDescription)
                 sdpLineStr[nextSDPLine - sdpLine] = '\0';
             }
 
-            DPRINTF("Bad SDP \"m=\" linue: %s\n", sdpLineStr);
+            rtsp_error("Bad SDP \"m=\" linue:[%s]", sdpLineStr);
             if (sdpLineStr != (char *)sdpLine) {
                 delete[] sdpLineStr;
             }
@@ -276,7 +278,7 @@ bool MediaSession::initializeWithSDP(char const *sdpDescription)
             if (subsession->fCodecName == NULL) {
                 char typeStr[20];
                 sprintf(typeStr, "%d", subsession->fRTPPayloadFormat);
-                DPRINTF("Unknown codec name for RTP payload type %s", typeStr);
+                rtsp_error("Unknown codec name for RTP payload type:[%s]", typeStr);
                 return false;
             }
         }
@@ -313,7 +315,7 @@ bool MediaSession::parseSDPLine(char const *inputLine, char const *&nextLine)
     }
 
     if ((strlen(inputLine) < 2) || (inputLine[1] != '=') || (inputLine[0] < 'a') || (inputLine[0] > 'z')) {
-        DPRINTF("Invalid SDP line: %s\n", inputLine);
+        rtsp_error("Invalid SDP line:[%s]", inputLine);
         return false;
     }
 
@@ -601,7 +603,7 @@ bool MediaSubsession::initiate(int streamType, TaskScheduler &task, bool rtpOnly
             break;
         }
 
-        DPRINTF("Rtp port(%d) already used the other rtp port\r\n", clientSockPort);
+        rtsp_warn("Rtp port:[%d] already used the other rtp port", clientSockPort);
         clientSockPort += 2;
     }
 

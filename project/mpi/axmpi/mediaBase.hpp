@@ -1,8 +1,11 @@
 #ifndef AXERA_MEDIABASE_HPP
 #define AXERA_MEDIABASE_HPP
 
+#include <mutex>
+#include <atomic>
 #include <thread>
 #include <functional>
+#include <condition_variable>
 
 #define __AXERA_MEDIABASE_HPP_INSIDE__
 #include "mediaIvps.hpp"
@@ -53,7 +56,44 @@ private:
     void ispRunThread(int camId);
 
 private:
+    class API_HIDDEN semaphore {
+    public:
+        explicit semaphore(size_t initial = 0) {
+            mCount = initial;
+        }
+
+        ~semaphore() {
+
+        }
+
+        void post(size_t n = 1) {
+            std::unique_lock<std::recursive_mutex> lock(mMutex);
+            mCount += n;
+            if (n == 1) {
+                mCondition.notify_one();
+            } else {
+                mCondition.notify_all();
+            }
+        }
+
+        void wait() {
+            std::unique_lock<std::recursive_mutex> lock(mMutex);
+            while (mCount == 0) {
+                mCondition.wait(lock);
+            }
+
+            --mCount;
+        }
+
+    private:
+        size_t                      mCount;
+        std::recursive_mutex        mMutex;
+        std::condition_variable_any mCondition;
+    };
+
+private:
     bool                     mIspLoopOut;
+    semaphore                mSemaphore;
     axsys_init_params_t      mSysInitParam;
     axcam_t                  mCamers[MAX_CAMERAS];
     std::vector<std::thread> mIspThreadId;

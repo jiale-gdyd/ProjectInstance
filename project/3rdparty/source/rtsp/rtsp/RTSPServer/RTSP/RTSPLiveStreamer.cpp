@@ -2,6 +2,8 @@
 #include <rtsp/internal/RTSPLiveStreamer.h>
 #include <rtsp/internal/LiveServerMediaSession.h>
 
+#include "../../../private.h"
+
 namespace rtsp {
 RTSPLiveStreamer::RTSPLiveStreamer() : m_pServerSession(NULL), m_pSessionName(NULL)
 {
@@ -23,13 +25,13 @@ int RTSPLiveStreamer::open(const char *url, int stream_type, const char *session
     }
 
     if (m_pRtspServer->lookupServerMediaSession(sessionName) != NULL) {
-        DPRINTF("failed to open server session, session %s already exists\n", sessionName);
+        rtsp_error("failed to open server session, session:[%s] already exists", sessionName);
         return -1;
     }
 
     int ret = m_pRtspClient->openURL(url, stream_type, 2, true);
     if (ret < 0) {
-        DPRINTF("%s open failed\n", url);
+        rtsp_error("url:[%s] open failed", url);
         return ret;
     }
 

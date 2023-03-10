@@ -1,0 +1,16 @@
+obj-y += Acceptor.o
+obj-y += BufferReader.o
+obj-y += BufferWriter.o
+obj-y += EpollTaskScheduler.o
+obj-y += EventLoop.o
+obj-y += MemoryManager.o
+obj-y += NetInterface.o
+obj-y += Pipe.o
+obj-y += SelectTaskScheduler.o
+obj-y += SocketUtil.o
+obj-y += TaskScheduler.o
+obj-y += TcpConnection.o
+obj-y += TcpServer.o
+obj-y += TcpSocket.o
+obj-y += Timer.o
+obj-y += Timestamp.o

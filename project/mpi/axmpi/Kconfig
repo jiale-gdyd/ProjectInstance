@@ -9,7 +9,7 @@ config AXERA_MPI
     default n
     depends on AXERA
     select RTSP
-    select SIMPLE_RTSP_SERVER
+    select RTSP_SERVER
     help
       Axera platform media process interface
 

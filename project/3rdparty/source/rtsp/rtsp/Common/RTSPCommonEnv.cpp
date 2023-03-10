@@ -10,7 +10,7 @@ int _vscprintf(const char *format, va_list pargs)
 
     va_copy(argcopy, pargs);
     retval = vsnprintf(NULL, 0, format, argcopy); 
-    va_end(argcopy); 
+    va_end(argcopy);
 
     return retval;
 }

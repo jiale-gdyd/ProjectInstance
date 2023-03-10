@@ -24,12 +24,11 @@ config SIMPLE_RTSP_SERVER
     help
       Enable simple rtsp server.
 
-config LIVE555_RTSP_SERVER
-    bool "live555 rtsp server"
+config RTSP_SERVER
+    bool "rtsp server"
     default n
     depends on RTSP
-    select LIVE555
     help
-      Enable live555 rtsp server.
+      Enable rtsp server.
 
 endmenu

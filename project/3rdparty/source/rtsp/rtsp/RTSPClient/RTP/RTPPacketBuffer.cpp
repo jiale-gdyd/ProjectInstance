@@ -2,6 +2,8 @@
 #include <rtsp/internal/RTSPCommonEnv.h>
 #include <rtsp/internal/RTPPacketBuffer.h>
 
+#include "../../../private.h"
+
 namespace rtsp {
 RTPPacketBuffer::RTPPacketBuffer() : fBuf(NULL), fLength(0), fVersion(0), fPadding(0), fExtension(0), fCSRCCount(0),
     fMarkerBit(0), fPayloadType(0), fSequenceNum(0), fTimestamp(0), fSSRC(0), fNextPacket(NULL), fIsFirstPacket(false), fExtTimestamp(0)
@@ -30,7 +32,7 @@ int RTPPacketBuffer::payloadLen()
 bool RTPPacketBuffer::packetHandler(uint8_t *buf, int len)
 {
     if ((len < sizeof(RTP_HEADER)) || (len > MAX_RTP_PACKET_SIZE)) {
-        DPRINTF("invalid rtp length %u\n", len);
+        rtsp_error("invalid rtp length:[%u]", len);
         return false;
     }
 
@@ -51,28 +53,28 @@ bool RTPPacketBuffer::packetHandler(uint8_t *buf, int len)
 
     fCurPtr += sizeof(RTP_HEADER);
     if (fVersion != 2) {
-        DPRINTF("invalid rtp version %u\n", fVersion);	
+        rtsp_error("invalid rtp version:[%u]", fVersion);
     }
 
     if (fCSRCCount > 0) {
         if (payloadLen() <= (fCSRCCount * 4)) {
-            DPRINTF("invalid rtp header, CSRC count error %u\n", fCSRCCount);
+            rtsp_error("invalid rtp header, CSRC count:[%u]", fCSRCCount);
             return false;
         } else {
-            fCurPtr += (fCSRCCount*4);
+            fCurPtr += (fCSRCCount * 4);
         }
     }
 
     if (fExtension) {
         if (payloadLen() <= 4) {
-            DPRINTF("invalid rtp header, extension length error\n");
+            rtsp_error("invalid rtp header, extension length error");
             return false;
         } else {
             EXT_HEADER *dxmHdr = (EXT_HEADER *)fCurPtr;
             unsigned extHdr = ntohl(*(unsigned *)fCurPtr); fCurPtr += 4;
-            unsigned remExtSize = 4*(extHdr&0xFFFF);
+            unsigned remExtSize = 4 * (extHdr & 0xFFFF);
             if (payloadLen() <= remExtSize) {
-                DPRINTF("invalid rtp header, extension size error %u\n", remExtSize);
+                rtsp_error("invalid rtp header, extension size:[%u]", remExtSize);
                 return false;
             } else {
                 if (dxmHdr->profile == 0x8110) {
@@ -88,12 +90,12 @@ bool RTPPacketBuffer::packetHandler(uint8_t *buf, int len)
 
     if (fPadding) {
         if (payloadLen() <= 0) {
-            DPRINTF("invalid rtp header, padding error\n");
+            rtsp_error("invalid rtp header, padding error");
             return false;
         } else {
             unsigned numPaddingBytes = (unsigned)fBuf[fLength - 1];
             if (payloadLen() <= numPaddingBytes) {
-                DPRINTF("invalid rtp header, padding length error\n");
+                rtsp_error("invalid rtp header, padding length error");
                 return false;
             } else {
                 fLength -= numPaddingBytes;

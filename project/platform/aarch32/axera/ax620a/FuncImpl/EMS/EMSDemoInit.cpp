@@ -51,7 +51,7 @@ int EMSDemoImpl::mediaInit()
     pipeline.inType = media::AXPIPE_INPUT_VDEC_H264;
     pipeline.outType = media::AXPIPE_OUTPUT_RTSP_H264;
     pipeline.bThreadQuit = false;
-    pipeline.vencConfig.endPoint = "/live/main_stream";
+    pipeline.vencConfig.endPoint = "live/main_stream";
     pipeline.vencConfig.vencChannel = 0;
     pipeline.vdecConfig.vdecGroup = 0;
     mPipelines.push_back(pipeline);

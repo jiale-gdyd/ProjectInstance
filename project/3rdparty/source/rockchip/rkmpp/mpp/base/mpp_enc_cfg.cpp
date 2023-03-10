@@ -189,9 +189,9 @@ public:
     ENTRY(h264, log2_max_poc_lsb,   U32, RK_U32,        MPP_ENC_H264_CFG_CHANGE_MAX_POC_LSB,    codec.h264, log2_max_poc_lsb) \
     ENTRY(h264, log2_max_frm_num,   U32, RK_U32,        MPP_ENC_H264_CFG_CHANGE_MAX_FRM_NUM,    codec.h264, log2_max_frame_num) \
     ENTRY(h264, gaps_not_allowed,   U32, RK_U32,        MPP_ENC_H264_CFG_CHANGE_GAPS_IN_FRM_NUM, codec.h264, gaps_not_allowed) \
-    ENTRY(h264, cabac_en,       S32, RK_S32,            MPP_ENC_H264_CFG_CHANGE_ENTROPY,        codec.h264, entropy_coding_mode) \
-    ENTRY(h264, cabac_idc,      S32, RK_S32,            MPP_ENC_H264_CFG_CHANGE_ENTROPY,        codec.h264, cabac_init_idc) \
-    ENTRY(h264, trans8x8,       S32, RK_S32,            MPP_ENC_H264_CFG_CHANGE_TRANS_8x8,      codec.h264, transform8x8_mode) \
+    ENTRY(h264, cabac_en,       S32, RK_S32,            MPP_ENC_H264_CFG_CHANGE_ENTROPY,        codec.h264, entropy_coding_mode_ex) \
+    ENTRY(h264, cabac_idc,      S32, RK_S32,            MPP_ENC_H264_CFG_CHANGE_ENTROPY,        codec.h264, cabac_init_idc_ex) \
+    ENTRY(h264, trans8x8,       S32, RK_S32,            MPP_ENC_H264_CFG_CHANGE_TRANS_8x8,      codec.h264, transform8x8_mode_ex) \
     ENTRY(h264, const_intra,    S32, RK_S32,            MPP_ENC_H264_CFG_CHANGE_CONST_INTRA,    codec.h264, constrained_intra_pred_mode) \
     ENTRY(h264, scaling_list,   S32, RK_S32,            MPP_ENC_H264_CFG_CHANGE_SCALING_LIST,   codec.h264, scaling_list_mode) \
     ENTRY(h264, cb_qp_offset,   S32, RK_S32,            MPP_ENC_H264_CFG_CHANGE_CHROMA_QP,      codec.h264, chroma_cb_qp_offset) \
@@ -365,7 +365,7 @@ MppEncCfgService::MppEncCfgService() :
     MPP_RET ret;
     RK_S32 i;
 
-    ret = mpp_trie_init(&trie, 1644, cfg_cnt);
+    ret = mpp_trie_init(&trie, 1724, cfg_cnt);
     if (ret) {
         mpp_err_f("failed to init enc cfg set trie\n");
         return ;
@@ -376,6 +376,8 @@ MppEncCfgService::MppEncCfgService() :
 
     mInfo = mpp_enc_cfg_flaten(trie, cfgs);
     mCfgSize = mInfo->head.cfg_size;
+
+    mpp_enc_cfg_dbg_func("node cnt: %d\n", get_node_count());
 
     mpp_trie_deinit(trie);
 }
@@ -420,6 +422,8 @@ MPP_RET mpp_enc_cfg_init(MppEncCfg *cfg)
         return MPP_ERR_NULL_PTR;
     }
 
+    mpp_env_get_u32("mpp_enc_cfg_debug", &mpp_enc_cfg_debug, 0);
+
     cfg_size = MppEncCfgService::get()->get_cfg_size();
     p = mpp_calloc_size(MppEncCfgImpl, cfg_size + sizeof(p->size));
     if (NULL == p) {
@@ -431,8 +435,6 @@ MPP_RET mpp_enc_cfg_init(MppEncCfg *cfg)
     mpp_assert(cfg_size == sizeof(p->cfg));
     p->size = cfg_size;
     mpp_enc_cfg_set_default(&p->cfg);
-
-    mpp_env_get_u32("mpp_enc_cfg_debug", &mpp_enc_cfg_debug, 0);
 
     *cfg = p;
 

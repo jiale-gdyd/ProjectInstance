@@ -1,0 +1,14 @@
+obj-y += AACSource.o
+obj-y += DigestAuthentication.o
+obj-y += G711ASource.o
+obj-y += H264Parser.o
+obj-y += H264Source.o
+obj-y += H265Source.o
+obj-y += MediaSession.o
+obj-y += RtpConnection.o
+obj-y += RtspConnection.o
+obj-y += RtspMessage.o
+obj-y += RtspPusher.o
+obj-y += RtspServer.o
+obj-y += SenderReport.o
+obj-y += VP8Source.o

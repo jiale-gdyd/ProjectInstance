@@ -2,6 +2,8 @@
 #include <rtsp/internal/NetCommon.h>
 #include <rtsp/internal/RTSPCommonEnv.h>
 
+#include "../../private.h"
+
 namespace rtsp {
 char *strDup(char const*str)
 {
@@ -35,7 +37,7 @@ int CheckUdpPort(unsigned short port)
 {
     int newSocket = socket(AF_INET, SOCK_DGRAM, 0);
     if (newSocket < 0) {
-        DPRINTF("unable to create datagram socket");
+        rtsp_error("unable to create datagram socket");
         return -1;
     }
 
@@ -45,11 +47,8 @@ int CheckUdpPort(unsigned short port)
     c_addr.sin_family = AF_INET;
     c_addr.sin_port = htons(port);
 
-    if (bind(newSocket, (struct sockaddr *)&c_addr, sizeof c_addr) != 0) {
-        char tmpBuffer[100];
-        sprintf(tmpBuffer, "[%s] bind() error (port number: %d): ", __FUNCTION__, port);
-
-        DPRINTF0(tmpBuffer);
+    if (bind(newSocket, (struct sockaddr *)&c_addr, sizeof(c_addr)) != 0) {
+        rtsp_error("bind() error (port number:[%d)", port);
         closeSocket(newSocket);
 
         return -1;

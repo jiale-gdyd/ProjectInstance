@@ -7,3 +7,5 @@ obj-y += mediaVenc.o
 obj-y += mediaVdec.o
 obj-y += mediaVmix.o
 obj-y += mediaBase.o
+
+obj-$(CONFIG_ROCKCHIP_PIPELINE) += pipeline/

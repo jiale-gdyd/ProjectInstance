@@ -23,7 +23,7 @@ ems_config_t EMSDemoImpl::mEMSConfig = {
         .encodeBitRate        = 8000000,                    // 编码码率
         .encodeIFrameInterval = 25,                         // 视频编码I帧间隔
         .serverPort           = 554,                        // RTSP服务器端口号
-        .streamPath           = "/live/main_stream"         // RTSP服务器流地址
+        .streamPath           = "live/main_stream"          // RTSP服务器流地址
     },
 };
 

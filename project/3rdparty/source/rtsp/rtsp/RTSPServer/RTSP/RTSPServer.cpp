@@ -7,6 +7,8 @@
 #include <rtsp/internal/RTSPCommonEnv.h>
 #include <rtsp/internal/ServerMediaSession.h>
 
+#include "../../../private.h"
+
 namespace rtsp {
 RTSPServer *RTSPServer::fInstance = new RTSPServer();
 
@@ -46,7 +48,7 @@ int RTSPServer::startServer(unsigned short port, RTSPServerCallback func, void *
         fServerPort = port;
 
         if (fServerSock.setupServerSock(fServerPort, true) < 0) {
-            DPRINTF("failed to start RTSP Server (%d)\n", fServerPort);
+            rtsp_error("failed to start RTSP Server port:[%d]", fServerPort);
             return -9;
         }
 
@@ -54,8 +56,7 @@ int RTSPServer::startServer(unsigned short port, RTSPServerCallback func, void *
         fTask->turnOnBackgroundReadHandling(fServerSock.sock(), &incomingConnectionHandlerRTSP, this);
         fTask->startEventLoop();
 
-        DPRINTF("RTSP Server started, port: %d\n", fServerPort);
-
+        rtsp_info("RTSP Server started, port:[%d]", fServerPort);
         fIsServerRunning = true;
     }
 
@@ -78,7 +79,7 @@ void RTSPServer::stopServer()
         fTask->stopEventLoop();
         fIsServerRunning = false;
 
-        DPRINTF("RTSP Server stopped\n");
+        rtsp_warn("RTSP Server stopped");
     }
 }
 
@@ -94,7 +95,7 @@ void RTSPServer::addServerMediaSession(ServerMediaSession *serverMediaSession)
     fServerMediaSessions.insert(serverMediaSession);
     fServerMediaSessions.unlock();
 
-    DPRINTF("server session %s added, count : %d\n", serverMediaSession->streamName(), fServerMediaSessions.count());
+    rtsp_info("server session:[%s] added, count:[%d]", serverMediaSession->streamName(), fServerMediaSessions.count());
 }
 
 void RTSPServer::removeServerMediaSession(ServerMediaSession *serverMediaSession)
@@ -110,13 +111,14 @@ void RTSPServer::removeServerMediaSession(ServerMediaSession *serverMediaSession
 
     while (cursor) {
         if (cursor == serverMediaSession) {
-            DPRINTF("server session %s being removed\n", serverMediaSession->streamName());
+            rtsp_warn("server session:[%s] being removed", serverMediaSession->streamName());
             if (serverMediaSession->referenceCount() == 0) {
                 fServerMediaSessions.remove();
             } else {
                 serverMediaSession->deleteWhenUnreferenced() = true;
             }
-            DPRINTF("server session count : %d\n", fServerMediaSessions.count());
+
+            rtsp_info("server session count:[%d]", fServerMediaSessions.count());
             break;
         }
 
@@ -460,7 +462,7 @@ void RTSPServer::RTSPClientSession::handleRequestBytes(int newBytesRead)
 
     do {
         if ((newBytesRead <= 0) || ((unsigned)newBytesRead >= fRequestBufferBytesLeft)) {
-            DPRINTF("RTSPClientConnection[%p]::handleRequestBytes() read %d new bytes (of %d); terminating connection!\n", this, newBytesRead, fRequestBufferBytesLeft);
+            rtsp_warn("RTSPClientConnection:[%p]::handleRequestBytes() read %d new bytes (of %d); terminating connection", this, newBytesRead, fRequestBufferBytesLeft);
             fIsActive = false;
             break;
         }
@@ -470,7 +472,7 @@ void RTSPServer::RTSPClientSession::handleRequestBytes(int newBytesRead)
 
         if (RTSPCommonEnv::nDebugFlag & DEBUG_FLAG_RTSP) {
             ptr[newBytesRead] = '\0';
-            DPRINTF("RTSPClientConnection[%p]::handleRequestBytes() %s %d new bytes:\n%s\n", this, numBytesRemaining > 0 ? "processing" : "read", newBytesRead, ptr);
+            rtsp_info("RTSPClientConnection[%p]::handleRequestBytes() %s %d new bytes:[%s]", this, numBytesRemaining > 0 ? "processing" : "read", newBytesRead, ptr);
         }
 
         unsigned char *tmpPtr = fLastCRLF + 2;
@@ -554,7 +556,7 @@ void RTSPServer::RTSPClientSession::handleRequestBytes(int newBytesRead)
         }
 
         if (RTSPCommonEnv::nDebugFlag & DEBUG_FLAG_RTSP) {
-            DPRINTF("sending response:\n%s\n", fResponseBuffer);
+            rtsp_info("sending response:[%s]", fResponseBuffer);
         }
         fClientSock->writeSocket((char *)fResponseBuffer, strlen((char *)fResponseBuffer));
 
@@ -602,7 +604,7 @@ void RTSPServer::RTSPClientSession::tcpReadHandler1()
                 fTCPReadingState = AWAITING_SIZE1;
 
                 if (RTSPCommonEnv::nDebugFlag & DEBUG_FLAG_RTP) {
-                    DPRINTF("channel id: %d\n", fStreamChannelId);
+                    rtsp_info("stream channel id:[%d]", fStreamChannelId);
                 }
             } else {
                 fTCPReadingState = AWAITING_DOLLAR;
@@ -620,7 +622,7 @@ void RTSPServer::RTSPClientSession::tcpReadHandler1()
             fRtpBufferIdx = 0;
 
             if (RTSPCommonEnv::nDebugFlag & DEBUG_FLAG_RTP) {
-                DPRINTF("size: %d\n", fTCPReadSize);
+                rtsp_info("tcp read size:[%d]", fTCPReadSize);
             }
         } break;
 
@@ -688,7 +690,7 @@ void RTSPServer::RTSPClientSession::handleCmd_DESCRIBE(const char *urlPreSuffix,
 
         session = fOurServer.lookupServerMediaSession(urlTotalSuffix);
         if (session == NULL) {
-            DPRINTF("[RTPServer] session %s not found\n", urlTotalSuffix);
+            rtsp_error("session url:[%s] not found", urlTotalSuffix);
             handleCmd_notFound();
             break;
         }
@@ -858,7 +860,7 @@ void RTSPServer::RTSPClientSession::handleCmd_SETUP(char const *urlPreSuffix, ch
             MySock *rtpSock = new MySock();
             rtpSock->setupDatagramSock(serverRTPPort, true);
             if (rtpSock->sock() < 0) {
-                DPRINTF("failed to setup rtp udp socket %d !!!\n", rtpSock->sock());
+                rtsp_error("failed to setup rtp udp socket:[%d]", rtpSock->sock());
                 delete rtpSock;
                 delete[] streamingModeString;
                 handleCmd_notFound();
@@ -876,7 +878,7 @@ void RTSPServer::RTSPClientSession::handleCmd_SETUP(char const *urlPreSuffix, ch
             MySock *rtcpSock = new MySock();
             rtcpSock->setupDatagramSock(serverRTCPPort, true);
             if (rtpSock->sock() < 0) {
-                DPRINTF("failed to setup rtcp udp socket %d !!!\n", rtpSock->sock());
+                rtsp_error("failed to setup rtcp udp socket:[%d]", rtpSock->sock());
                 delete rtpSock;
                 delete rtcpSock;
                 delete[] streamingModeString;
@@ -1131,8 +1133,11 @@ void RTSPServer::RTSPClientSession::handleCmd_PLAY(ServerMediaSubsession *subses
         rangeHeader,
         fOurSessionId,
         rtpInfo);
-    delete[] rtpInfo; delete[] rangeHeader;
-    delete[] scaleHeader; delete[] rtspURL;
+
+    delete[] rtpInfo;
+    delete[] rangeHeader;
+    delete[] scaleHeader;
+    delete[] rtspURL;
 
     if (fOurServer.fServerCallbackFunc) {
         if ((fOurServerMediaSession->sessionType() == SESSION_ONDEMAND) && (currentState != STREAM_STATE_STOPPED)) {

@@ -3,6 +3,8 @@
 #include <rtsp/internal/SockCommon.h>
 #include <rtsp/internal/RTSPCommonEnv.h>
 
+#include "../../private.h"
+
 namespace rtsp {
 #define MAKE_SOCKADDR_IN(var, adr, prt) \
     struct sockaddr_in var;             \
@@ -29,24 +31,20 @@ void socketErr(char *lpszFormat,...)
     buffer = (char *)malloc(len * sizeof(char));
 
     vsprintf(buffer, lpszFormat, args);
-
-    fprintf(stdout, "%s", buffer);
-    fprintf(stdout, "%d\n", WSAGetLastError());
-
+    rtsp_error("%s, errno:[%d]", buffer, WSAGetLastError());
     free(buffer);
 }
 
 int setupStreamSock(short port, int makeNonBlocking)
 {
     if (!initializeWinsockIfNecessary()) {
-        socketErr("[%s] Failed to initialize 'winsock': ", __FUNCTION__);
+        socketErr("Failed to initialize 'winsock'");
         return -1;
     }
 
     int newSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (newSocket < 0) {
-        DPRINTF("%s:%d\n", __FUNCTION__, __LINE__);
-        socketErr("[%s] unable to create stream socket: ", __FUNCTION__);
+        socketErr("unable to create stream socket");
         return newSocket;
     }
 
@@ -57,14 +55,14 @@ int setupStreamSock(short port, int makeNonBlocking)
     c_addr.sin_port = htons(port);
 
     if (bind(newSocket, (struct sockaddr *)&c_addr, sizeof c_addr) != 0) {
-        socketErr("[%s] bind() error (port number: %d): ", __FUNCTION__, port);
+        socketErr("bind() error (port number:[%d])", port);
         closeSocket(newSocket);
         return -1;
     }
 
     if (makeNonBlocking) {
         if (!makeSocketNonBlocking(newSocket)) {
-            socketErr("[%s] failed to make non-blocking: ", __FUNCTION__);
+            socketErr("failed to make non-blocking");
             closeSocket(newSocket);
             return -1;
         }
@@ -76,20 +74,20 @@ int setupStreamSock(short port, int makeNonBlocking)
 int setupDatagramSock(short port, int makeNonBlocking)
 {
     if (!initializeWinsockIfNecessary()) {
-        socketErr("[%s] Failed to initialize 'winsock': ", __FUNCTION__);
+        socketErr("Failed to initialize 'winsock'");
         return -1;
     }
 
     int newSocket = socket(AF_INET, SOCK_DGRAM, 0);
     if (newSocket < 0) {
-        socketErr("[%s] unable to create datagram socket: ", __FUNCTION__);
+        socketErr("unable to create datagram socket");
         return newSocket;
     }
 
     if (setsockopt(newSocket, SOL_SOCKET, SO_REUSEADDR, (const char *)&reuseFlag, sizeof(reuseFlag)) < 0) {
-            socketErr("setsockopt(SO_REUSEADDR) error: ", __FUNCTION__);
-            closeSocket(newSocket);
-            return -1;
+        socketErr("setsockopt(SO_REUSEADDR) error");
+        closeSocket(newSocket);
+        return -1;
     }
 
     struct sockaddr_in c_addr;
@@ -99,14 +97,14 @@ int setupDatagramSock(short port, int makeNonBlocking)
     c_addr.sin_port = htons(port);
 
     if (bind(newSocket, (struct sockaddr *)&c_addr, sizeof c_addr) != 0) {
-        socketErr("[%s] bind() error (port number: %d): ", __FUNCTION__, port);
+        socketErr("bind() error (port number:[%d])", port);
         closeSocket(newSocket);
         return -1;
     }
 
     if (makeNonBlocking) {
         if (!makeSocketNonBlocking(newSocket)) {
-            socketErr("[%s] failed to make non-blocking: ", __FUNCTION__);
+            socketErr("failed to make non-blocking");
             closeSocket(newSocket);
             return -1;
         }
@@ -123,7 +121,7 @@ int setupServerSock(short port, int makeNonBlocking)
     }
 
     if (listen(sock, LISTEN_BACKLOG_SIZE) != 0) {
-        socketErr("[%s] failed to listen sock: ", __FUNCTION__);
+        socketErr("failed to listen sock");
         closeSocket(sock);
         return -1;
     }
@@ -138,7 +136,7 @@ int setupClientSock(int serverSock, int makeNonBlocking, struct sockaddr_in &cli
     if (clientSock < 0) {
         int err = WSAGetLastError();
         if (err != EWOULDBLOCK) {
-            socketErr("[%s] accept() failed: ", __FUNCTION__);
+            socketErr("accept() failed");
             closeSocket(clientSock);
             return -1;
         }
@@ -162,7 +160,7 @@ int makeTCP_NoDelay(int sock)
     int err = setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag));
 
     if (err != 0) {
-        socketErr("[%s] setsocket TCPNODELAY error: ", __FUNCTION__);
+        socketErr("setsocket TCPNODELAY error");
     }
 
     return 0;
@@ -193,7 +191,7 @@ unsigned getBufferSize(int bufOptName, int sock)
     unsigned curSize;
     socklen_t sizeSize = sizeof(curSize);
     if (getsockopt(sock, SOL_SOCKET, bufOptName, (char *)&curSize, &sizeSize) < 0) {
-        socketErr("getBufferSize() error: ", __FUNCTION__);
+        socketErr("getBufferSize() error");
         return 0;
     }
 
@@ -204,7 +202,7 @@ unsigned setBufferSizeTo(int bufOptName, int sock, int requestedSize)
 {
     socklen_t sizeSize = sizeof(requestedSize);
     if (setsockopt(sock, SOL_SOCKET, bufOptName, (char *)&requestedSize, sizeSize) != 0) {
-        socketErr("setBufferSizeTo() error: ", __FUNCTION__);
+        socketErr("setBufferSizeTo() error");
     }
 
     return getBufferSize(bufOptName, sock);
@@ -233,12 +231,12 @@ int blockUntilReadable(int sock, timeval *timeout)
                 continue;
             }
 
-            socketErr("[%s] select() error: ", __FUNCTION__);
+            socketErr("select() error");
             break;
         }
 
         if (!FD_ISSET(sock, &rd_set)) {
-            socketErr("[%s] select() error - !FD_ISSET", __FUNCTION__);
+            socketErr("select() error - !FD_ISSET");
             break;
         }
     } while (0);
@@ -268,7 +266,7 @@ int readSocket(int sock, char *buffer, unsigned int bufferSize, sockaddr_in &fro
             break;
         }
 
-        socklen_t addressSize = sizeof fromAddress;
+        socklen_t addressSize = sizeof(fromAddress);
         bytesRead = recvfrom(sock, buffer, bufferSize, 0, (struct sockaddr *)&fromAddress, &addressSize);
         if (bytesRead < 0) {
             int err = WSAGetLastError();
@@ -277,7 +275,7 @@ int readSocket(int sock, char *buffer, unsigned int bufferSize, sockaddr_in &fro
                 return 0;
             }
 
-            socketErr("[%s] recvfrom() error: ", __FUNCTION__);
+            socketErr("recvfrom() error");
             break;
         }
     } while (0);
@@ -321,7 +319,7 @@ bool writeSocket(int socket, struct in_addr address, unsigned short port, unsign
         int bytesSent = sendto(socket, (char *)buffer, bufferSize, 0, (struct sockaddr *)&dest, sizeof dest);
         if (bytesSent != (int)bufferSize) {
             char tmpBuf[100];
-            sprintf(tmpBuf, "writeSocket(%d), sendTo() error: wrote %d bytes instead of %u: ", socket, bytesSent, bufferSize);
+            sprintf(tmpBuf, "writeSocket:[%d], sendTo() error: wrote:[%d] bytes instead of:[%u]", socket, bytesSent, bufferSize);
             socketErr(tmpBuf);
             break;
         }
@@ -336,7 +334,7 @@ bool writeSocket(int socket, struct in_addr address, unsigned short port, unsign
 {
     uint8_t ttl = (uint8_t)ttlArg;
     if (setsockopt(socket, IPPROTO_IP, IP_MULTICAST_TTL, (const char *)&ttl, sizeof(ttl)) < 0) {
-        socketErr("setsockopt(IP_MULTICAST_TTL) error: ");
+        socketErr("setsockopt(IP_MULTICAST_TTL) error");
         return false;
     }
 
@@ -372,7 +370,7 @@ int sendRTPOverTCP(int sock, char *buffer, int len, unsigned char streamChannelI
 void shutdown(int sock)
 {
     if (shutdown(sock, SHUT_RD) != 0) {
-        socketErr("shutdown error: ");
+        socketErr("shutdown error");
     }
 }
 
@@ -394,7 +392,7 @@ bool socketJoinGroupSSM(int sock, unsigned int groupAddress, unsigned int source
     imr.imr_interface.s_addr = INADDR_ANY;
 
     if (setsockopt(sock, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, (const char *)&imr, sizeof(struct ip_mreq_source)) < 0) {
-        socketErr("setsockopt(IP_ADD_SOURCE_MEMBERSHIP) error: ", __FUNCTION__);
+        socketErr("setsockopt(IP_ADD_SOURCE_MEMBERSHIP) error");
         return false;
     }
 
@@ -430,7 +428,7 @@ bool socketJoinGroup(int sock, unsigned int groupAddress)
     imr.imr_interface.s_addr = INADDR_ANY;
 
     if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (const char *)&imr, sizeof(struct ip_mreq)) < 0) {
-        socketErr("setsockopt(IP_ADD_MEMBERSHIP) error: ", __FUNCTION__);
+        socketErr("setsockopt(IP_ADD_MEMBERSHIP) error");
         return false;
     }
 
@@ -509,7 +507,7 @@ uint32_t ourIPAddress()
             }
 
             unsigned char readBuffer[20];
-            int bytesRead = readSocket1(sock, (char *)readBuffer, sizeof readBuffer, fromAddr);
+            int bytesRead = readSocket1(sock, (char *)readBuffer, sizeof(readBuffer), fromAddr);
             if ((bytesRead != (int)testStringLength) || (strncmp((char *)readBuffer, (char *)testString, testStringLength) != 0)) {
                 break;
             }
@@ -524,7 +522,7 @@ uint32_t ourIPAddress()
 
         uint32_t from = fromAddr.sin_addr.s_addr;
         if (badAddressForUs(from)) {
-            DPRINTF("This computer has an invalid IP address\n");
+            rtsp_error("This computer has an invalid IP address");
             from = 0;
         }
 

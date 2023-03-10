@@ -5,6 +5,8 @@
 #include <rtsp/internal/RTSPClient.h>
 #include <rtsp/internal/RTSPCommonEnv.h>
 
+#include "../../../private.h"
+
 namespace rtsp {
 static char const *NoSessionErr = "No RTSP session is currently in progress\n";
 
@@ -139,29 +141,29 @@ int RTSPClient::connectToServer(const char *ip_addr, unsigned short port, int ti
     if ((ret = connect(sock, (struct sockaddr *)&svr_addr, sizeof(svr_addr))) != 0) {
         err = WSAGetLastError();
         if ((err != EINPROGRESS) && (err != EWOULDBLOCK)) {
-            DPRINTF0("connect() failed\n");
+            rtsp_error("connect failed");
             goto connect_fail;
         }
         
         if (select(sock + 1, NULL, &set, NULL, &tvout) <= 0) {
-            DPRINTF0("select/connect() failed\n");
+            rtsp_error("select/connect failed");
             goto connect_fail;
         }
         
         err = 0;
         socklen_t len = sizeof(err);
         if ((getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&err, &len) < 0) || (err != 0)) {
-            DPRINTF("getsockopt() error: %d\n", err);
+            rtsp_error("getsockopt() error:[%d]", err);
             goto connect_fail;
         }
     }
 
-    DPRINTF("connected to server %s:%d\n", ip_addr, port);
+    rtsp_info("connected to server:[%s:%d]", ip_addr, port);
     return 0;
 
 connect_fail:
     err = WSAGetLastError();
-    DPRINTF("cannot connect to server, err:%d\n", err);
+    rtsp_error("cannot connect to server, errno:[%d]", err);
     fRtspSock.closeSock();
 
     return -2;
@@ -170,13 +172,16 @@ connect_fail:
 int RTSPClient::sendRequest(char *str, char *tag)
 {
     if (RTSPCommonEnv::nDebugFlag & DEBUG_FLAG_RTSP) {
-        DPRINTF("Sending Request:\n%s\n", str);
+        rtsp_info("Sending Request:[%s]", str);
     }
 
     int ret = fRtspSock.writeSocket(str, strlen(str));
     if (ret <= 0) {
-        if (tag == NULL) tag = "";
-        DPRINTF("send() failed: %s, err: %d\n", tag, WSAGetLastError());
+        if (tag == NULL) {
+            tag = "";
+        }
+
+        rtsp_error("send failed, tag:[%s], errno:[%d]", tag, WSAGetLastError());
     }
 
     return ret;
@@ -185,7 +190,7 @@ int RTSPClient::sendRequest(char *str, char *tag)
 bool RTSPClient::parseResponseCode(char const *line, unsigned &responseCode) 
 {
     if (sscanf(line, "%*s%u", &responseCode) != 1) {
-        DPRINTF("no response code in line: \"""%s""\"", line);
+        rtsp_error("no response code in line: \"""%s""\"", line);
         return false;
     }
 
@@ -198,12 +203,12 @@ bool RTSPClient::getResponse(char const *tag, unsigned &bytesRead, unsigned &res
         char *readBuf = fResponseBuffer;
         bytesRead = getResponse1(readBuf, fResponseBufferSize);
         if (bytesRead == 0) {
-            DPRINTF0("Failed to read response: \n");
+            rtsp_error("Failed to read response");
             break;
         }
 
         if (RTSPCommonEnv::nDebugFlag & DEBUG_FLAG_RTSP) {
-            DPRINTF("Received %s response:\n%s\n", tag, readBuf);
+            rtsp_info("Received tag:[%s] response:[%s]", tag, readBuf);
         }
 
         firstLine = readBuf;
@@ -215,7 +220,7 @@ bool RTSPClient::getResponse(char const *tag, unsigned &bytesRead, unsigned &res
         fLastResponseCode = responseCode;
 
         if ((responseCode != 200) && checkFor200Response) {
-            DPRINTF("%s : cannot handle response: %s\n", tag, firstLine);
+            rtsp_error("tag:[%s] cannot handle response:[%s]", tag, firstLine);
             break;
         }
 
@@ -263,7 +268,7 @@ unsigned RTSPClient::getResponse1(char *&responseBuffer, unsigned responseBuffer
             }
             size = ntohs(size);
 
-            DPRINTF("Discarding interleaved RTP or RTCP packet (%u bytes, channel id %u)\n", size, streamChannelId);
+            rtsp_info("Discarding interleaved RTP or RTCP packet (%u bytes, channel id %u)", size, streamChannelId);
 
             unsigned char *tmpBuffer = new unsigned char[size];
             if (tmpBuffer == NULL) {
@@ -303,7 +308,7 @@ unsigned RTSPClient::getResponse1(char *&responseBuffer, unsigned responseBuffer
     while (bytesRead < (int)responseBufferSize) {
         int bytesReadNow = fRtspSock.readSocket((char *)(responseBuffer + bytesRead), 1, fromAddress);
         if (bytesReadNow <= 0) {
-            DPRINTF0("RTSP response was truncated\n");
+            rtsp_info("RTSP response was truncated");
             break;
         }
         bytesRead += bytesReadNow;
@@ -341,14 +346,14 @@ unsigned RTSPClient::getResponse1(char *&responseBuffer, unsigned responseBuffer
         }
     }
 
-    DPRINTF0("We received a response not ending with <CR><LF><CR><LF>\n");
+    rtsp_info("We received a response not ending with <CR><LF><CR><LF>");
     return 0;
 }
 
 void RTSPClient::tcpReadError(int result)
 {
     int err = WSAGetLastError();
-    DPRINTF("failed to read RTSP, err: %d, result: %d\n", err, result);
+    rtsp_error("failed to read RTSP, errno:[%d], result:[%d]", err, result);
 
     fTask->turnOffBackgroundReadHandling(fRtspSock.sock());
     if (fCloseFunc) {
@@ -407,7 +412,7 @@ void RTSPClient::tcpReadHandler1()
                 fTCPReadingState = AWAITING_SIZE1;
 
                 if (RTSPCommonEnv::nDebugFlag & DEBUG_FLAG_RTP) {
-                    DPRINTF("channel id: %d\n", fStreamChannelId);
+                    rtsp_info("stream channel id:[%d]", fStreamChannelId);
                 }
             } else {
                 fTCPReadingState = AWAITING_DOLLAR;
@@ -425,7 +430,7 @@ void RTSPClient::tcpReadHandler1()
             fRtpBufferIdx = 0;
 
             if (RTSPCommonEnv::nDebugFlag & DEBUG_FLAG_RTP) {
-                DPRINTF("size: %d\n", fTCPReadSize);
+                rtsp_info("tcp read size:[%d]", fTCPReadSize);
             }
         } break;
 
@@ -446,7 +451,7 @@ bool RTSPClient::readRTSPMessage()
     int len = fResponseBufferSize - fResponseBufferIdx - 1;
 
     if (len <= 0) {
-        DPRINTF0("response buffer is full\n");
+        rtsp_warn("response buffer is full");
         fTCPReadingState = AWAITING_DOLLAR;
         return false;
     }
@@ -505,14 +510,14 @@ bool RTSPClient::parseRTSPMessage()
     }
 
     if (!isCompleted) {
-        DPRINTF0("RTSP message was fragmented\n");
+        rtsp_info("RTSP message was fragmented");
         int sz = fResponseBuffer + fResponseBufferIdx - responseBuffer;
         memmove(fResponseBuffer, responseBuffer, sz);
         fResponseBufferIdx = sz;
         fTCPReadingState = AWAITING_RTSP_MESSAGE;
     } else {
         if (RTSPCommonEnv::nDebugFlag & DEBUG_FLAG_RTSP) {
-            DPRINTF("Received %d bytes response:\n%s\n", fResponseBufferIdx, fResponseBuffer);
+            rtsp_info("Received [%d] bytes response:[%s]", fResponseBufferIdx, fResponseBuffer);
         }
 
         resetResponseBuffer();
@@ -550,7 +555,7 @@ bool RTSPClient::lookupStreamChannelId(unsigned char channel)
     delete iter;
 
     if (subsession == NULL) {
-        DPRINTF("channel id: %d not found handler\n", channel);
+        rtsp_error("session channel id:[%d] not found handler", channel);
         return false;
     }
 
@@ -652,7 +657,7 @@ char *RTSPClient::sendOptionsCmd(const char *url, char *username, char *password
 
         if (responseCode != 200) {
             checkForAuthenticationFailure(responseCode, nextLineStart, authenticator);
-            DPRINTF("cannot handle OPTIONS response: %s\n", firstLine);
+            rtsp_error("cannot handle OPTIONS response:[%s]", firstLine);
             break;
         }
 
@@ -748,7 +753,7 @@ char* RTSPClient::describeURL(const char *url, Authenticator *authenticator, boo
         unsigned bytesRead, responseCode;
 
         if (!getResponse("DESCRIBE", bytesRead, responseCode, firstLine, nextLineStart,  false)) {
-            DPRINTF0("Cannot read DESCRIBE response\n");
+            rtsp_error("Cannot read DESCRIBE response");
             break;
         }
 
@@ -760,7 +765,7 @@ char* RTSPClient::describeURL(const char *url, Authenticator *authenticator, boo
             redirectionURL = new char[fResponseBufferSize];
         } else if (responseCode != 200) {
             checkForAuthenticationFailure(responseCode, nextLineStart, authenticator);
-            DPRINTF("cannot handle DESCRIBE response: %s\n", firstLine);
+            rtsp_error("cannot handle DESCRIBE response:[%s]", firstLine);
             break;
         }
 
@@ -783,7 +788,7 @@ char* RTSPClient::describeURL(const char *url, Authenticator *authenticator, boo
                 || sscanf(lineStart, "Content-length: %d", &contentLength) == 1)
             {
                 if (contentLength < 0) {
-                    DPRINTF("Bad \"Content-length:\" header: \"%s\"\n", lineStart);
+                    rtsp_error("Bad \"Content-length:\" header: \"%s\"", lineStart);
                     break;
                 }
             } else if (strncmp(lineStart, "Content-Base:", 13) == 0
@@ -799,7 +804,7 @@ char* RTSPClient::describeURL(const char *url, Authenticator *authenticator, boo
                 delete[] fLastSessionId; fLastSessionId = strDup(serverType);
             } else if (wantRedirection) {
                 if (sscanf(lineStart, "Location: %s", redirectionURL) == 1) {
-                    DPRINTF("Redirecting to the new URL \"%s\"\n", redirectionURL);
+                    rtsp_warn("Redirecting to the new URL \"%s\"", redirectionURL);
                 }
 
                 reset();
@@ -816,13 +821,13 @@ char* RTSPClient::describeURL(const char *url, Authenticator *authenticator, boo
         delete[] serverType;
 
         if (wantRedirection) {
-            DPRINTF0("Saw redirection response code, but not a \"Location:\" header");
+            rtsp_warn("Saw redirection response code, but not a \"Location:\" header");
             delete[] redirectionURL;
             break;
         }
 
         if (lineStart == NULL) {
-            DPRINTF("no content following header lines: %s\n", fResponseBuffer);
+            rtsp_warn("no content following header lines:[%s]", fResponseBuffer);
             break;
         }
 
@@ -836,12 +841,12 @@ char* RTSPClient::describeURL(const char *url, Authenticator *authenticator, boo
                     char tmpBuf[200];
                     sprintf(tmpBuf, "Read buffer size (%d) is too small for \"Content-length:\" %d (need a buffer size of >= %d bytes\n",
                         fResponseBufferSize, contentLength, fResponseBufferSize + numExtraBytesNeeded - remainingBufferSize);
-                    DPRINTF0(tmpBuf);
+                    rtsp_warn("%s", tmpBuf);
                     break;
                 }
 
                 if (RTSPCommonEnv::nDebugFlag & DEBUG_FLAG_RTSP) {
-                    DPRINTF("Need to read %d extra bytes\n", numExtraBytesNeeded);
+                    rtsp_info("Need to read %d extra bytes", numExtraBytesNeeded);
                 }
 
                 while (numExtraBytesNeeded > 0) {
@@ -855,7 +860,7 @@ char* RTSPClient::describeURL(const char *url, Authenticator *authenticator, boo
                     ptr[bytesRead2] = '\0';
 
                     if (RTSPCommonEnv::nDebugFlag & DEBUG_FLAG_RTSP) {
-                        DPRINTF("Read %d extra bytes:\n%s\n", bytesRead2, ptr);
+                        rtsp_info("Read %d extra bytes:[%s]", bytesRead2, ptr);
                     }
 
                     bytesRead += bytesRead2;
@@ -879,7 +884,7 @@ char* RTSPClient::describeURL(const char *url, Authenticator *authenticator, boo
             }
 
             if (from != to) {
-                DPRINTF("Warning: %s invalid 'NULL' bytes were found in (and removed from) the SDP description.\n", from-to);
+                rtsp_warn("invalid 'NULL' bytes were found in (and removed from) the SDP description, from:[%d], to:[%d]", from, to);
             }
 
             bodyStart[to] = '\0';
@@ -1083,7 +1088,7 @@ bool RTSPClient::setupMediaSubsession(MediaSubsession &subsession, bool streamOu
                 portTypeStr = ";client_port";
                 rtpNumber = subsession.clientPortNum();
                 if (rtpNumber == 0) {
-                    DPRINTF0("Client port number unknown\n");
+                    rtsp_error("Client port number unknown");
                     delete[] authenticatorStr;
                     delete[] sessionStr;
                     delete[] setupStr;
@@ -1187,7 +1192,7 @@ bool RTSPClient::setupMediaSubsession(MediaSubsession &subsession, bool streamOu
         delete[] sessionId;
 
         if (subsession.sessionId == NULL) {
-            DPRINTF0("\"Session:\" header is missing in the response");
+            rtsp_error("\"Session:\" header is missing in the response");
             break;
         }
 
@@ -1316,7 +1321,7 @@ bool RTSPClient::playMediaSession(MediaSession &session, bool response, double s
 
     do {
         if (fLastSessionId == NULL) {
-            DPRINTF0((char *)NoSessionErr);
+            rtsp_error("%s", (char *)NoSessionErr);
             break;
         }
 
@@ -1424,7 +1429,7 @@ bool RTSPClient::pauseMediaSession(MediaSession &session)
 
     do {
         if (fLastSessionId == NULL) {
-            DPRINTF0((char *)NoSessionErr);
+            rtsp_error("%s", (char *)NoSessionErr);
             break;
         }
 
@@ -1482,7 +1487,7 @@ int RTSPClient::openURL(const char *url, int streamType, int timeout, bool rtpOn
         unsigned short port = 0;
 
         if (!parseRTSPURL(url, address, port, &urlSuffix)) {
-            printf("parseRTSPURL failed\n");
+            rtsp_error("parse rtsp url:[%s] failed", url);
             break;
         }
 
@@ -1523,7 +1528,7 @@ int RTSPClient::openURL(const char *url, int streamType, int timeout, bool rtpOn
 
         fMediaSession = MediaSession::createNew(sdpDescription);
         if (!fMediaSession) {
-            DPRINTF0("create MediaSession failed\n");
+            rtsp_error("create MediaSession failed");
             delete[] sdpDescription;
             break;
         }
@@ -1533,7 +1538,7 @@ int RTSPClient::openURL(const char *url, int streamType, int timeout, bool rtpOn
 
         while ((subsession=iter->next()) != NULL) {
             if (!subsession->initiate(streamType, *fTask, rtpOnly)) {
-                DPRINTF("RTSP subsession '%s/%s' failed\n", subsession->mediumName(), subsession->codecName());
+                rtsp_error("RTSP subsession '%s/%s' failed", subsession->mediumName(), subsession->codecName());
                 continue;
             }
 
@@ -1549,7 +1554,7 @@ int RTSPClient::openURL(const char *url, int streamType, int timeout, bool rtpOn
             }
 
             if (!res) {
-                DPRINTF0("setup media subsession failed\n");
+                rtsp_error("setup media subsession failed");
                 continue;
             }
 
@@ -1807,7 +1812,7 @@ bool RTSPClient::setMediaSessionParameter(MediaSession &session, char const *par
 
     do {
         if (fLastSessionId == NULL) {
-            DPRINTF0((char *)NoSessionErr);
+            rtsp_error("%s", (char *)NoSessionErr);
             break;
         }
 
@@ -1873,7 +1878,7 @@ bool RTSPClient::getMediaSessionParameter(MediaSession &/*session*/, char const 
 
     do {
         if (fLastSessionId == NULL) {
-            DPRINTF0((char *)NoSessionErr);
+            rtsp_error("%s", (char *)NoSessionErr);
             break;
         }
 
@@ -1953,7 +1958,7 @@ bool RTSPClient::teardownMediaSession(MediaSession &session)
 
     do {
         if (fLastSessionId == NULL) {
-            DPRINTF0((char *)NoSessionErr);
+            rtsp_error("%s", (char *)NoSessionErr);
             break;
         }
 

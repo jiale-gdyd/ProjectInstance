@@ -4,6 +4,8 @@
 #include <rtsp/internal/RTSPCommonEnv.h>
 #include <rtsp/internal/ServerMediaSession.h>
 
+#include "../../../private.h"
+
 namespace rtsp {
 char const *const libVersionStr = "2023.02.22";
 static char const *const libNameStr = "ljl Streaming Media v";
@@ -572,7 +574,7 @@ void ServerMediaSubsession::getStreamParameters(
             break;
         }
 
-        DPRINTF("Rtp port(%d) already used the other rtp port\r\n", serverSockPort);
+        rtsp_warn("Rtp port:[%d)] already used the other rtp port", serverSockPort);
         serverSockPort += 2;
     }
     MUTEX_UNLOCK(&hMutex);
@@ -630,9 +632,10 @@ int ServerMediaSubsession::sendClientRtp(char *buf, int len)
         if (cursor->isActivated()) {
             if (cursor->sendRTP(buf, len) < 0) {
                 err = WSAGetLastError();
-                DPRINTF("rtp send error %d\n", err);
+                rtsp_error("rtp send error, errno:[%d]", err);
             }
         }
+
         cursor = fClientSockList.getNextCursor();
     }
 
@@ -652,9 +655,10 @@ int ServerMediaSubsession::sendClientRtcp(char *buf, int len)
         if (cursor->isActivated()) {
             if (cursor->sendRTCP(buf, len) < 0) {
                 err = WSAGetLastError();
-                DPRINTF("rtcp send error %d\n", err);
+                rtsp_error("rtcp send error, errno:[%d]", err);
             }
         }
+
         cursor = fClientSockList.getNextCursor();
     }
 
