@@ -80,22 +80,23 @@
 #else
 #define x_macro__has_attribute(x)                           x_macro__has_attribute_##x
 
-#define x_macro__has_attribute___pure__                     X_GNUC_CHECK_VERSION(2, 96)
-#define x_macro__has_attribute___malloc__                   X_GNUC_CHECK_VERSION(2, 96)
-#define x_macro__has_attribute___noinline__                 X_GNUC_CHECK_VERSION(2, 96)
-#define x_macro__has_attribute___sentinel__                 X_GNUC_CHECK_VERSION(4, 0)
 #define x_macro__has_attribute___alloc_size__               X_GNUC_CHECK_VERSION(4, 3)
+#define x_macro__has_attribute___always_inline__            X_GNUC_CHECK_VERSION(2, 0)
+#define x_macro__has_attribute___const__                    X_GNUC_CHECK_VERSION(2, 4)
+#define x_macro__has_attribute___deprecated__               X_GNUC_CHECK_VERSION(3, 1)
 #define x_macro__has_attribute___format__                   X_GNUC_CHECK_VERSION(2, 4)
 #define x_macro__has_attribute___format_arg__               X_GNUC_CHECK_VERSION(2, 4)
-#define x_macro__has_attribute___noreturn__                 (X_GNUC_CHECK_VERSION(2, 8) || (0x5110 <= __SUNPRO_C))
-#define x_macro__has_attribute___const__                    X_GNUC_CHECK_VERSION(2, 4)
-#define x_macro__has_attribute___unused__                   X_GNUC_CHECK_VERSION(2, 4)
+#define x_macro__has_attribute___malloc__                   X_GNUC_CHECK_VERSION(2, 96)
 #define x_macro__has_attribute___no_instrument_function__   X_GNUC_CHECK_VERSION(2, 4)
+#define x_macro__has_attribute___noinline__                 X_GNUC_CHECK_VERSION(2, 96)
+#define x_macro__has_attribute___noreturn__                 (X_GNUC_CHECK_VERSION(2, 8) || (0x5110 <= __SUNPRO_C))
+#define x_macro__has_attribute___pure__                     X_GNUC_CHECK_VERSION(2, 96)
+#define x_macro__has_attribute___sentinel__                 X_GNUC_CHECK_VERSION(4, 0)
+#define x_macro__has_attribute___unused__                   X_GNUC_CHECK_VERSION(2, 4)
+#define x_macro__has_attribute_cleanup                      X_GNUC_CHECK_VERSION(3, 3)
 #define x_macro__has_attribute_fallthrough                  X_GNUC_CHECK_VERSION(6, 0)
-#define x_macro__has_attribute___deprecated__               X_GNUC_CHECK_VERSION(3, 1)
 #define x_macro__has_attribute_may_alias                    X_GNUC_CHECK_VERSION(3, 3)
 #define x_macro__has_attribute_warn_unused_result           X_GNUC_CHECK_VERSION(3, 4)
-#define x_macro__has_attribute_cleanup                      X_GNUC_CHECK_VERSION(3, 3)
 #endif
 
 #if x_macro__has_attribute(__pure__)

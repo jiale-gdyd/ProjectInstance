@@ -19,6 +19,7 @@ CONFIG_ROCKCHIP_PIPELINE=y
 #
 # rknpu
 #
+CONFIG_NPU=y
 CONFIG_RKNPU=y
 CONFIG_RKNPU1=y
 
@@ -38,6 +39,12 @@ CONFIG_RTSP=y
 CONFIG_RTSP_SERVER=y
 CONFIG_RTSP_SERVER_CLIENT=y
 # CONFIG_SIMPLE_RTSP_SERVER is not set
+
+#
+# liblog
+#
+# CONFIG_LIBLOG is not set
+# CONFIG_LIBLOG_COLOR is not set
 
 #
 # hardware platform

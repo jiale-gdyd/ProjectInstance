@@ -1,0 +1,120 @@
+USER_LIB_INCLUDE :=
+USER_LD_LIB      :=
+USER_LINK_LIB    :=
+USER_PTH_RT_LIB  :=
+
+SDK_ROOT         := $(shell pwd)/sdk/nvidia/jetson
+
+SDK_LIB          := $(SDK_ROOT)/sdk/lib
+SDK_INC          := $(SDK_ROOT)/sdk/include
+
+SELF_LIB         := $(SDK_ROOT)/aure/lib
+SELF_INC         := $(SDK_ROOT)/aure/include
+
+USER_LIB_INCLUDE += $(SDK_INC) \
+                    $(SDK_INC)/nvvm \
+                    $(SDK_INC)/glib-2.0 \
+                    $(SDK_INC)/gio-unix-2.0 \
+                    $(SDK_INC)/gstreamer-1.0 \
+                    $(SDK_INC)/deepstream \
+                    $(SDK_INC)/cudnn \
+                    $(SDK_INC)/cuda \
+                    $(SELF_INC)/freetype2 \
+                    $(SELF_INC)/opencv4
+
+USER_LINK_LIB    := -L$(SDK_LIB) \
+                    -L$(SDK_LIB)/cuda \
+                    -L$(SDK_LIB)/nvds \
+                    -L$(SDK_LIB)/nvvm \
+                    -L$(SDK_LIB)/glib \
+                    -L$(SDK_LIB)/tegra \
+                    -L$(SDK_LIB)/gstreamer-1.0 \
+                    -L$(SELF_LIB)
+
+USER_LD_LIB      +=
+
+USER_LINK_LIB         += $(addprefix -l,${USER_LD_LIB})
+USER_PTH_RT_LIB       += -lpthread -lrt -lm -ldl $(USE_STDCPP_VERSION)
+USER_LIB_INCLUDE_FLAG := $(addprefix -I,${USER_LIB_INCLUDE})
+
+export USER_LIB_INCLUDE_FLAG USER_LINK_LIB USER_PTH_RT_LIB
+
+KBUILD_CFLAGS   := -D__arm64__ -DLINUX -D_GNU_SOURCE -DBLUEZ_USE -Wno-psabi -fdata-sections -ffunction-sections
+KBUILD_CFLAGS   := -mcpu=cortex-a57
+
+KBUILD_CPPFLAGS := -D_GNU_SOURCE -Wno-psabi -Wno-write-strings -Wno-pointer-arith -fdata-sections -ffunction-sections
+KBUILD_CPPFLAGS += -DRAPIDJSON_HAS_STDSTRING -D__arm64__ -DLINUX
+
+KBUILD_CXXFLAGS := -DRAPIDJSON_HAS_STDSTRING -D__arm64__ -DLINUX -D_GNU_SOURCE -Wno-psabi -Wno-pointer-arith -fdata-sections -ffunction-sections
+KBUILD_CXXFLAGS += -mcpu=cortex-a57
+
+KBUILD_CFLAGS_KERNEL   := -D__STDC_CONSTANT_MACROS -D__OPTIMIZE__ -fdata-sections -ffunction-sections
+KBUILD_CXXFLAGS_KERNEL := -D__OPTIMIZE__ -DRAPIDJSON_HAS_STDSTRING -fdata-sections -ffunction-sections
+
+KBUILD_CXXFLAGS += -Wall -O2 \
+                -fno-strict-aliasing \
+                -fno-common \
+                -Wno-return-type \
+                -Wno-sign-compare \
+                -Wno-write-strings \
+                -Wno-conversion-null \
+                -Wno-literal-suffix \
+                -Wno-deprecated-declarations \
+                -Wno-unused-but-set-variable \
+                -Wno-unused-function \
+                -Wno-unused-result \
+                -Wno-unused-label \
+                -Wno-unused-variable \
+                -Wno-memset-elt-size \
+                -Wno-reorder \
+                -Wno-delete-incomplete \
+                -Wno-delete-non-virtual-dtor \
+                -Wno-stringop-truncation \
+                -Wno-format-truncation \
+                -Wno-stringop-overflow \
+                -Wno-class-memaccess \
+                -Wno-catch-value \
+                -Wno-maybe-uninitialized \
+                -Wno-narrowing \
+                -Wno-pessimizing-move \
+                -Wno-unused-value \
+                -Wno-sizeof-pointer-memaccess \
+                -Wno-unknown-pragmas \
+                -Wno-char-subscripts \
+                -Wno-array-bounds \
+                -Wno-format-extra-args
+
+KBUILD_CFLAGS += -Wall -O2 \
+            -Wno-trigraphs \
+            -fno-strict-aliasing -fno-common \
+            -Wno-format-security \
+            -Wno-deprecated-declarations \
+            -Wno-unused-but-set-variable \
+            -fno-delete-null-pointer-checks \
+            -Wno-write-strings \
+            -Wno-pointer-arith \
+            -Wno-unused-function \
+            -Wno-unused-variable \
+            -Wno-int-to-pointer-cast \
+            -Wno-unused-result \
+            -Wno-tautological-compare \
+            -Wno-multichar \
+            -Wno-unused-label \
+            -Wno-memset-elt-size \
+            -Wno-format-overflow \
+            -Wno-format-truncation \
+            -Wno-stringop-truncation \
+            -Wno-stringop-overflow \
+            -Wno-sequence-point \
+            -Wno-char-subscripts \
+            -Wno-sign-compare \
+            -Wno-uninitialized \
+            -Wno-unused-value \
+            -Wno-maybe-uninitialized \
+            -Wno-narrowing \
+            -Wno-array-bounds \
+            -Wno-int-in-bool-context \
+            -Wno-restrict \
+            -Wno-array-compare
+
+export KBUILD_CPPFLAGS KBUILD_CXXFLAGS KBUILD_CFLAGS KBUILD_CFLAGS_KERNEL KBUILD_CXXFLAGS_KERNEL

@@ -1,0 +1,9 @@
+#
+# Nvidia AArch64 Platform Application Kconfig
+# 
+
+menu "Nvidia AArch64 Platform Application"
+
+source "project/platform/aarch64/nvidia/jetson/Kconfig"
+
+endmenu

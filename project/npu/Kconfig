@@ -4,6 +4,12 @@
 
 menu "Algorithm NPU"
 
+config NPU
+    bool "Neural Processor Unit"
+    default n
+    help
+      Enable Neural Processor Unit
+
 source "project/npu/axnpu/Kconfig"
 source "project/npu/rknpu/Kconfig"
 

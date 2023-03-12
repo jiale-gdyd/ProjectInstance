@@ -5,7 +5,9 @@
 #include "mediaBase.hpp"
 #undef __AXERA_MEDIABASE_HPP_INSIDE__
 
-API_BEGIN_NAMESPACE(media)
+namespace axpi {
+int g_majorStreamWidth = 1920;
+int g_majorStreamHeight = 1080;
 
 MediaApi::MediaApi()
 {
@@ -50,6 +52,9 @@ int MediaApi::init(axsys_init_params_t *param)
         if (ret != 0) {
             return -2;
         }
+
+        g_majorStreamWidth = mCamers[0].stChnAttr.tChnAttr->nWidth;
+        g_majorStreamHeight = mCamers[0].stChnAttr.tChnAttr->nHeight;
     }
 
     ret = axsys_init(&(mSysInitParam.sysCommonArgs));
@@ -115,7 +120,7 @@ void MediaApi::ispRunThread(int camId)
     }
 }
 
-media::MediaApi *MediaBase::mMediaApi = nullptr;
+axpi::MediaApi *MediaBase::mMediaApi = nullptr;
 
 MediaBase::MediaBase()
 {
@@ -130,13 +135,12 @@ MediaBase::~MediaBase()
     }
 }
 
-media::MediaApi *MediaBase::getApi()
+axpi::MediaApi *MediaBase::getApi()
 {
     if (mMediaApi == nullptr) {
-        mMediaApi = new media::MediaApi();
+        mMediaApi = new axpi::MediaApi();
     }
 
     return mMediaApi;
 }
-
-API_END_NAMESPACE(media)
+}

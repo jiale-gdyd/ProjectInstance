@@ -1,0 +1,19 @@
+#
+# Nvidia jetson(nano/nx) Application Kconfig
+# 
+
+menu "Nvidia jetson Application"
+
+choice
+prompt "Nvidia jetson Application Implementation"
+depends on NVIDIA && JETSON
+default JETSON_UNKNOWN
+
+config JETSON_EMS
+    bool "Electronic rearview mirror system"
+
+config JETSON_UNKNOWN
+    bool "Unknown Application"
+endchoice
+
+endmenu

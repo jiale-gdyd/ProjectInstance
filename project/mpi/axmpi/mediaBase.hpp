@@ -1,21 +1,22 @@
-#ifndef AXERA_MEDIABASE_HPP
-#define AXERA_MEDIABASE_HPP
+#pragma once
 
 #include <mutex>
 #include <atomic>
 #include <thread>
+#include <vector>
 #include <functional>
 #include <condition_variable>
 
 #define __AXERA_MEDIABASE_HPP_INSIDE__
+#include "axpi.hpp"
+#include "axpipe.hpp"
 #include "mediaIvps.hpp"
-#include "pipeline/axpipe.hpp"
-#include "common/common_camera.hpp"
-#include "common/common_function.hpp"
+#include "private/common/common/common_system.hpp"
+#include "private/common/common/common_camera.hpp"
+#include "private/common/common/common_function.hpp"
 #undef __AXERA_MEDIABASE_HPP_INSIDE__
 
-API_BEGIN_NAMESPACE(media)
-
+namespace axpi {
 typedef struct {
     uint32_t sysCameraCase;
     uint32_t sysCameraHdrMode;
@@ -37,7 +38,7 @@ typedef struct {
     axnpu_info_t     npuInitInfo;           // NPU初始化信息
 } axsys_init_params_t;
 
-class API_HIDDEN MediaApi {
+class MediaApi {
 public:
     MediaApi();
     ~MediaApi();
@@ -56,7 +57,7 @@ private:
     void ispRunThread(int camId);
 
 private:
-    class API_HIDDEN semaphore {
+    class semaphore {
     public:
         explicit semaphore(size_t initial = 0) {
             mCount = initial;
@@ -102,7 +103,7 @@ private:
     MediaIvps                mMediaIvps;
 };
 
-class API_EXPORT MediaBase {
+class MediaBase {
 public:
     MediaBase();
     virtual ~MediaBase();
@@ -110,12 +111,9 @@ public:
     virtual int init() = 0;
 
 public:
-    media::MediaApi *getApi();
+    axpi::MediaApi *getApi();
 
 private:
-    static media::MediaApi *mMediaApi;
+    static axpi::MediaApi *mMediaApi;
 };
-
-API_END_NAMESPACE(media)
-
-#endif
+}

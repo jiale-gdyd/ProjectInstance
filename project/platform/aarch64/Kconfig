@@ -4,6 +4,6 @@
 
 menu "AArch64 platform"
 
-
+source "project/platform/aarch64/nvidia/Kconfig"
 
 endmenu

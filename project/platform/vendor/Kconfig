@@ -54,7 +54,7 @@ endmenu
 
 menu "Rockchip Platform Board"
 config ROCKCHIP
-    bool "Rockchip"
+    bool "Rockchip Electronics Co., Ltd."
     default n
     help
       Rockchip Electronics Co., Ltd
@@ -80,6 +80,25 @@ choice
         bool "rockchip 3588 chip"
         select AARCH64
 endchoice
+endmenu
+
+menu "Nvidia Platform Board"
+config NVIDIA
+    bool "NVIDIA Corporation"
+    default n
+    help
+      NVIDIA Corporation
+
+choice
+    prompt "Nvidia soc choice"
+    depends on NVIDIA
+    default JETSON
+
+    config JETSON
+        bool "jetson nano or nx"
+        select AARCH64
+endchoice
+
 endmenu
 
 endmenu

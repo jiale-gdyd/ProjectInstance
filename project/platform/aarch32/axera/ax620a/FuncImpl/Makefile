@@ -1,1 +1,0 @@
-obj-$(CONFIG_AX620A_EMS) += EMS/

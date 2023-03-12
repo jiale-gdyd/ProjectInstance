@@ -1,6 +1,7 @@
 source "project/3rdparty/source/rtsp/Kconfig"
 source "project/3rdparty/source/xlib/Kconfig"
 source "project/3rdparty/source/media/Kconfig"
+source "project/3rdparty/source/liblog/Kconfig"
 source "project/3rdparty/source/libv4l/Kconfig"
 source "project/3rdparty/source/libdrm/Kconfig"
 source "project/3rdparty/source/live555/Kconfig"

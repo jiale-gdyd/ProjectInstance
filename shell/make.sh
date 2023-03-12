@@ -3,6 +3,7 @@
 source ${TOPSHELL}/shell/make_host.sh
 source ${TOPSHELL}/shell/make_rv11xx.sh
 source ${TOPSHELL}/shell/make_ax620a.sh
+source ${TOPSHELL}/shell/make_jetson.sh
 source ${TOPSHELL}/shell/make_imx6ull.sh
 
 function clean()
@@ -19,6 +20,7 @@ function clean()
     print_info "distclean ${PROJECT_NAME} project start"
 
     host_clean
+    jetson_clean
     ax620a_clean
     rv11xx_clean
     imx6ull_clean

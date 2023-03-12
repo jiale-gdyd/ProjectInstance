@@ -1,0 +1,24 @@
+#
+# liblog Kconfig
+#
+
+menu "liblog Kconfig"
+
+config LIBLOG
+    tristate "Enable liblog"
+    default n
+    help
+      liblog is a reliable, high-performance, thread safe, flexible, clear-model, pure C logging library.
+      Actually, in the C world there was NO good logging library for applications like logback in java or
+      log4cxx in c++. Using printf can work, but can not be redirected or reformatted easily.
+      syslog is slow and is designed for system use. So I wrote liblog. It is faster, safer and more powerful than log4c.
+      So it can be widely used.
+
+config LIBLOG_COLOR
+    tristate "Enable liblog color"
+    depends on LIBLOG
+    default y
+    help
+      liblog supports colored output.
+
+endmenu
