@@ -28,6 +28,7 @@ enum {
 /* pipeline输出 */
 enum {
     AXPIPE_OUTPUT_NONE = 0,
+
     AXPIPE_OUTPUT_BUFF = 0x10,
     AXPIPE_OUTPUT_BUFF_RGB,
     AXPIPE_OUTPUT_BUFF_BGR,
@@ -55,20 +56,20 @@ typedef struct {
     int       osdRgnHandle[OSD_RGN_COUNT];  // rgn的句柄
     int       ivpsFramerate;                // IPVS输出帧率
     int       ivpsRotate;                   // 旋转角度(0, 90, 180, 270)
-    int       ivpsWidth;                    // 帧宽度(必须为偶数)
-    int       ivpsHeight;                   // 帧高度(必须为偶数)
+    int       ivpsWidth;                    // 帧宽度(必须为偶数)，根据需要ivps输出的帧宽度
+    int       ivpsHeight;                   // 帧高度(必须为偶数)，根据需要ivps输出的帧高度
     bool      bIvpsMirror;                  // 是否镜像
     bool      bIvpsFlip;                    // 是否翻转
     bool      bLetterBbox;                  // 是否填充(一般用于ai检测)
     int       fifoCount;                    // 0表示不输出，1-4表示队列的个数，大于0则可以在调用回调输出图像
-    pthread_t tid;                          // 内部使用
+    pthread_t threadId;                     // 内部使用
 } axpipe_ivps_config_t;
 
 /* pipeline vdec配置 */
 typedef struct {
     int       vdecGroup;                    // 视频解码组
     int       poolId;                       // 内部使用
-    pthread_t tid;                          // 内部使用
+    pthread_t threadId;                     // 内部使用
 } axpipe_vdec_config_t;
 
 /* pipeline venc配置 */
@@ -76,7 +77,7 @@ typedef struct {
     int         vencChannel;                // 视频编码通道
     uint16_t    rtspPort;                   // rtsp服务器端口号
     std::string endPoint;                   // rtsp节点名称(URL)
-    pthread_t   tid;                        // 内部使用
+    pthread_t   threadId;                   // 内部使用
 } axpipe_venc_config_t;
 
 /* pipeline user vo配置 */

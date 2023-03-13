@@ -10,7 +10,7 @@ namespace axpi {
 #define AXVO_DEV0               0
 
 typedef struct {
-    pthread_t tid;
+    pthread_t threadId;
     bool      forceStop;
     uint32_t  layerId;
     uint32_t  channelId;

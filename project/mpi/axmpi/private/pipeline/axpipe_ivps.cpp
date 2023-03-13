@@ -231,7 +231,7 @@ int axpipe_create_ivps(axpipe_t *pipe)
         case AXPIPE_OUTPUT_BUFF_NV12:
         case AXPIPE_OUTPUT_BUFF_NV21: {
             if (stPipelineAttr.nOutFifoDepth[chnId] > 0) {
-                ret = pthread_create(&pipe->ivpsConfig.tid, NULL, ivpsGetFrameThread, (void *)pipe);
+                ret = pthread_create(&pipe->ivpsConfig.threadId, NULL, ivpsGetFrameThread, (void *)pipe);
                 if (ret != 0) {
                     axmpi_error("create ivps get frame thread failed");
                     return -6;
@@ -250,7 +250,7 @@ int axpipe_create_ivps(axpipe_t *pipe)
 
 int axpipe_release_ivps(axpipe_t *pipe)
 {
-    pthread_join(pipe->ivpsConfig.tid, NULL);
+    pthread_join(pipe->ivpsConfig.threadId, NULL);
 
     int ret = AX_IVPS_StopGrp(pipe->ivpsConfig.ivpsGroup);
     if (ret != 0) {

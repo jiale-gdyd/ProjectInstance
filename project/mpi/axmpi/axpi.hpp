@@ -159,7 +159,7 @@ int axpi_init(std::string confJsonFile, void **handler);
 
 int axpi_get_model_type(void *handler);
 int axpi_get_color_space(void *handler);
-int axpi_get_ivps_width_height(void *handler, std::string confJsonFile, int &width, int &height);
+int axpi_get_ivps_width_height(void *handler, std::string confJsonFile, size_t &width, size_t &height);
 
 int axpi_inference(void *handler, axpi_image_t *pstFrame, axpi_results_t *lastResults);
 int axpi_draw_results(void *handler, axpi_canvas_t *canvas, axpi_results_t *lastResults, float fontscale, int thickness, int offsetX, int offsetY);

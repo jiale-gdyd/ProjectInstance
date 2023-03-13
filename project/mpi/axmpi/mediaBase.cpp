@@ -53,8 +53,8 @@ int MediaApi::init(axsys_init_params_t *param)
             return -2;
         }
 
-        g_majorStreamWidth = mCamers[0].stChnAttr.tChnAttr->nWidth;
-        g_majorStreamHeight = mCamers[0].stChnAttr.tChnAttr->nHeight;
+        g_majorStreamWidth = mCamers[0].stChnAttr.tChnAttr[AX_YUV_SOURCE_ID_MAIN].nWidth;
+        g_majorStreamHeight = mCamers[0].stChnAttr.tChnAttr[AX_YUV_SOURCE_ID_MAIN].nHeight;
     }
 
     ret = axsys_init(&(mSysInitParam.sysCommonArgs));

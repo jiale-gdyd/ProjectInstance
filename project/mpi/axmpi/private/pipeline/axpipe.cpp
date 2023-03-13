@@ -137,12 +137,12 @@ int axpipe_create(axpipe_t *pipe)
 
         case AXPIPE_INPUT_VIN: {
             if (pipe->vinPipe >= VIN_PIPE_COUNT) {
-                axmpi_error("vin pipe must lower than %d, current:[%d]", VIN_PIPE_COUNT - 1, pipe->vinPipe);
+                axmpi_error("vin pipe must lower than %d, current:[%d]", VIN_PIPE_COUNT, pipe->vinPipe);
                 return -7;
             }
 
             if (pipe->vinChn >= VIN_CHN_COUNT) {
-                axmpi_error("vin chn must lower than %d, current:[%d]", VIN_CHN_COUNT - 1, pipe->vinChn);
+                axmpi_error("vin chn must lower than %d, current:[%d]", VIN_CHN_COUNT, pipe->vinChn);
                 return -8;
             }
 

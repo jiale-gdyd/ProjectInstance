@@ -11,7 +11,7 @@ default AX620A_EMS
 
 config AX620A_EMS
     bool "Electronic rearview mirror system"
-    depends on AXERA_MPI
+    select AXERA_MPI
 
 config AX620A_UNKNOWN
     bool "Unknown Application"

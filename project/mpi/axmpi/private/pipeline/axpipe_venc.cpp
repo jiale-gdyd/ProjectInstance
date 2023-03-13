@@ -389,7 +389,7 @@ int axpipe_create_venc(axpipe_t *pipe)
         setJpegParam(pipe);
     }
 
-    if (pthread_create(&pipe->vencConfig.tid, NULL, vencGetFrameThread, pipe) != 0) {
+    if (pthread_create(&pipe->vencConfig.threadId, NULL, vencGetFrameThread, pipe) != 0) {
         axmpi_error("create venc get frame thread failed");
         return -5;
     }
@@ -399,7 +399,7 @@ int axpipe_create_venc(axpipe_t *pipe)
 
 int axpipe_release_venc(axpipe_t *pipe)
 {
-    pthread_join(pipe->vencConfig.tid, NULL);
+    pthread_join(pipe->vencConfig.threadId, NULL);
     int ret = AX_VENC_StopRecvFrame(pipe->vencConfig.vencChannel);
     if (ret != 0) {
         axmpi_error("venc chn:[%d] stop recv frame failed, return:[%d]", pipe->vencConfig.vencChannel, ret);

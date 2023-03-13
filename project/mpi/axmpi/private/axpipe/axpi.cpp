@@ -49,7 +49,7 @@ int axpi_exit(void **handler)
     }
 }
 
-int axpi_get_ivps_width_height(void *handler, std::string confJsonFile, int &width, int &height)
+int axpi_get_ivps_width_height(void *handler, std::string confJsonFile, size_t &width, size_t &height)
 {
     if (!(axpi_model_handle_t *)(handler) || !((axpi_model_handle_t *)(handler))->model.get()) {
         return -1;
