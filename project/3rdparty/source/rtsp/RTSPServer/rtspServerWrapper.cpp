@@ -49,7 +49,7 @@ public:
 
         xop::MediaSessionId session_id = mServer->AddSession(session);
 
-        std::cout << "Play URL: " << mRtspUrl << "/" << url_suffix << "   sessionID:" << session_id << std::endl;
+        std::cout << "Playing URL:[" << mRtspUrl << "/" << url_suffix << "], sessionID:[" << session_id << "]" << std::endl;
         return session_id;
     }
 

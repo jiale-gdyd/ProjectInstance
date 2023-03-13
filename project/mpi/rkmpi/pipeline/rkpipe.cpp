@@ -21,7 +21,7 @@ typedef struct {
     std::vector<uint32_t>                    voChannel;
     std::vector<uint32_t>                    vinChannel;
     std::vector<uint32_t>                    rgaChannel;
-    std::vector<uint32_t>                    vencChannel;
+    std::vector<uint32_t>                    channel;
     std::vector<uint32_t>                    vdecChannel;
 } rkpipe_private_t;
 
@@ -124,7 +124,7 @@ int rkpipe_create(rkpipe_t *pipe)
         if (g_pipelineHandler.voChannel.size() == 0
             && g_pipelineHandler.vinChannel.size() == 0
             && g_pipelineHandler.rgaChannel.size() == 0
-            && g_pipelineHandler.vencChannel.size() == 0
+            && g_pipelineHandler.channel.size() == 0
             && g_pipelineHandler.vdecChannel.size() == 0)
         {
             int ret = drm_mpi_system_init();
@@ -201,13 +201,13 @@ int rkpipe_create(rkpipe_t *pipe)
                 return -13;
             }
 
-            if (pipe->venc.vencChannel >= DRM_VENC_CHANNEL_BUTT) {
-                rkmpi_error("venc channel must lower than:[%d], current:[%u]", DRM_VENC_CHANNEL_BUTT - 1, pipe->venc.vencChannel);
+            if (pipe->venc.channel >= DRM_VENC_CHANNEL_BUTT) {
+                rkmpi_error("venc channel must lower than:[%d], current:[%u]", DRM_VENC_CHANNEL_BUTT - 1, pipe->venc.channel);
                 return -14;
             }
 
-            if (mpi::contain(g_pipelineHandler.vencChannel, pipe->venc.vencChannel)) {
-                rkmpi_error("venc channel:[%d] has been created", pipe->venc.vencChannel);
+            if (mpi::contain(g_pipelineHandler.channel, pipe->venc.channel)) {
+                rkmpi_error("venc channel:[%d] has been created", pipe->venc.channel);
                 return -15;
             }
 
@@ -215,7 +215,7 @@ int rkpipe_create(rkpipe_t *pipe)
                 return -16;
             }
 
-            g_pipelineHandler.vencChannel.push_back(pipe->venc.vencChannel);
+            g_pipelineHandler.channel.push_back(pipe->venc.channel);
             if ((pipe->outputType == RKPIPE_OUTPUT_RTSP_H264) || (pipe->outputType == RKPIPE_OUTPUT_RTSP_H265)) {
                 if (!g_pipelineHandler.rtspServerHandler) {
                     g_pipelineHandler.rtspServerHandler = rtsp::rtsp_new_server(pipe->venc.rtspServerPort ? pipe->venc.rtspServerPort : DEFAULT_RTSP_SERVER_PORT);
@@ -301,9 +301,9 @@ int rkpipe_release(rkpipe_t *pipe)
         case RKPIPE_OUTPUT_RTSP_H265: {
             /* 如果有绑定，则先取消绑定 */
 
-            if (mpi::contain(g_pipelineHandler.vencChannel, pipe->venc.vencChannel)) {
+            if (mpi::contain(g_pipelineHandler.channel, pipe->venc.channel)) {
                 rkpipe_release_venc(pipe);
-                mpi::erase(g_pipelineHandler.vencChannel, pipe->venc.vencChannel);
+                mpi::erase(g_pipelineHandler.channel, pipe->venc.channel);
             }
 
             if ((pipe->outputType == RKPIPE_OUTPUT_RTSP_H264) || (pipe->outputType == RKPIPE_OUTPUT_RTSP_H265)) {
@@ -350,7 +350,7 @@ int rkpipe_release(rkpipe_t *pipe)
         if (g_pipelineHandler.voChannel.size() == 0
             && g_pipelineHandler.vinChannel.size() == 0
             && g_pipelineHandler.rgaChannel.size() == 0
-            && g_pipelineHandler.vencChannel.size() == 0
+            && g_pipelineHandler.channel.size() == 0
             && g_pipelineHandler.vdecChannel.size() == 0)
         {
             g_pipelineHandler.sysInited = false;

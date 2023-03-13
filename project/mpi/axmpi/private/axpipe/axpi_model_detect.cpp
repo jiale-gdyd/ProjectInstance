@@ -44,9 +44,9 @@ int AxPiModelYolov5::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resi
         axobj.bbox.h = obj.rect.height;
 
         if (obj.label < (int)mClassName.size()) {
-            axobj.objname = mClassName[obj.label];
+            strcpy(axobj.objname, mClassName[obj.label].c_str());
         } else {
-            axobj.objname = "unknown";
+            strcpy(axobj.objname, "unknown");
         }
 
         results->objects.push_back(axobj);
@@ -112,9 +112,9 @@ int AxPiModelYolov5Seg::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_r
         }
 
         if (obj.label < (int)mClassName.size()) {
-            axobj.objname = mClassName[obj.label];
+            strcpy(axobj.objname, mClassName[obj.label].c_str());
         } else {
-            axobj.objname = "unknown";
+            strcpy(axobj.objname, "unknown");
         }
 
         results->objects.push_back(axobj);
@@ -203,9 +203,9 @@ int AxPiModelYolov5Face::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_
         axobj.landmark = landmark;
 
         if (obj.label < (int)mClassName.size()) {
-            axobj.objname = mClassName[obj.label];
+            strcpy(axobj.objname, mClassName[obj.label].c_str());
         } else {
-            axobj.objname = "unknown";
+            strcpy(axobj.objname, "unknown");
         }
 
         results->objects.push_back(axobj);
@@ -310,9 +310,9 @@ int AxPiModelYolov5LisencePlate::post_process(axpi_image_t *pstFrame, axpi_bbox_
         axobj.bbox_vertices = bbox_vertices;
 
         if (obj.label < (int)mClassName.size()) {
-            axobj.objname = mClassName[obj.label];
+            strcpy(axobj.objname, mClassName[obj.label].c_str());
         } else {
-            axobj.objname = "unknown";
+            strcpy(axobj.objname, "unknown");
         }
 
         results->objects.push_back(axobj);
@@ -351,9 +351,9 @@ int AxPiModelYolov6::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resi
         axobj.bbox.h = obj.rect.height;
 
         if (obj.label < (int)mClassName.size()) {
-            axobj.objname = mClassName[obj.label];
+            strcpy(axobj.objname, mClassName[obj.label].c_str());
         } else {
-            axobj.objname = "unknown";
+            strcpy(axobj.objname, "unknown");
         }
 
         results->objects.push_back(axobj);
@@ -399,9 +399,9 @@ int AxPiModelYolov7::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resi
         axobj.bbox.h = obj.rect.height;
 
         if (obj.label < (int)mClassName.size()) {
-            axobj.objname = mClassName[obj.label];
+            strcpy(axobj.objname, mClassName[obj.label].c_str());
         } else {
-            axobj.objname = "unknown";
+            strcpy(axobj.objname, "unknown");
         }
 
         results->objects.push_back(axobj);
@@ -465,9 +465,9 @@ int AxPiModelYolov7Face::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_
         axobj.landmark = landmark;
 
         if (obj.label < (int)mClassName.size()) {
-            axobj.objname = mClassName[obj.label];
+            strcpy(axobj.objname, mClassName[obj.label].c_str());
         } else {
-            axobj.objname = "unknown";
+            strcpy(axobj.objname, "unknown");
         }
 
         results->objects.push_back(axobj);
@@ -522,7 +522,7 @@ int AxPiModelYolov7FacePlamHand::post_process(axpi_image_t *pstFrame, axpi_bbox_
         }
         axobj.bbox_vertices = bbox_vertices;
 
-        axobj.objname = "hand";
+        strcpy(axobj.objname, "hand");
         results->objects.push_back(axobj);
     }
 
@@ -576,7 +576,7 @@ int AxPiModelPlamHand::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_re
         }
         axobj.bbox_vertices = bbox_vertices;
 
-        axobj.objname = "hand";
+        strcpy(axobj.objname, "hand");
         results->objects.push_back(axobj);
     }
 
@@ -613,9 +613,9 @@ int AxPiModelYolox::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resiz
         axobj.bbox.h = obj.rect.height;
 
         if (obj.label < (int)mClassName.size()) {
-            axobj.objname = mClassName[obj.label];
+            strcpy(axobj.objname, mClassName[obj.label].c_str());
         } else {
-            axobj.objname = "unknown";
+            strcpy(axobj.objname, "unknown");
         }
 
         results->objects.push_back(axobj);
@@ -662,9 +662,9 @@ int AxPiModelYoloxPPL::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_re
         axobj.bbox.h = obj.rect.height;
 
         if (obj.label < (int)mClassName.size()) {
-            axobj.objname = mClassName[obj.label];
+            strcpy(axobj.objname, mClassName[obj.label].c_str());
         } else {
-            axobj.objname = "unknown";
+            strcpy(axobj.objname, "unknown");
         }
 
         results->objects.push_back(axobj);
@@ -725,7 +725,7 @@ int AxPiModelYoloPV2::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_res
         axobj.bbox.h = obj.rect.height;
 
         results->objects[i].label = 0;
-        axobj.objname = "car";
+        strcpy(axobj.objname, "car");
         results->objects.push_back(axobj);
     }
 
@@ -864,7 +864,7 @@ int AxPiModelYoloFastBody::post_process(axpi_image_t *pstFrame, axpi_bbox_t *cro
         axobj.bbox.h = obj.rect.height;
 
         axobj.label = 0;
-        axobj.objname = "person";
+        strcpy(axobj.objname, "person");
 
         results->objects.push_back(axobj);
     }
@@ -902,9 +902,9 @@ int AxPiModelNanoDetect::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_
         axobj.bbox.h = obj.rect.height;
 
         if (obj.label < (int)mClassName.size()) {
-            axobj.objname = mClassName[obj.label];
+            strcpy(axobj.objname, mClassName[obj.label].c_str());
         } else {
-            axobj.objname = "unknown";
+            strcpy(axobj.objname, "unknown");
         }
 
         results->objects.push_back(axobj);
@@ -974,9 +974,9 @@ int AxPiModelSCRFD::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resiz
         axobj.landmark = landmark;
 
         if (obj.label < (int)mClassName.size()) {
-            axobj.objname = mClassName[obj.label];
+            strcpy(axobj.objname, mClassName[obj.label].c_str());
         } else {
-            axobj.objname = "unknown";
+            strcpy(axobj.objname, "unknown");
         }
 
         results->objects.push_back(axobj);
@@ -1023,9 +1023,9 @@ int AxPiModelYolov8::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resi
         axobj.bbox.h = obj.rect.height;
 
         if (obj.label < (int)mClassName.size()) {
-            axobj.objname = mClassName[obj.label];
+            strcpy(axobj.objname, mClassName[obj.label].c_str());
         } else {
-            axobj.objname = "unknown";
+            strcpy(axobj.objname, "unknown");
         }
 
         results->objects.push_back(axobj);
@@ -1091,9 +1091,9 @@ int AxPiModelYolov8Seg::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_r
         }
 
         if (obj.label < (int)mClassName.size()) {
-            axobj.objname = mClassName[obj.label];
+            strcpy(axobj.objname, mClassName[obj.label].c_str());
         } else {
-            axobj.objname = "unknown";
+            strcpy(axobj.objname, "unknown");
         }
 
         results->objects.push_back(axobj);

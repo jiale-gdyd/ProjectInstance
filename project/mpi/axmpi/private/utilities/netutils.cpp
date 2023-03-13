@@ -7,7 +7,7 @@
 #include "netutils.hpp"
 
 namespace axpi {
-int get_ip(const char *devname, const char *ipaddr)
+int get_ip(const char *devname, char *ipaddr)
 {
     struct ifreq ifr;
     int fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -28,7 +28,7 @@ int get_ip(const char *devname, const char *ipaddr)
     return -1;
 }
 
-int get_ip_auto(const char *ipaddr)
+int get_ip_auto(char *ipaddr)
 {
     int ret = get_ip("eth0", ipaddr);
     if (ret == 0) {

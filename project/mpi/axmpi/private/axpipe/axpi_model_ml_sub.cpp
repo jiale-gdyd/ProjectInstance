@@ -445,7 +445,7 @@ int AxPiModelLicensePlateRecognitionSub::post_process(axpi_image_t *pstFrame, ax
         pre_str = plate_string[index];
     }
 
-    results->objects[mCurrentIdx].objname = plate;
+    strcpy(results->objects[mCurrentIdx].objname, plate.c_str());
     return 0;
 }
 }

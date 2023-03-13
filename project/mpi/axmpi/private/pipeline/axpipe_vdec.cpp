@@ -43,8 +43,8 @@ static int framePoolInit(int grpId, uint32_t frameSize, uint32_t *poolId)
 
 int axpipe_create_vdec(axpipe_t *pipe)
 {
-    if (pipe->vdecConfig.vdecGroup >= VDEC_GRP_COUNT) {
-        axmpi_error("Invalid vdec group:[%d], only suppord:[%d:%d]", pipe->vdecConfig.vdecGroup, 0, VDEC_GRP_COUNT - 1);
+    if (pipe->vdec.channel >= VDEC_GRP_COUNT) {
+        axmpi_error("Invalid vdec group:[%d], only suppord:[%d:%d]", pipe->vdec.channel, 0, VDEC_GRP_COUNT - 1);
         return -1;
     }
 
@@ -63,24 +63,24 @@ int axpipe_create_vdec(axpipe_t *pipe)
             uint32_t u32PoolId;
             uint32_t frameSize = 0;
 
-            int ret = AX_VDEC_CreateGrp(pipe->vdecConfig.vdecGroup, &gGrpAttr);
+            int ret = AX_VDEC_CreateGrp(pipe->vdec.channel, &gGrpAttr);
             if (ret != 0) {
-                axmpi_error("vdec group:[%d] create failed, return:[%d]", pipe->vdecConfig.vdecGroup, ret);
+                axmpi_error("vdec group:[%d] create failed, return:[%d]", pipe->vdec.channel, ret);
                 return -2;
             }
 
             frameSize = AX_VDEC_GetPicBufferSize(1920, 108, PT_H264);
-            ret = framePoolInit(pipe->vdecConfig.vdecGroup, frameSize, &u32PoolId);
+            ret = framePoolInit(pipe->vdec.channel, frameSize, &u32PoolId);
             if (ret != 0) {
                 axmpi_error("framePoolInit failed, return:[%d]", ret);
                 return -3;
             }
 
-            pipe->vdecConfig.poolId = u32PoolId;
-            ret = AX_VDEC_StartRecvStream(pipe->vdecConfig.vdecGroup);
+            pipe->vdec.poolId = u32PoolId;
+            ret = AX_VDEC_StartRecvStream(pipe->vdec.channel);
             if (ret != 0) {
-                AX_VDEC_DestroyGrp(pipe->vdecConfig.vdecGroup);
-                axmpi_error("vdec group:[%d] recv stream failed, return:[%d]", pipe->vdecConfig.vdecGroup, ret);
+                AX_VDEC_DestroyGrp(pipe->vdec.channel);
+                axmpi_error("vdec group:[%d] recv stream failed, return:[%d]", pipe->vdec.channel, ret);
                 return -4;
             }
 
@@ -106,7 +106,7 @@ int axpipe_create_vdec(axpipe_t *pipe)
                 return -5;
             }
 
-            pipe->vdecConfig.poolId = u32PoolId;
+            pipe->vdec.poolId = u32PoolId;
             break;
         }
 
@@ -120,15 +120,15 @@ int axpipe_create_vdec(axpipe_t *pipe)
 int axpipe_release_vdec(axpipe_t *pipe)
 {
     axpipe_release_jdec(pipe);
-    AX_POOL_MarkDestroyPool(pipe->vdecConfig.poolId);
+    AX_POOL_MarkDestroyPool(pipe->vdec.poolId);
 
     return 0;
 }
 
 int axpipe_create_jdec(axpipe_t *pipe)
 {
-    if (pipe->vdecConfig.vdecGroup >= VDEC_GRP_COUNT) {
-        axmpi_error("Invalid vdec group:[%d], only suppord:[%d:%d]", pipe->vdecConfig.vdecGroup, 0, VDEC_GRP_COUNT - 1);
+    if (pipe->vdec.channel >= VDEC_GRP_COUNT) {
+        axmpi_error("Invalid vdec group:[%d], only suppord:[%d:%d]", pipe->vdec.channel, 0, VDEC_GRP_COUNT - 1);
         return -1;
     }
 
@@ -142,22 +142,22 @@ int axpipe_create_jdec(axpipe_t *pipe)
     gGrpAttr.u32FrameBufCnt = 10;
     gGrpAttr.enLinkMode = AX_LINK_MODE;
 
-    int ret = AX_VDEC_CreateGrp(pipe->vdecConfig.vdecGroup, &gGrpAttr);
+    int ret = AX_VDEC_CreateGrp(pipe->vdec.channel, &gGrpAttr);
     if (ret != 0) {
-        axmpi_error("vdec group:[%d] create failed, return:[%d]", pipe->vdecConfig.vdecGroup, ret);
+        axmpi_error("vdec group:[%d] create failed, return:[%d]", pipe->vdec.channel, ret);
         return -2;
     }
 
-    ret = AX_VDEC_AttachPool(pipe->vdecConfig.vdecGroup, pipe->vdecConfig.poolId);
+    ret = AX_VDEC_AttachPool(pipe->vdec.channel, pipe->vdec.poolId);
     if (ret != 0) {
-        axmpi_error("vdec group:[%d] attach to poolId:[%X] failed, return:[%d]", pipe->vdecConfig.vdecGroup, pipe->vdecConfig.poolId, ret);
+        axmpi_error("vdec group:[%d] attach to poolId:[%X] failed, return:[%d]", pipe->vdec.channel, pipe->vdec.poolId, ret);
         return -3;
     }
 
-    ret = AX_VDEC_StartRecvStream(pipe->vdecConfig.vdecGroup);
+    ret = AX_VDEC_StartRecvStream(pipe->vdec.channel);
     if (ret != 0) {
-        AX_VDEC_DestroyGrp(pipe->vdecConfig.vdecGroup);
-        axmpi_error("vdec group:[%d] start recv stream failed, return:[%d]", pipe->vdecConfig.vdecGroup, ret);
+        AX_VDEC_DestroyGrp(pipe->vdec.channel);
+        axmpi_error("vdec group:[%d] start recv stream failed, return:[%d]", pipe->vdec.channel, ret);
         return -4;
     }
 
@@ -166,9 +166,9 @@ int axpipe_create_jdec(axpipe_t *pipe)
 
 int axpipe_release_jdec(axpipe_t *pipe)
 {
-    AX_VDEC_StopRecvStream(pipe->vdecConfig.vdecGroup);
-    AX_VDEC_DetachPool(pipe->vdecConfig.vdecGroup);
-    AX_VDEC_DestroyGrp(pipe->vdecConfig.vdecGroup);
+    AX_VDEC_StopRecvStream(pipe->vdec.channel);
+    AX_VDEC_DetachPool(pipe->vdec.channel);
+    AX_VDEC_DestroyGrp(pipe->vdec.channel);
 
     return 0;
 }

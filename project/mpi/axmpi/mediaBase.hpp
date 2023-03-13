@@ -29,13 +29,11 @@ typedef struct {
 } axnpu_info_t;
 
 typedef struct {
-    bool             enableCamera;          // 是否启用摄像头
-    union {
-        axcam_info_t cameraInfo;            // 摄像头配置信息(enableCamera启用时有效)
-        axsys_args_t sysCommonArgs;         // 系统通用参数(enableCamera启用时，则不需要关心)
-    };
-    bool             enableNPU;             // 是否启用NPU
-    axnpu_info_t     npuInitInfo;           // NPU初始化信息
+    bool         enableCamera;          // 是否启用摄像头
+    axcam_info_t cameraInfo;            // 摄像头配置信息(enableCamera启用时有效)
+    axsys_args_t sysCommonArgs;         // 系统通用参数(enableCamera启用时，则不需要关心)
+    bool         enableNPU;             // 是否启用NPU
+    axnpu_info_t npuInitInfo;           // NPU初始化信息
 } axsys_init_params_t;
 
 class MediaApi {
@@ -44,6 +42,7 @@ public:
     ~MediaApi();
 
     int init(axsys_init_params_t *param);
+    int camInit();
 
     int run();
     void stop();

@@ -19,9 +19,14 @@ namespace axpi {
 #define MAX(a, b)       ((a) < (b) ? (b) : (a))
 #endif
 
-std::map<std::string, int> g_modelTypeTable = {
-    {"MT_UNKNOWN", MT_UNKNOWN},
-};
+std::map<std::string, int> &getModelTypeTable()
+{
+    static std::map<std::string, int> g_modelTypeTable = {
+        {"MT_UNKNOWN", MT_UNKNOWN}
+    };
+
+    return g_modelTypeTable;
+}
 
 template <typename T>
 void update_val(nlohmann::json &jsondata, const char *key, T *val)
@@ -49,8 +54,8 @@ int AxPiModelBase::getModelType(void *jsonData, std::string &modelType)
         if (jsondata["model_type"].is_number_integer()) {
             int mt = -1;
             mt = jsondata["model_type"];
-            auto it = g_modelTypeTable.begin();
-            for (size_t i = 0; i < g_modelTypeTable.size(); i++) {
+            auto it = getModelTypeTable().begin();
+            for (size_t i = 0; i < getModelTypeTable().size(); i++) {
                 if (it->second == mt) {
                     mModelType = mt;
                 }
@@ -58,9 +63,9 @@ int AxPiModelBase::getModelType(void *jsonData, std::string &modelType)
         } else if (jsondata["model_type"].is_string()) {
             modelType = jsondata["model_type"];
 
-            auto item = g_modelTypeTable.find(modelType);
-            if (item != g_modelTypeTable.end()) {
-                mModelType = g_modelTypeTable[modelType];
+            auto item = getModelTypeTable().find(modelType);
+            if (item != getModelTypeTable().end()) {
+                mModelType = getModelTypeTable()[modelType];
             }
         }
     }
@@ -77,18 +82,18 @@ int AxPiModelBase::getRunnerType(void *jsonData, std::string &strRunnerType)
         if (jsondata["runner_type"].is_number_integer()) {
             int mt = -1;
             mt = jsondata["runner_type"];
-            auto it = g_modelTypeTable.begin();
+            auto it =  getModelTypeTable().begin();
 
-            for (size_t i = 0; i < g_modelTypeTable.size(); i++) {
+            for (size_t i = 0; i < getModelTypeTable().size(); i++) {
                 if (it->second == mt) {
                     mRunnerType = mt;
                 }
             }
         } else if (jsondata["runner_type"].is_string()) {
             strRunnerType = jsondata["runner_type"];
-            auto item = g_modelTypeTable.find(strRunnerType);
-            if (item != g_modelTypeTable.end()) {
-                mRunnerType = g_modelTypeTable[strRunnerType];
+            auto item = getModelTypeTable().find(strRunnerType);
+            if (item != getModelTypeTable().end()) {
+                mRunnerType = getModelTypeTable()[strRunnerType];
             }
         }
     }

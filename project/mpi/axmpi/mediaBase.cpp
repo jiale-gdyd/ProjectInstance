@@ -18,17 +18,6 @@ MediaApi::MediaApi()
 MediaApi::~MediaApi()
 {
     mIspLoopOut = true;
-    for (int i = 0; i < mSysInitParam.sysCommonArgs.camCount; ++i) {
-        if (!mCamers[i].bOpen) {
-            continue;
-        }
-
-        axcam_close(&mCamers[i]);
-        if (mIspThreadId[i].joinable()) {
-            mIspThreadId[i].join();
-        }
-    }
-
     if (mSysInitParam.enableCamera) {
         axcam_deinit();
     }
@@ -53,8 +42,11 @@ int MediaApi::init(axsys_init_params_t *param)
             return -2;
         }
 
+        memset(&(mSysInitParam.sysCommonArgs), 0, sizeof(mSysInitParam.sysCommonArgs));
         g_majorStreamWidth = mCamers[0].stChnAttr.tChnAttr[AX_YUV_SOURCE_ID_MAIN].nWidth;
         g_majorStreamHeight = mCamers[0].stChnAttr.tChnAttr[AX_YUV_SOURCE_ID_MAIN].nHeight;
+
+        printf("major stream width:[%d], height:[%d]\n", g_majorStreamWidth, g_majorStreamHeight);
     }
 
     ret = axsys_init(&(mSysInitParam.sysCommonArgs));
@@ -76,7 +68,7 @@ int MediaApi::init(axsys_init_params_t *param)
     return 0;
 }
 
-int MediaApi::run()
+int MediaApi::camInit()
 {
     if (mSysInitParam.enableCamera) {
         int ret = axcam_init();
@@ -92,13 +84,39 @@ int MediaApi::run()
                 axsys_deinit();
                 return -2;
             }
+        }
+    }
 
-            mCamers[i].bOpen = true;
-            mIspThreadId[i] = std::thread(std::bind(&MediaApi::ispRunThread, this, i));
+    return 0;
+}
+
+int MediaApi::run()
+{
+    if (mSysInitParam.enableCamera) {
+        for (int i = 0; i < mSysInitParam.sysCommonArgs.camCount; ++i) {
+
+            if (mCamers[i].bOpen) {
+                mIspThreadId[i] = std::thread(std::bind(&MediaApi::ispRunThread, this, i));
+            }
         }
     }
 
     mSemaphore.wait();
+
+    if (mSysInitParam.enableCamera) {
+        for (int i = 0; i < mSysInitParam.sysCommonArgs.camCount; ++i) {
+            if (!mCamers[i].bOpen) {
+                continue;
+            }
+
+            if (mIspThreadId[i].joinable()) {
+                mIspThreadId[i].join();
+            }
+
+            axcam_close(&mCamers[i]);
+        }
+    }
+
     return 0;
 }
 

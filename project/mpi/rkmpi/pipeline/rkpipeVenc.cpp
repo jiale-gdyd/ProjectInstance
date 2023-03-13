@@ -19,7 +19,7 @@ static void *vencGetFrameProcessThread(void *arg)
     rkpipe_t *pipe = reinterpret_cast<rkpipe_t *>(arg);
 
     while (!pipe->quitThread) {
-        mediaFrame = drm_mpi_system_get_media_buffer(MOD_ID_VENC, pipe->venc.vencChannel, 200);
+        mediaFrame = drm_mpi_system_get_media_buffer(MOD_ID_VENC, pipe->venc.channel, 200);
         if (mediaFrame) {
             if ((pipe->outputType == RKPIPE_OUTPUT_RTSP_H264) || (pipe->outputType == RKPIPE_OUTPUT_RTSP_H265)) {
                 if (checkRtspSessionPipeId(pipe->pipelineId)) {
@@ -106,9 +106,9 @@ int rkpipe_create_venc(rkpipe_t *pipe)
     stVencChnAttr.stVencAttr.u32PicHeight = pipe->venc.vencHeight;
     stVencChnAttr.stVencAttr.u32VirHeight = pipe->venc.vencHeight;
 
-    int ret = drm_mpi_venc_create_channel(pipe->venc.vencChannel, &stVencChnAttr);
+    int ret = drm_mpi_venc_create_channel(pipe->venc.channel, &stVencChnAttr);
     if (ret) {
-        rkmpi_error("create vecn channel:[%d] failed, return:[%d]", pipe->venc.vencChannel, ret);
+        rkmpi_error("create vecn channel:[%d] failed, return:[%d]", pipe->venc.channel, ret);
         return ret;
     }
 
@@ -121,14 +121,14 @@ int rkpipe_create_venc(rkpipe_t *pipe)
         rotation = VENC_ROTATION_270;
     }
 
-    ret = drm_mpi_venc_set_rotation(pipe->venc.vencChannel, (drm_venc_rotation_e)rotation);
+    ret = drm_mpi_venc_set_rotation(pipe->venc.channel, (drm_venc_rotation_e)rotation);
     if (ret) {
-        rkmpi_warn("set vecn channel:[%d] rotation:[%d] failed, return:[%d]", pipe->venc.vencChannel, rotation, ret);
+        rkmpi_warn("set vecn channel:[%d] rotation:[%d] failed, return:[%d]", pipe->venc.channel, rotation, ret);
     }
 
-    ret = drm_mpi_system_set_media_buffer_depth(MOD_ID_VENC, pipe->venc.vencChannel, pipe->venc.bufDepth);
+    ret = drm_mpi_system_set_media_buffer_depth(MOD_ID_VENC, pipe->venc.channel, pipe->venc.bufDepth);
     if (ret) {
-        rkmpi_warn("vecn channel:[%d] set buff depth failed, return:[%d]", pipe->venc.vencChannel, ret);
+        rkmpi_warn("vecn channel:[%d] set buff depth failed, return:[%d]", pipe->venc.channel, ret);
     }
 
     pthread_create(&pipe->venc.threadId, NULL, vencGetFrameProcessThread, pipe);
@@ -138,7 +138,7 @@ int rkpipe_create_venc(rkpipe_t *pipe)
 int rkpipe_release_venc(rkpipe_t *pipe)
 {
     pthread_join(pipe->venc.threadId, NULL);
-    return drm_mpi_venc_destroy_channel(pipe->venc.vencChannel);
+    return drm_mpi_venc_destroy_channel(pipe->venc.channel);
 }
 
 API_END_NAMESPACE(mpi)

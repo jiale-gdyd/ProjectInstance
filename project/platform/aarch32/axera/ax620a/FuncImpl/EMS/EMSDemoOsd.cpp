@@ -16,8 +16,8 @@ void EMSDemo::osdProcessThread()
 
         memset(&display, 0, sizeof(axpi::axivps_rgn_disp_grp_t));
         canvas.channel = 4;
-        canvas.width = mPipesNeedOSD[i]->ivpsConfig.ivpsWidth;
-        canvas.height = mPipesNeedOSD[i]->ivpsConfig.ivpsHeight;
+        canvas.width = mPipesNeedOSD[i]->ivps.width;
+        canvas.height = mPipesNeedOSD[i]->ivps.height;
         canvas.data = new unsigned char[canvas.width * canvas.height * 4];
     }
 
@@ -26,7 +26,7 @@ void EMSDemo::osdProcessThread()
         if (!mJointResultsRing.isEmpty() && mJointResultsRing.remove(results)) {
             for (size_t i = 0; i < mPipesNeedOSD.size(); ++i) {
                 auto &osdPipe = mPipesNeedOSD[i];
-                if (osdPipe && osdPipe->ivpsConfig.osdRegions) {
+                if (osdPipe && osdPipe->ivps.regions) {
                     axpi::axpi_canvas_t &imageOverlay = pipesOsdCanvas[osdPipe->pipeId];
                     axpi::axivps_rgn_disp_grp_t &display = pipesOsdStruct[osdPipe->pipeId];
 
@@ -57,11 +57,11 @@ void EMSDemo::osdProcessThread()
                         display.arrDisp[0].uDisp.tOSD.u64PhyAddr = 0;
                         display.arrDisp[0].uDisp.tOSD.pBitmap = imageOverlay.data;
 
-                        int ret = getApi()->getIvps().updateRegion(osdPipe->ivpsConfig.osdRgnHandle[0], &display);
+                        int ret = getApi()->getIvps().updateRegion(osdPipe->ivps.handler[0], &display);
                         if (ret != 0) {
                             static int failedCount = 0;
                             if ((++failedCount % 100) == 0) {
-                                printf("ivps region update failed, return:[%d], handler:[%d]\n", failedCount, osdPipe->ivpsConfig.osdRgnHandle[0]);
+                                printf("ivps region update failed, return:[%d], handler:[%d]\n", failedCount, osdPipe->ivps.handler[0]);
                             }
 
                             std::this_thread::sleep_for(std::chrono::milliseconds(30));

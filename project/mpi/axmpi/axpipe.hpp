@@ -51,30 +51,30 @@ enum {
 
 /* pipeline ivps配置 */
 typedef struct {
-    int       ivpsGroup;                    // IVPS组
-    int       osdRegions;                   // rgn的个数，设为0则表示不进行osd，每一个rgn可以绘制32个目标
-    int       osdRgnHandle[OSD_RGN_COUNT];  // rgn的句柄
-    int       ivpsFramerate;                // IPVS输出帧率
-    int       ivpsRotate;                   // 旋转角度(0, 90, 180, 270)
-    int       ivpsWidth;                    // 帧宽度(必须为偶数)，根据需要ivps输出的帧宽度
-    int       ivpsHeight;                   // 帧高度(必须为偶数)，根据需要ivps输出的帧高度
-    bool      bIvpsMirror;                  // 是否镜像
-    bool      bIvpsFlip;                    // 是否翻转
-    bool      bLetterBbox;                  // 是否填充(一般用于ai检测)
+    int       group;                        // IVPS组
+    int       regions;                      // rgn的个数，设为0则表示不进行osd，每一个rgn可以绘制32个目标
+    int       handler[OSD_RGN_COUNT];       // rgn的句柄
+    int       framerate;                    // IPVS输出帧率
+    int       rotate;                       // 旋转角度(0, 90, 180, 270)
+    int       width;                        // 帧宽度(必须为偶数)，根据需要ivps输出的帧宽度
+    int       height;                       // 帧高度(必须为偶数)，根据需要ivps输出的帧高度
+    bool      mirror;                       // 是否镜像
+    bool      flip;                         // 是否翻转
+    bool      letterBbox;                   // 是否填充(一般用于ai检测)
     int       fifoCount;                    // 0表示不输出，1-4表示队列的个数，大于0则可以在调用回调输出图像
     pthread_t threadId;                     // 内部使用
 } axpipe_ivps_config_t;
 
 /* pipeline vdec配置 */
 typedef struct {
-    int       vdecGroup;                    // 视频解码组
+    int       channel;                      // 视频解码通道
     int       poolId;                       // 内部使用
     pthread_t threadId;                     // 内部使用
 } axpipe_vdec_config_t;
 
 /* pipeline venc配置 */
 typedef struct {
-    int         vencChannel;                // 视频编码通道
+    int         channel;                    // 视频编码通道
     uint16_t    rtspPort;                   // rtsp服务器端口号
     std::string endPoint;                   // rtsp节点名称(URL)
     pthread_t   threadId;                   // 内部使用
@@ -82,7 +82,7 @@ typedef struct {
 
 /* pipeline user vo配置 */
 typedef struct {
-    int         dispChannel;                // 显示通道
+    int         channel;                    // 显示通道
     std::string dispDevStr;                 // 显示设备配置(例如, "dsi0@480x854@60")
 } axpipe_vo_config_t;
 
@@ -103,17 +103,17 @@ typedef struct {
 using axpipe_frame_t = std::function<void (axpipe_buffer_t *buff, void *user_data)>;
 
 typedef struct {
-    bool                 bEnable;           // 是否启用
+    bool                 enable;            // 是否启用
     int                  pipeId;            // pipeline的ID号，不可重复
     int                  inType;            // 输入类型
     int                  outType;           // 输出类型
     volatile bool        bThreadQuit;       // 如果有线程，则可以控制线程退出
     int                  vinPipe;           // 输入管道
     int                  vinChn;            // 输入通道
-    axpipe_vo_config_t   voConfig;          // 显示设备配置
-    axpipe_vdec_config_t vdecConfig;        // 视频解码配置
-    axpipe_venc_config_t vencConfig;        // 视频编码配置
-    axpipe_ivps_config_t ivpsConfig;        // IVPS配置
+    axpipe_vo_config_t   vo;                // 显示设备配置
+    axpipe_vdec_config_t vdec;              // 视频解码配置
+    axpipe_venc_config_t venc;              // 视频编码配置
+    axpipe_ivps_config_t ivps;              // IVPS配置
     axpipe_frame_t       frameCallback;     // 帧回调函数
     void                 *userData;         // 用户数据
 } axpipe_t;

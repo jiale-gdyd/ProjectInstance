@@ -200,16 +200,16 @@ int axpipe_create_vo(std::string str, axpipe_t *pipe)
         pstVoLayer = &pstVoConf->stVoLayer[i];
         pstVoLayerAttr = &pstVoLayer->stVoLayerAttr;
         if (i == 0) {
-            switch (pipe->ivpsConfig.ivpsRotate) {
+            switch (pipe->ivps.rotate) {
                 case 90:
                 case 270:
-                    pstVoLayerAttr->stImageSize.u32Width = pipe->ivpsConfig.ivpsHeight;
-                    pstVoLayerAttr->stImageSize.u32Height = pipe->ivpsConfig.ivpsWidth;
+                    pstVoLayerAttr->stImageSize.u32Width = pipe->ivps.height;
+                    pstVoLayerAttr->stImageSize.u32Height = pipe->ivps.width;
                     break;
 
                 default:
-                    pstVoLayerAttr->stImageSize.u32Width = pipe->ivpsConfig.ivpsWidth;
-                    pstVoLayerAttr->stImageSize.u32Height = pipe->ivpsConfig.ivpsHeight;
+                    pstVoLayerAttr->stImageSize.u32Width = pipe->ivps.width;
+                    pstVoLayerAttr->stImageSize.u32Height = pipe->ivps.height;
                     break;
             }
         } else {

@@ -12,8 +12,9 @@ EMSDemo::~EMSDemo()
 {
     mInitFin = false;
 
-    axpi::axpi_exit(&mHandler);
     pipelineRelease();
+    axpi::axpi_exit(&mHandler);
+
     getApi()->stop();
 }
 
@@ -32,15 +33,19 @@ int EMSDemo::init()
         return -1;
     }
 
-    if (axpi::axpi_init("/root/yolov5.json", &mHandler) != 0) {
+    if (axpi::axpi_init("/root/yolov5s.json", &mHandler) != 0) {
         return -2;
     } else {
         mAlgoInit = true;
-        axpi::axpi_get_ivps_width_height(mHandler, "/root/yolov5.json", mAlgoWidth, mAlgoHeight);
+        axpi::axpi_get_ivps_width_height(mHandler, "/root/yolov5s.json", mAlgoWidth, mAlgoHeight);
+    }
+
+    if (getApi()->camInit()) {
+        return -3;
     }
 
     if (pipelineCreate()) {
-        return -3;
+        return -4;
     }
 
     mInitFin = true;

@@ -308,12 +308,12 @@ int AxPiModelFaceRecognition::inference(axpi_image_t *pstFrame, axpi_bbox_t *cro
 
         if (maxidx >= 0) {
             if (max_score >= mFaceRecThreshold) {
-                results->objects[i].objname = mFaceRegisterIds[maxidx].name;
+                strcpy(results->objects[i].objname, mFaceRegisterIds[maxidx].name.c_str());
             } else {
-                results->objects[i].objname = "unknown";
+                strcpy(results->objects[i].objname, "unknown");
             }
         } else {
-           results->objects[i].objname = "unknown";
+           strcpy(results->objects[i].objname,"unknown");
         }
     }
 

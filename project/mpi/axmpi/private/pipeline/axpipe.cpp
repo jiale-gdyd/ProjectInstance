@@ -10,6 +10,7 @@
 #include <rtsp/rtspServerWrapper.hpp>
 
 #include "private.hpp"
+#include "../utilities/netutils.hpp"
 
 namespace axpi {
 #undef DEFAULT_RTSP_SERVER_PORT
@@ -22,12 +23,31 @@ typedef struct {
     rtsp::rtsp_server_t                 rtspServerHandler;
     std::map<int, rtsp::rtsp_session_t> rtspServerSessions;
     std::vector<std::string>            rtspEndPoint;
-    std::vector<int>                    ivpsGroup;
-    std::vector<int>                    vdecGroup;
-    std::vector<int>                    vencChannel;
+    std::vector<int>                    ivps_group;
+    std::vector<int>                    vdec_channel;
+    std::vector<int>                    venc_channel;
 } axpipe_internal_t;
 
 static axpipe_internal_t sg_axPipeHandler;
+
+static void print_rtsp(std::string url, uint16_t port)
+{
+    char ipaddr[64] = {0};
+    int ret = get_ip("eth0", ipaddr);
+    if (ret == 0) {
+        axmpi_info("[eth0]  rtsp url rtsp://%s:%d/%s", ipaddr, port, url.c_str());
+    }
+
+    ret = get_ip("usb0", ipaddr);
+    if (ret == 0) {
+        axmpi_info("[usb0]  rtsp url rtsp://%s:%d/%s", ipaddr, port, url.c_str());
+    }
+
+    ret = get_ip("wlan0", ipaddr);
+    if (ret == 0) {
+        axmpi_info("[wlan0] rtsp url rtsp://%s:%d/%s", ipaddr, port, url.c_str());
+    }
+}
 
 template <typename T>
 bool contain(std::vector<T> &v, T &t)
@@ -97,7 +117,7 @@ int axpipe_create(axpipe_t *pipe)
         return -1;
     }
 
-    if (!pipe->bEnable) {
+    if (!pipe->enable) {
         axmpi_warn("current pipeline id:[%d] not enable", pipe->pipeId);
         return -2;
     }
@@ -111,7 +131,7 @@ int axpipe_create(axpipe_t *pipe)
 
     switch (pipe->inType) {
         case AXPIPE_INPUT_USER: {
-            if (sg_axPipeHandler.ivpsGroup.size() == 0) {
+            if (sg_axPipeHandler.ivps_group.size() == 0) {
                 int ret = AX_IVPS_Init();
                 if (ret != 0) {
                     axmpi_error("AX_IVPS_Init failed, return:[%d]", ret);
@@ -119,15 +139,15 @@ int axpipe_create(axpipe_t *pipe)
                 }
             }
 
-            if (axpi::contain(sg_axPipeHandler.ivpsGroup, pipe->ivpsConfig.ivpsGroup)) {
-                axmpi_warn("ivps group:[%d] has been created", pipe->ivpsConfig.ivpsGroup);
+            if (axpi::contain(sg_axPipeHandler.ivps_group, pipe->ivps.group)) {
+                axmpi_warn("ivps group:[%d] has been created", pipe->ivps.group);
                 return -5;
             }
 
-            sg_axPipeHandler.ivpsGroup.push_back(pipe->ivpsConfig.ivpsGroup);
+            sg_axPipeHandler.ivps_group.push_back(pipe->ivps.group);
             int ret = axpipe_create_ivps(pipe);
             if (ret != 0) {
-                axpi::erase(sg_axPipeHandler.ivpsGroup, pipe->ivpsConfig.ivpsGroup);
+                axpi::erase(sg_axPipeHandler.ivps_group, pipe->ivps.group);
                 axmpi_error("axpipe_create_ivps failed, return:[%d]", ret);
                 return -6;
             }
@@ -146,7 +166,7 @@ int axpipe_create(axpipe_t *pipe)
                 return -8;
             }
 
-            if (sg_axPipeHandler.ivpsGroup.size() == 0) {
+            if (sg_axPipeHandler.ivps_group.size() == 0) {
                 int ret = AX_IVPS_Init();
                 if (ret != 0) {
                     axmpi_error("AX_IVPS_Init failed, return:[%d]", ret);
@@ -154,15 +174,15 @@ int axpipe_create(axpipe_t *pipe)
                 }
             }
 
-            if (axpi::contain(sg_axPipeHandler.ivpsGroup, pipe->ivpsConfig.ivpsGroup)) {
-                axmpi_warn("ivps group:[%d] has been created", pipe->ivpsConfig.ivpsGroup);
+            if (axpi::contain(sg_axPipeHandler.ivps_group, pipe->ivps.group)) {
+                axmpi_warn("ivps group:[%d] has been created", pipe->ivps.group);
                 return -10;
             }
 
-            sg_axPipeHandler.ivpsGroup.push_back(pipe->ivpsConfig.ivpsGroup);
+            sg_axPipeHandler.ivps_group.push_back(pipe->ivps.group);
             int ret = axpipe_create_ivps(pipe);
             if (ret != 0) {
-                axpi::erase(sg_axPipeHandler.ivpsGroup, pipe->ivpsConfig.ivpsGroup);
+                axpi::erase(sg_axPipeHandler.ivps_group, pipe->ivps.group);
                 axmpi_error("axpipe_create_ivps failed, return:[%d]", ret);
                 return -11;
             }
@@ -172,12 +192,12 @@ int axpipe_create(axpipe_t *pipe)
             srcMod.s32GrpId = pipe->vinPipe;
             srcMod.s32ChnId = pipe->vinChn;
             dstMod.enModId = AX_ID_IVPS;
-            dstMod.s32GrpId = pipe->ivpsConfig.ivpsGroup;
+            dstMod.s32GrpId = pipe->ivps.group;
             dstMod.s32ChnId = 0;
             ret = AX_SYS_Link((const AX_MOD_INFO_S *)&srcMod, (const AX_MOD_INFO_S *)&dstMod);
             if (ret != 0) {
-                axpi::erase(sg_axPipeHandler.ivpsGroup, pipe->ivpsConfig.ivpsGroup);
-                axmpi_error("bind vin:[%d:%d] to ivps:[%d:0] failed, return:[%d]", pipe->vinPipe, pipe->vinChn, pipe->ivpsConfig.ivpsGroup, 0, ret);
+                axpi::erase(sg_axPipeHandler.ivps_group, pipe->ivps.group);
+                axmpi_error("bind vin:[%d:%d] to ivps:[%d:0] failed, return:[%d]", pipe->vinPipe, pipe->vinChn, pipe->ivps.group, 0, ret);
                 return -12;
             }
 
@@ -186,7 +206,7 @@ int axpipe_create(axpipe_t *pipe)
 
         case AXPIPE_INPUT_VDEC_H264:
         case AXPIPE_INPUT_VDEC_JPEG: {
-            if (sg_axPipeHandler.ivpsGroup.size() == 0) {
+            if (sg_axPipeHandler.ivps_group.size() == 0) {
                 int ret = AX_IVPS_Init();
                 if (ret != 0) {
                     axmpi_error("AX_IVPS_Init failed, return:[%d]", ret);
@@ -194,51 +214,51 @@ int axpipe_create(axpipe_t *pipe)
                 }
             }
 
-            if (axpi::contain(sg_axPipeHandler.ivpsGroup, pipe->ivpsConfig.ivpsGroup)) {
-                axmpi_warn("ivps group:[%d] has been created", pipe->ivpsConfig.ivpsGroup);
+            if (axpi::contain(sg_axPipeHandler.ivps_group, pipe->ivps.group)) {
+                axmpi_warn("ivps group:[%d] has been created", pipe->ivps.group);
                 return -14;
             }
 
-            sg_axPipeHandler.ivpsGroup.push_back(pipe->ivpsConfig.ivpsGroup);
+            sg_axPipeHandler.ivps_group.push_back(pipe->ivps.group);
             int ret = axpipe_create_ivps(pipe);
             if (ret != 0) {
-                axpi::erase(sg_axPipeHandler.ivpsGroup, pipe->ivpsConfig.ivpsGroup);
+                axpi::erase(sg_axPipeHandler.ivps_group, pipe->ivps.group);
                 axmpi_error("axpipe_create_ivps failed, return:[%d]", ret);
                 return -15;
             }
 
-            if (sg_axPipeHandler.vdecGroup.size() == 0) {
+            if (sg_axPipeHandler.vdec_channel.size() == 0) {
                 ret = AX_VDEC_Init();
                 if (ret != 0) {
-                    axpi::erase(sg_axPipeHandler.ivpsGroup, pipe->ivpsConfig.ivpsGroup);
+                    axpi::erase(sg_axPipeHandler.ivps_group, pipe->ivps.group);
                     axmpi_error("AX_VDEC_Init failed, return:[%d]", ret);
                     return -16;
                 }
             }
 
-            if (!axpi::contain(sg_axPipeHandler.vdecGroup, pipe->vdecConfig.vdecGroup)) {
+            if (!axpi::contain(sg_axPipeHandler.vdec_channel, pipe->vdec.channel)) {
                 ret = axpipe_create_vdec(pipe);
                 if (ret != 0) {
-                    axpi::erase(sg_axPipeHandler.ivpsGroup, pipe->ivpsConfig.ivpsGroup);
+                    axpi::erase(sg_axPipeHandler.ivps_group, pipe->ivps.group);
                     axmpi_error("axpipe_create_vdec failed, return:[%d]", ret);
                     return -17;
                 }
 
-                sg_axPipeHandler.vdecGroup.push_back(pipe->vdecConfig.vdecGroup);
+                sg_axPipeHandler.vdec_channel.push_back(pipe->vdec.channel);
             }
 
             AX_MOD_INFO_S srcMod, dstMod;
             srcMod.enModId = AX_ID_VDEC;
-            srcMod.s32GrpId = pipe->vdecConfig.vdecGroup;
+            srcMod.s32GrpId = pipe->vdec.channel;
             srcMod.s32ChnId = 0;
             dstMod.enModId = AX_ID_IVPS;
-            dstMod.s32GrpId = pipe->ivpsConfig.ivpsGroup;
+            dstMod.s32GrpId = pipe->ivps.group;
             dstMod.s32ChnId = 0;
             ret = AX_SYS_Link((const AX_MOD_INFO_S *)&srcMod, (const AX_MOD_INFO_S *)&dstMod);
             if (ret != 0) {
-                axpi::erase(sg_axPipeHandler.ivpsGroup, pipe->ivpsConfig.ivpsGroup);
-                axpi::erase(sg_axPipeHandler.vdecGroup, pipe->vdecConfig.vdecGroup);
-                axmpi_error("bind vdec:[%d:%d] to ivps:[%d:%d] failed, return:[%d]", pipe->vdecConfig.vdecGroup, 0, pipe->ivpsConfig.ivpsGroup, 0, ret);
+                axpi::erase(sg_axPipeHandler.ivps_group, pipe->ivps.group);
+                axpi::erase(sg_axPipeHandler.vdec_channel, pipe->vdec.channel);
+                axmpi_error("bind vdec:[%d:%d] to ivps:[%d:%d] failed, return:[%d]", pipe->vdec.channel, 0, pipe->ivps.group, 0, ret);
                 return -18;
             }
 
@@ -256,7 +276,7 @@ int axpipe_create(axpipe_t *pipe)
         case AXPIPE_OUTPUT_VENC_H265:
         case AXPIPE_OUTPUT_RTSP_H264:
         case AXPIPE_OUTPUT_RTSP_H265: {
-            if (sg_axPipeHandler.vencChannel.size() == 0) {
+            if (sg_axPipeHandler.venc_channel.size() == 0) {
                 AX_VENC_MOD_ATTR_S stVencModAttr;
                 memset(&stVencModAttr, 0, sizeof(stVencModAttr));
                 stVencModAttr.enVencType = VENC_MULTI_ENCODER;
@@ -268,45 +288,48 @@ int axpipe_create(axpipe_t *pipe)
                 }
             }
 
-            if (axpi::contain(sg_axPipeHandler.vencChannel, pipe->vencConfig.vencChannel)) {
-                axmpi_warn("venc chn:[%d] has been created", pipe->vencConfig.vencChannel);
+            if (axpi::contain(sg_axPipeHandler.venc_channel, pipe->venc.channel)) {
+                axmpi_warn("venc chn:[%d] has been created", pipe->venc.channel);
                 return -20;
             }
 
-            sg_axPipeHandler.vencChannel.push_back(pipe->vencConfig.vencChannel);
+            sg_axPipeHandler.venc_channel.push_back(pipe->venc.channel);
 
             AX_MOD_INFO_S srcMod, dstMod;
             srcMod.enModId = AX_ID_IVPS;
-            srcMod.s32GrpId = pipe->ivpsConfig.ivpsGroup;
+            srcMod.s32GrpId = pipe->ivps.group;
             srcMod.s32ChnId = 0;
             dstMod.enModId = AX_ID_VENC;
             dstMod.s32GrpId = 0;
-            dstMod.s32ChnId = pipe->vencConfig.vencChannel;
+            dstMod.s32ChnId = pipe->venc.channel;
             int ret = AX_SYS_Link((const AX_MOD_INFO_S *)&srcMod, (const AX_MOD_INFO_S *)&dstMod);
             if (ret != 0) {
-                axpi::erase(sg_axPipeHandler.vencChannel, pipe->vencConfig.vencChannel);
-                axmpi_error("bind ivps:[%d:%d] to venc:[%d:%d] failed, return:[%d]", pipe->ivpsConfig.ivpsGroup, 0, 0, pipe->vencConfig.vencChannel, ret);
+                axpi::erase(sg_axPipeHandler.venc_channel, pipe->venc.channel);
+                axmpi_error("bind ivps:[%d:%d] to venc:[%d:%d] failed, return:[%d]", pipe->ivps.group, 0, 0, pipe->venc.channel, ret);
                 return -21;
             }
 
             ret = axpipe_create_venc(pipe);
             if (ret != 0) {
                 AX_SYS_UnLink((const AX_MOD_INFO_S *)&srcMod, (const AX_MOD_INFO_S *)&dstMod);
-                axpi::erase(sg_axPipeHandler.vencChannel, pipe->vencConfig.vencChannel);
+                axpi::erase(sg_axPipeHandler.venc_channel, pipe->venc.channel);
                 axmpi_error("axpipe_create_venc failed, return:[%d]", ret);
                 return -22;
             }
 
             if ((pipe->outType == AXPIPE_OUTPUT_RTSP_H264) || (pipe->outType == AXPIPE_OUTPUT_RTSP_H265)) {
+                uint16_t rtspPort = pipe->venc.rtspPort ? pipe->venc.rtspPort : DEFAULT_RTSP_SERVER_PORT;
                 if (!sg_axPipeHandler.rtspServerHandler) {
-                    sg_axPipeHandler.rtspServerHandler = rtsp::rtsp_new_server(pipe->vencConfig.rtspPort ? pipe->vencConfig.rtspPort : DEFAULT_RTSP_SERVER_PORT);
+                    sg_axPipeHandler.rtspServerHandler = rtsp::rtsp_new_server(rtspPort);
                 }
 
-                std::string url = pipe->vencConfig.endPoint;
+                std::string url = pipe->venc.endPoint;
                 if (!axpi::contain(sg_axPipeHandler.rtspEndPoint, url) && !axpi::contain(sg_axPipeHandler.rtspServerSessions, pipe->pipeId)) {
                     auto rtspSession = rtsp::rtsp_new_session(sg_axPipeHandler.rtspServerHandler, url.c_str(), pipe->outType == AXPIPE_OUTPUT_RTSP_H264 ? 0 : 1);
                     sg_axPipeHandler.rtspServerSessions[pipe->pipeId] = rtspSession;
                     sg_axPipeHandler.rtspEndPoint.push_back(url);
+
+                    print_rtsp(url, rtspPort);
                 } else {
                     axmpi_warn("rtsp url:[%s] has been created", url.c_str());
                 }
@@ -319,7 +342,7 @@ int axpipe_create(axpipe_t *pipe)
             if (!sg_axPipeHandler.bMaxi3Init) {
                 AX_MOD_INFO_S srcMod, dstMod;
                 srcMod.enModId = AX_ID_IVPS;
-                srcMod.s32GrpId = pipe->ivpsConfig.ivpsGroup;
+                srcMod.s32GrpId = pipe->ivps.group;
                 srcMod.s32ChnId = 0;
                 dstMod.enModId = AX_ID_VO;
                 dstMod.s32GrpId = 0;
@@ -327,7 +350,7 @@ int axpipe_create(axpipe_t *pipe)
 
                 int ret = AX_SYS_Link((const AX_MOD_INFO_S *)&srcMod, (const AX_MOD_INFO_S *)&dstMod);
                 if (ret != 0) {
-                    axmpi_error("bind ivps:[%d:%d] to vo:[%d:%d] failed, return:[%d]", pipe->ivpsConfig.ivpsGroup, 0, 0, 0, ret);
+                    axmpi_error("bind ivps:[%d:%d] to vo:[%d:%d] failed, return:[%d]", pipe->ivps.group, 0, 0, 0, ret);
                     return -23;
                 }
 
@@ -348,7 +371,7 @@ int axpipe_create(axpipe_t *pipe)
             if (!sg_axPipeHandler.bUserVoInit) {
                 AX_MOD_INFO_S srcMod, dstMod;
                 srcMod.enModId = AX_ID_IVPS;
-                srcMod.s32GrpId = pipe->ivpsConfig.ivpsGroup;
+                srcMod.s32GrpId = pipe->ivps.group;
                 srcMod.s32ChnId = 0;
                 dstMod.enModId = AX_ID_VO;
                 dstMod.s32GrpId = 0;
@@ -356,11 +379,11 @@ int axpipe_create(axpipe_t *pipe)
 
                 int ret = AX_SYS_Link((const AX_MOD_INFO_S *)&srcMod, (const AX_MOD_INFO_S *)&dstMod);
                 if (ret != 0) {
-                    axmpi_error("bind ivps:[%d:%d] to vo:[%d:%d] failed, return:[%d]", pipe->ivpsConfig.ivpsGroup, 0, 0, 0, ret);
+                    axmpi_error("bind ivps:[%d:%d] to vo:[%d:%d] failed, return:[%d]", pipe->ivps.group, 0, 0, 0, ret);
                     return -23;
                 }
 
-                ret = axpipe_create_vo(pipe->voConfig.dispDevStr, pipe);
+                ret = axpipe_create_vo(pipe->vo.dispDevStr, pipe);
                 if (ret != 0) {
                     AX_SYS_UnLink((const AX_MOD_INFO_S *)&srcMod, (const AX_MOD_INFO_S *)&dstMod);
                     axmpi_error("axpipe_create_vo failed, return:[%d]", ret);
@@ -389,7 +412,7 @@ int axpipe_release(axpipe_t *pipe)
         return -1;
     }
 
-    if (!pipe->bEnable) {
+    if (!pipe->enable) {
         axmpi_warn("current pipeline id:[%d] not enable", pipe->pipeId);
         return -2;
     }
@@ -410,24 +433,24 @@ int axpipe_release(axpipe_t *pipe)
         case AXPIPE_OUTPUT_RTSP_H265: {
             AX_MOD_INFO_S srcMod, dstMod;
             srcMod.enModId = AX_ID_IVPS;
-            srcMod.s32GrpId = pipe->ivpsConfig.ivpsGroup;
+            srcMod.s32GrpId = pipe->ivps.group;
             srcMod.s32ChnId = 0;
             dstMod.enModId = AX_ID_VENC;
             dstMod.s32GrpId = 0;
-            dstMod.s32ChnId = pipe->vencConfig.vencChannel;
+            dstMod.s32ChnId = pipe->venc.channel;
             AX_SYS_UnLink((const AX_MOD_INFO_S *)&srcMod, (const AX_MOD_INFO_S *)&dstMod);
 
-            if (axpi::contain(sg_axPipeHandler.vencChannel, pipe->vencConfig.vencChannel)) {
+            if (axpi::contain(sg_axPipeHandler.venc_channel, pipe->venc.channel)) {
                 axpipe_release_venc(pipe);
-                axpi::erase(sg_axPipeHandler.vencChannel, pipe->vencConfig.vencChannel);
+                axpi::erase(sg_axPipeHandler.venc_channel, pipe->venc.channel);
             }
 
-            if (sg_axPipeHandler.vencChannel.size() == 0) {
+            if (sg_axPipeHandler.venc_channel.size() == 0) {
                 AX_VENC_Deinit();
             }
 
             if ((pipe->outType == AXPIPE_OUTPUT_RTSP_H264) || (pipe->outType == AXPIPE_OUTPUT_RTSP_H265)) {
-                std::string url = pipe->vencConfig.endPoint;
+                std::string url = pipe->venc.endPoint;
                 if (url.length()) {
                     if (url[0] != '/') {
                         url = "/" + url;
@@ -455,7 +478,7 @@ int axpipe_release(axpipe_t *pipe)
         case AXPIPE_OUTPUT_VO_SIPEED_SCREEN: {
             AX_MOD_INFO_S srcMod, dstMod;
             srcMod.enModId = AX_ID_IVPS;
-            srcMod.s32GrpId = pipe->ivpsConfig.ivpsGroup;
+            srcMod.s32GrpId = pipe->ivps.group;
             srcMod.s32ChnId = 0;
             dstMod.enModId = AX_ID_VO;
             dstMod.s32GrpId = 0;
@@ -473,7 +496,7 @@ int axpipe_release(axpipe_t *pipe)
         case AXPIPE_OUTPUT_VO_USER_SCREEN: {
             AX_MOD_INFO_S srcMod, dstMod;
             srcMod.enModId = AX_ID_IVPS;
-            srcMod.s32GrpId = pipe->ivpsConfig.ivpsGroup;
+            srcMod.s32GrpId = pipe->ivps.group;
             srcMod.s32ChnId = 0;
             dstMod.enModId = AX_ID_VO;
             dstMod.s32GrpId = 0;
@@ -494,12 +517,12 @@ int axpipe_release(axpipe_t *pipe)
 
     switch (pipe->inType) {
         case AXPIPE_INPUT_USER: {
-            if (axpi::contain(sg_axPipeHandler.ivpsGroup, pipe->ivpsConfig.ivpsGroup)) {
+            if (axpi::contain(sg_axPipeHandler.ivps_group, pipe->ivps.group)) {
                 axpipe_release_ivps(pipe);
-                axpi::erase(sg_axPipeHandler.ivpsGroup, pipe->ivpsConfig.ivpsGroup);
+                axpi::erase(sg_axPipeHandler.ivps_group, pipe->ivps.group);
             }
 
-            if (sg_axPipeHandler.ivpsGroup.size() == 0) {
+            if (sg_axPipeHandler.ivps_group.size() == 0) {
                 AX_IVPS_Deinit();
             }
 
@@ -512,16 +535,16 @@ int axpipe_release(axpipe_t *pipe)
             srcMod.s32GrpId = pipe->vinPipe;
             srcMod.s32ChnId = pipe->vinChn;
             dstMod.enModId = AX_ID_IVPS;
-            dstMod.s32GrpId = pipe->ivpsConfig.ivpsGroup;
+            dstMod.s32GrpId = pipe->ivps.group;
             dstMod.s32ChnId = 0;
             AX_SYS_UnLink((const AX_MOD_INFO_S *)&srcMod, (const AX_MOD_INFO_S *)&dstMod);
 
-            if (axpi::contain(sg_axPipeHandler.ivpsGroup, pipe->ivpsConfig.ivpsGroup)) {
+            if (axpi::contain(sg_axPipeHandler.ivps_group, pipe->ivps.group)) {
                 axpipe_release_ivps(pipe);
-                axpi::erase(sg_axPipeHandler.ivpsGroup, pipe->ivpsConfig.ivpsGroup);
+                axpi::erase(sg_axPipeHandler.ivps_group, pipe->ivps.group);
             }
 
-            if (sg_axPipeHandler.ivpsGroup.size() == 0) {
+            if (sg_axPipeHandler.ivps_group.size() == 0) {
                 AX_IVPS_Deinit();
             }
             break;
@@ -531,31 +554,31 @@ int axpipe_release(axpipe_t *pipe)
         case AXPIPE_INPUT_VDEC_JPEG: {
             AX_MOD_INFO_S srcMod, dstMod;
             srcMod.enModId = AX_ID_VDEC;
-            srcMod.s32GrpId = pipe->vdecConfig.vdecGroup;
+            srcMod.s32GrpId = pipe->vdec.channel;
             srcMod.s32ChnId = 0;
             dstMod.enModId = AX_ID_IVPS;
-            dstMod.s32GrpId = pipe->ivpsConfig.ivpsGroup;
+            dstMod.s32GrpId = pipe->ivps.group;
             dstMod.s32ChnId = 0;
             AX_SYS_UnLink((const AX_MOD_INFO_S *)&srcMod, (const AX_MOD_INFO_S *)&dstMod);
 
-            if (axpi::contain(sg_axPipeHandler.vdecGroup, pipe->vdecConfig.vdecGroup)) {
+            if (axpi::contain(sg_axPipeHandler.vdec_channel, pipe->vdec.channel)) {
                 if (pipe->inType == AXPIPE_INPUT_VDEC_H264) {
                     axpipe_release_vdec(pipe);
                 }
 
-                axpi::erase(sg_axPipeHandler.vdecGroup, pipe->vdecConfig.vdecGroup);
+                axpi::erase(sg_axPipeHandler.vdec_channel, pipe->vdec.channel);
             }
 
-            if (sg_axPipeHandler.vdecGroup.size() == 0) {
+            if (sg_axPipeHandler.vdec_channel.size() == 0) {
                 AX_VDEC_DeInit();
             }
 
-            if (axpi::contain(sg_axPipeHandler.ivpsGroup, pipe->ivpsConfig.ivpsGroup)) {
+            if (axpi::contain(sg_axPipeHandler.ivps_group, pipe->ivps.group)) {
                 axpipe_release_ivps(pipe);
-                axpi::erase(sg_axPipeHandler.ivpsGroup, pipe->ivpsConfig.ivpsGroup);
+                axpi::erase(sg_axPipeHandler.ivps_group, pipe->ivps.group);
             }
 
-            if (sg_axPipeHandler.ivpsGroup.size() == 0) {
+            if (sg_axPipeHandler.ivps_group.size() == 0) {
                 AX_IVPS_Deinit();
             }
 
@@ -621,13 +644,13 @@ int axpipe_user_input(axpipe_t *pipe, int pipes, axpipe_buffer_t *buff)
             std::vector<int> tmpVec;
 
             for (int i = 0; i < pipes; ++i) {
-                if (!axpi::contain(tmpVec, pipe[i].ivpsConfig.ivpsGroup)) {
-                    ret = AX_IVPS_SendFrame(pipe[i].ivpsConfig.ivpsGroup, &frameInfo.stVFrame, 200);
+                if (!axpi::contain(tmpVec, pipe[i].ivps.group)) {
+                    ret = AX_IVPS_SendFrame(pipe[i].ivps.group, &frameInfo.stVFrame, 200);
                     if (ret != 0) {
-                        // axmpi_error("ivps group:[%d] send frame failed, retuen:[%d]", pipe[i].ivpsConfig.ivpsGroup, ret);
+                        // axmpi_error("ivps group:[%d] send frame failed, retuen:[%d]", pipe[i].ivps.group, ret);
                     }
 
-                    tmpVec.push_back(pipe[i].ivpsConfig.ivpsGroup);
+                    tmpVec.push_back(pipe[i].ivps.group);
                 }
             }
 
@@ -654,13 +677,13 @@ int axpipe_user_input(axpipe_t *pipe, int pipes, axpipe_buffer_t *buff)
             frameInfo.bEndOfStream = buff->virAddr == NULL ? AX_TRUE : AX_FALSE;
 
             for (int i = 0; i < pipes; ++i) {
-                if (!axpi::contain(tmpVec, pipe[i].vdecConfig.vdecGroup)) {
-                    ret = AX_VDEC_SendStream(pipe[i].vdecConfig.vdecGroup, &frameInfo, 200);
+                if (!axpi::contain(tmpVec, pipe[i].vdec.channel)) {
+                    ret = AX_VDEC_SendStream(pipe[i].vdec.channel, &frameInfo, 200);
                     if (ret != 0) {
-                        axmpi_error("vdec group:[%d] send frame failed, return:[%d]", pipe[i].vdecConfig.vdecGroup, ret);
+                        axmpi_error("vdec group:[%d] send frame failed, return:[%d]", pipe[i].vdec.channel, ret);
                     }
 
-                    tmpVec.push_back(pipe[i].vdecConfig.vdecGroup);
+                    tmpVec.push_back(pipe[i].vdec.channel);
                 }
             }
 
@@ -682,13 +705,13 @@ int axpipe_user_input(axpipe_t *pipe, int pipes, axpipe_buffer_t *buff)
             frameInfo.bEndOfStream = buff->virAddr == NULL ? AX_TRUE : AX_FALSE;
 
             for (int i = 0; i < pipes; ++i) {
-                if (!axpi::contain(tmpVec, pipe[i].vdecConfig.vdecGroup)) {
-                    ret = AX_VDEC_SendStream(pipe[i].vdecConfig.vdecGroup, &frameInfo, -1);
+                if (!axpi::contain(tmpVec, pipe[i].vdec.channel)) {
+                    ret = AX_VDEC_SendStream(pipe[i].vdec.channel, &frameInfo, -1);
                     if (ret != 0) {
-                        axmpi_error("jdec group:[%d] send frame failed, return:[%d]", pipe[i].vdecConfig.vdecGroup, ret);
+                        axmpi_error("jdec group:[%d] send frame failed, return:[%d]", pipe[i].vdec.channel, ret);
                     }
 
-                    tmpVec.push_back(pipe[i].vdecConfig.vdecGroup);
+                    tmpVec.push_back(pipe[i].vdec.channel);
                 }
             }
 

@@ -59,31 +59,31 @@ int axcam_open(axcam_t *cam)
 
     axRet = AX_VIN_Create(nPipeId);
     if (0 != axRet) {
-        axmpi_error("nPipeId:[%d] AX_VIN_Create failed, rerturn:[%d]", nPipeId, axRet);
+        axmpi_error("pipeId:[%d] AX_VIN_Create failed, rerturn:[%d]", nPipeId, axRet);
         return -1;
     }
 
     axRet = axisp_regsiter_sns(nPipeId, nDevId, eSnsType);
     if (0 != axRet) {
-        axmpi_error("nPipeId:[%d], nDevId:[%d] COMMON_ISP_RegisterSns failed, rerturn:[%d]", nPipeId, nDevId, axRet);
+        axmpi_error("pipeId:[%d], devId:[%d] COMMON_ISP_RegisterSns failed, rerturn:[%d]", nPipeId, nDevId, axRet);
         return -2;
     }
 
     axRet = AX_VIN_SetRunMode(nPipeId, AX_ISP_PIPELINE_NORMAL);
     if (0 != axRet) {
-        axmpi_error("nPipeId:[%d] AX_VIN_SetRunMode failed, rerturn:[%d]", nPipeId, axRet);
+        axmpi_error("pipeId:[%d] AX_VIN_SetRunMode failed, rerturn:[%d]", nPipeId, axRet);
         return -3;
     }
 
     axRet = AX_VIN_SetSnsAttr(nPipeId, &cam->stSnsAttr);
     if (0 != axRet) {
-        axmpi_error("nPipeId:[%d] AX_VIN_SetSnsAttr failed, rerturn:[%d]", nPipeId, axRet);
+        axmpi_error("pipeId:[%d] AX_VIN_SetSnsAttr failed, rerturn:[%d]", nPipeId, axRet);
         return -4;
     }
 
     axRet = AX_VIN_OpenSnsClk(nPipeId, cam->stSnsClkAttr.nSnsClkIdx, (AX_SNS_CLK_RATE_E)cam->stSnsClkAttr.eSnsClkRate);
     if (0 != axRet) {
-        axmpi_error("nPipeId:[%d] AX_VIN_OpenSnsClk failed, rerturn:[%d]", nPipeId, axRet);
+        axmpi_error("pipeId:[%d] AX_VIN_OpenSnsClk failed, rerturn:[%d]", nPipeId, axRet);
         return -5;
     }
 
@@ -101,13 +101,13 @@ int axcam_open(axcam_t *cam)
 
     axRet = AX_VIN_SetChnAttr(nPipeId, &cam->stChnAttr);
     if (0 != axRet) {
-        axmpi_error("nPipeId:[%d] AX_VIN_SetChnAttr failed, rerturn:[%d]", nPipeId, axRet);
+        axmpi_error("pipeId:[%d] AX_VIN_SetChnAttr failed, rerturn:[%d]", nPipeId, axRet);
         return -8;
     }
 
     axRet = AX_VIN_SetPipeAttr(nPipeId, &cam->stPipeAttr);
     if (0 != axRet) {
-        axmpi_error("nPipeId:[%d] AX_VI_SetPipeAttr failed, rerturn:[%d]", nPipeId, axRet);
+        axmpi_error("pipeId:[%d] AX_VI_SetPipeAttr failed, rerturn:[%d]", nPipeId, axRet);
         return -9;
     }
 
@@ -119,44 +119,44 @@ int axcam_open(axcam_t *cam)
 
     axRet = AX_ISP_Open(nPipeId);
     if (0 != axRet) {
-        axmpi_error("nPipeId:[%d] AX_ISP_Open failed, rerturn:[%d]", nPipeId, axRet);
+        axmpi_error("pipeId:[%d] AX_ISP_Open failed, rerturn:[%d]", nPipeId, axRet);
         return -11;
     }
 
     axRet = axisp_register_ae_alglib(nPipeId, eSnsType, cam->bUser3a, &cam->tAeFuncs);
     if (0 != axRet) {
-        axmpi_error("nPipeId:[%d] RegisterAeAlgLib failed, rerturn:[%d]", nPipeId, axRet);
+        axmpi_error("pipeId:[%d] RegisterAeAlgLib failed, rerturn:[%d]", nPipeId, axRet);
         return -12;
     }
 
     axRet = axisp_register_awb_alglib(nPipeId, eSnsType, cam->bUser3a,  &cam->tAwbFuncs);
     if (0 != axRet) {
-        axmpi_error("nPipeId:[%d] RegisterAwbAlgLib failed, rerturn:[%d]", nPipeId, axRet);
+        axmpi_error("pipeId:[%d] RegisterAwbAlgLib failed, rerturn:[%d]", nPipeId, axRet);
         return -13;
     }
 
     axRet = axisp_register_lsc_alglib(nPipeId, eSnsType, cam->bUser3a, &cam->tLscFuncs);
     if (0 != axRet) {
-        axmpi_error("nPipeId:[%d] RegisterLscAlgLib failed, rerturn:[%d]", nPipeId, axRet);
+        axmpi_error("pipeId:[%d] RegisterLscAlgLib failed, rerturn:[%d]", nPipeId, axRet);
         return -14;
     }
 
     axRet = AX_ISP_LoadBinParams(nPipeId, pFile);
     if (0 != axRet) {
-        axmpi_error("nPipeId:[%d] AX_ISP_LoadBinParams %s will user sensor.h", nPipeId, pFile);
+        axmpi_error("pipeId:[%d] AX_ISP_LoadBinParams %s will user sensor.h", nPipeId, pFile);
         // return -15;
     }
 
     axRet = AX_VIN_Start(nPipeId);
     if (0 != axRet) {
-        axmpi_error("nPipeId:[%d] AX_VIN_Start failed, rerturn:[%d]", nPipeId, axRet);
+        axmpi_error("pipeId:[%d] AX_VIN_Start failed, rerturn:[%d]", nPipeId, axRet);
         return -16;
     }
 
     if (cam->eSrcType != AX_PIPE_FRAME_SOURCE_TYPE_DEV) {
         axRet = AX_VIN_SetPipeFrameSource(nPipeId, (AX_ISP_PIPE_FRAME_SOURCE_ID_E)cam->eSrcId, (AX_ISP_PIPE_FRAME_SOURCE_TYPE_E)cam->eSrcType);
         if (0 != axRet) {
-            axmpi_error("nPipeId:[%d] AX_VIN_SetPipeFrameSource failed, rerturn:[%d]", nPipeId, axRet);
+            axmpi_error("pipeId:[%d] AX_VIN_SetPipeFrameSource failed, rerturn:[%d]", nPipeId, axRet);
             return -17;
         }
     }
@@ -181,7 +181,7 @@ int axcam_open(axcam_t *cam)
 
     axRet = AX_VIN_StreamOn(nPipeId);
     if (0 != axRet) {
-        axmpi_error("nPipeId:[%d] AX_VIN_StreamOn failed, rerturn:[%d]", nPipeId, axRet);
+        axmpi_error("pipeId:[%d] AX_VIN_StreamOn failed, rerturn:[%d]", nPipeId, axRet);
         return -20;
     }
 

@@ -21,7 +21,7 @@ static void *ivpsGetFrameThread(void *arg)
 
     while (!pipe->bThreadQuit) {
         AX_VIDEO_FRAME_S stVideoFrame;
-        ret = AX_IVPS_GetChnFrame(pipe->ivpsConfig.ivpsGroup, 0, &stVideoFrame, milliSec);
+        ret = AX_IVPS_GetChnFrame(pipe->ivps.group, 0, &stVideoFrame, milliSec);
         if (ret != 0) {
             if (ret == AX_ERR_IVPS_BUF_EMPTY) {
                 usleep(1000);
@@ -71,7 +71,7 @@ static void *ivpsGetFrameThread(void *arg)
             pipe->frameCallback(&buff, pipe->userData);
         }
 
-        AX_IVPS_ReleaseChnFrame(pipe->ivpsConfig.ivpsGroup, 0, &stVideoFrame);
+        AX_IVPS_ReleaseChnFrame(pipe->ivps.group, 0, &stVideoFrame);
     }
 
     return NULL;
@@ -79,15 +79,15 @@ static void *ivpsGetFrameThread(void *arg)
 
 int axpipe_create_ivps(axpipe_t *pipe)
 {
-    if (pipe->ivpsConfig.ivpsGroup >= IVPS_GRP_COUNT) {
-        axmpi_error("Invalid ivps group:[%d], only support:[%d:%d]", pipe->ivpsConfig.ivpsGroup, 0, IVPS_GRP_COUNT - 1);
+    if (pipe->ivps.group >= IVPS_GRP_COUNT) {
+        axmpi_error("Invalid ivps group:[%d], only support:[%d:%d]", pipe->ivps.group, 0, IVPS_GRP_COUNT - 1);
         return -1;
     }
 
     int ret = 0;
     int chnId = 0;
     AX_IVPS_GRP_ATTR_S stGrpAttr = {0};
-    int grpId = pipe->ivpsConfig.ivpsGroup;
+    int grpId = pipe->ivps.group;
     AX_IVPS_PIPELINE_ATTR_S stPipelineAttr = {0};
 
     stPipelineAttr.tFbInfo.PoolId = AX_INVALID_POOLID;
@@ -104,19 +104,19 @@ int axpipe_create_ivps(axpipe_t *pipe)
     memset(&stPipelineAttr.tFilter, 0x00, sizeof(stPipelineAttr.tFilter));
 
     stPipelineAttr.tFilter[chnId][0].bEnable = AX_TRUE;
-    stPipelineAttr.tFilter[chnId][0].tFRC.nSrcFrameRate = pipe->ivpsConfig.ivpsFramerate;
-    stPipelineAttr.tFilter[chnId][0].tFRC.nDstFrameRate = pipe->ivpsConfig.ivpsFramerate;
+    stPipelineAttr.tFilter[chnId][0].tFRC.nSrcFrameRate = pipe->ivps.framerate;
+    stPipelineAttr.tFilter[chnId][0].tFRC.nDstFrameRate = pipe->ivps.framerate;
     stPipelineAttr.tFilter[chnId][0].nDstPicOffsetX0 = 0;
     stPipelineAttr.tFilter[chnId][0].nDstPicOffsetY0 = 0;
-    stPipelineAttr.tFilter[chnId][0].nDstPicWidth = pipe->ivpsConfig.ivpsWidth;
-    stPipelineAttr.tFilter[chnId][0].nDstPicHeight = pipe->ivpsConfig.ivpsHeight;
+    stPipelineAttr.tFilter[chnId][0].nDstPicWidth = pipe->ivps.width;
+    stPipelineAttr.tFilter[chnId][0].nDstPicHeight = pipe->ivps.height;
     stPipelineAttr.tFilter[chnId][0].nDstPicStride = ALIGN_UP(stPipelineAttr.tFilter[chnId][0].nDstPicWidth, 64);
-    stPipelineAttr.tFilter[chnId][0].nDstFrameWidth = pipe->ivpsConfig.ivpsWidth;
-    stPipelineAttr.tFilter[chnId][0].nDstFrameHeight = pipe->ivpsConfig.ivpsHeight;
+    stPipelineAttr.tFilter[chnId][0].nDstFrameWidth = pipe->ivps.width;
+    stPipelineAttr.tFilter[chnId][0].nDstFrameHeight = pipe->ivps.height;
     stPipelineAttr.tFilter[chnId][0].eDstPicFormat = AX_YUV420_SEMIPLANAR;
     stPipelineAttr.tFilter[chnId][0].eEngine = AX_IVPS_ENGINE_TDP;
 
-    if (pipe->ivpsConfig.bLetterBbox) {
+    if (pipe->ivps.letterBbox) {
         AX_IVPS_ASPECT_RATIO_S tAspectRatio;
         tAspectRatio.eMode = AX_IVPS_ASPECT_RATIO_AUTO;
         tAspectRatio.eAligns[0] = AX_IVPS_ASPECT_RATIO_HORIZONTAL_CENTER;
@@ -125,26 +125,26 @@ int axpipe_create_ivps(axpipe_t *pipe)
         stPipelineAttr.tFilter[chnId][0].tTdpCfg.tAspectRatio = tAspectRatio;
     }
 
-    stPipelineAttr.tFilter[chnId][0].tTdpCfg.bFlip = pipe->ivpsConfig.bIvpsFlip > 0 ? AX_TRUE : AX_FALSE;
-    stPipelineAttr.tFilter[chnId][0].tTdpCfg.bMirror = pipe->ivpsConfig.bIvpsMirror > 0 ? AX_TRUE : AX_FALSE;
-    if (pipe->ivpsConfig.ivpsRotate == 0) {
+    stPipelineAttr.tFilter[chnId][0].tTdpCfg.bFlip = pipe->ivps.flip > 0 ? AX_TRUE : AX_FALSE;
+    stPipelineAttr.tFilter[chnId][0].tTdpCfg.bMirror = pipe->ivps.mirror > 0 ? AX_TRUE : AX_FALSE;
+    if (pipe->ivps.rotate == 0) {
         stPipelineAttr.tFilter[chnId][0].tTdpCfg.eRotation = AX_IVPS_ROTATION_0;
-    } else if (pipe->ivpsConfig.ivpsRotate == 90) {
+    } else if (pipe->ivps.rotate == 90) {
         stPipelineAttr.tFilter[chnId][0].tTdpCfg.eRotation = AX_IVPS_ROTATION_90;
-    } else if (pipe->ivpsConfig.ivpsRotate == 180) {
+    } else if (pipe->ivps.rotate == 180) {
         stPipelineAttr.tFilter[chnId][0].tTdpCfg.eRotation = AX_IVPS_ROTATION_180;
-    } else if (pipe->ivpsConfig.ivpsRotate == 270) {
+    } else if (pipe->ivps.rotate == 270) {
         stPipelineAttr.tFilter[chnId][0].tTdpCfg.eRotation = AX_IVPS_ROTATION_270;
     }
 
     switch (stPipelineAttr.tFilter[chnId][0].tTdpCfg.eRotation) {
         case AX_IVPS_ROTATION_90:
         case AX_IVPS_ROTATION_270:
-            stPipelineAttr.tFilter[chnId][0].nDstPicWidth = pipe->ivpsConfig.ivpsHeight;
-            stPipelineAttr.tFilter[chnId][0].nDstPicHeight = pipe->ivpsConfig.ivpsWidth;
+            stPipelineAttr.tFilter[chnId][0].nDstPicWidth = pipe->ivps.height;
+            stPipelineAttr.tFilter[chnId][0].nDstPicHeight = pipe->ivps.width;
             stPipelineAttr.tFilter[chnId][0].nDstPicStride = ALIGN_UP(stPipelineAttr.tFilter[chnId][0].nDstPicWidth, 64);
-            stPipelineAttr.tFilter[chnId][0].nDstFrameWidth = pipe->ivpsConfig.ivpsHeight;
-            stPipelineAttr.tFilter[chnId][0].nDstFrameHeight = pipe->ivpsConfig.ivpsWidth;
+            stPipelineAttr.tFilter[chnId][0].nDstFrameWidth = pipe->ivps.height;
+            stPipelineAttr.tFilter[chnId][0].nDstFrameHeight = pipe->ivps.width;
             break;
 
         default:
@@ -179,7 +179,7 @@ int axpipe_create_ivps(axpipe_t *pipe)
             break;
     }
 
-    stPipelineAttr.nOutFifoDepth[chnId] = pipe->ivpsConfig.fifoCount;
+    stPipelineAttr.nOutFifoDepth[chnId] = pipe->ivps.fifoCount;
     if (stPipelineAttr.nOutFifoDepth[chnId] < 0) {
         stPipelineAttr.nOutFifoDepth[chnId] = 0;
     }
@@ -206,22 +206,22 @@ int axpipe_create_ivps(axpipe_t *pipe)
         return -5;
     }
 
-    for (int i = 0; (i < pipe->ivpsConfig.osdRegions) && (i < OSD_RGN_COUNT); ++i) {
+    for (int i = 0; (i < pipe->ivps.regions) && (i < OSD_RGN_COUNT); ++i) {
         IVPS_RGN_HANDLE hChnRgn = AX_IVPS_RGN_Create();
         if (hChnRgn != AX_IVPS_INVALID_REGION_HANDLE) {
             int fileter = 0x00;
-            ret = AX_IVPS_RGN_AttachToFilter(hChnRgn, pipe->ivpsConfig.ivpsGroup, fileter);
+            ret = AX_IVPS_RGN_AttachToFilter(hChnRgn, pipe->ivps.group, fileter);
             if (ret != 0) {
-                axmpi_error("attach region handler:[%d] to ivps group:[%d] filter:[%d] failed, return:[%d]", hChnRgn, pipe->ivpsConfig.ivpsGroup, fileter, ret);
-                pipe->ivpsConfig.osdRegions = i;
+                axmpi_error("attach region handler:[%d] to ivps group:[%d] filter:[%d] failed, return:[%d]", hChnRgn, pipe->ivps.group, fileter, ret);
+                pipe->ivps.regions = i;
                 break;
             }
 
-            pipe->ivpsConfig.osdRgnHandle[i] = hChnRgn;
+            pipe->ivps.handler[i] = hChnRgn;
             continue;
         }
 
-        pipe->ivpsConfig.osdRegions = i;
+        pipe->ivps.regions = i;
         break;
     }
 
@@ -231,7 +231,7 @@ int axpipe_create_ivps(axpipe_t *pipe)
         case AXPIPE_OUTPUT_BUFF_NV12:
         case AXPIPE_OUTPUT_BUFF_NV21: {
             if (stPipelineAttr.nOutFifoDepth[chnId] > 0) {
-                ret = pthread_create(&pipe->ivpsConfig.threadId, NULL, ivpsGetFrameThread, (void *)pipe);
+                ret = pthread_create(&pipe->ivps.threadId, NULL, ivpsGetFrameThread, (void *)pipe);
                 if (ret != 0) {
                     axmpi_error("create ivps get frame thread failed");
                     return -6;
@@ -250,23 +250,23 @@ int axpipe_create_ivps(axpipe_t *pipe)
 
 int axpipe_release_ivps(axpipe_t *pipe)
 {
-    pthread_join(pipe->ivpsConfig.threadId, NULL);
+    pthread_join(pipe->ivps.threadId, NULL);
 
-    int ret = AX_IVPS_StopGrp(pipe->ivpsConfig.ivpsGroup);
+    int ret = AX_IVPS_StopGrp(pipe->ivps.group);
     if (ret != 0) {
-        axmpi_error("stop ivps group:[%d] failed, return:[%d]", pipe->ivpsConfig.ivpsGroup, ret);
+        axmpi_error("stop ivps group:[%d] failed, return:[%d]", pipe->ivps.group, ret);
         return -1;
     }
 
-    ret = AX_IVPS_DisableChn(pipe->ivpsConfig.ivpsGroup, 0);
+    ret = AX_IVPS_DisableChn(pipe->ivps.group, 0);
     if (ret != 0) {
-        axmpi_error("disable ivps group:[%d] chn:[0] failed, return:[%d]", pipe->ivpsConfig.ivpsGroup, ret);
+        axmpi_error("disable ivps group:[%d] chn:[0] failed, return:[%d]", pipe->ivps.group, ret);
         return -2;
     }
 
-    ret = AX_IVPS_DestoryGrp(pipe->ivpsConfig.ivpsGroup);
+    ret = AX_IVPS_DestoryGrp(pipe->ivps.group);
     if (ret != 0) {
-        axmpi_error("destroy ivps group:[%d] failed", pipe->ivpsConfig.ivpsGroup, ret);
+        axmpi_error("destroy ivps group:[%d] failed", pipe->ivps.group, ret);
         return -3;
     }
 

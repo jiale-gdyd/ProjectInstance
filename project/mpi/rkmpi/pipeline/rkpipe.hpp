@@ -87,7 +87,7 @@ typedef struct {
 
 /* pipeline venc配置 */
 typedef struct {
-    uint32_t    vencChannel;                // VENC通道号
+    uint32_t    channel;                // VENC通道号
     uint32_t    bufDepth;                   // 分配缓存深度(个数)
     uint32_t    bufPoolCnt;                 // 分配缓存池实际个数
     uint32_t    vencWidth;                  // VENC编码像素宽度

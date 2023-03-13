@@ -266,9 +266,9 @@ void axjoint_post_process_detection(axpi_results_t *results, axjoint_models_t *h
         }
 
         if (obj.label < g_classNames.size()) {
-            axobj.objname = g_classNames[obj.label];
+            strcpy(axobj.objname, g_classNames[obj.label].c_str());
         } else {
-            axobj.objname = "unknown";
+            strcpy(axobj.objname, "unknown");
         }
 
         results->objects.push_back(axobj);
@@ -331,9 +331,9 @@ void axjoint_post_process_yolov5_seg(axpi_results_t *results, axjoint_models_t *
         }
 
         if (obj.label < g_classNames.size()) {
-            axobj.objname = g_classNames[obj.label];
+            strcpy(axobj.objname, g_classNames[obj.label].c_str());
         } else {
-            axobj.objname = "unknown";
+            strcpy(axobj.objname, "unknown");
         }
 
         results->objects.push_back(axobj);
@@ -382,7 +382,7 @@ static void axjoint_post_process_yolov7_palm_hand(axpi_results_t *results, axjoi
             results->objects[i].bbox_vertices[j].y = obj.vertices[j].y;
         }
 
-        axobj.objname = "hand";
+        strcpy(axobj.objname, "hand");
         results->objects.push_back(axobj);
     }
 }
@@ -434,7 +434,7 @@ void axjoint_post_process_palm_hand(axpi_results_t *results, axjoint_models_t *h
         }
         axobj.bbox_vertices = bbox_vertices;
 
-        axobj.objname = "hand";
+        strcpy(axobj.objname, "hand");
         results->objects.push_back(axobj);
     }
 }
@@ -486,7 +486,7 @@ static void axjoint_post_process_yolopv2(axpi_results_t *results, axjoint_models
         axobj.bbox.h = obj.rect.height;
 
         axobj.label = 0;
-        axobj.objname = "car";
+        strcpy(axobj.objname, "car");
 
         results->objects.push_back(axobj);
     }
@@ -608,7 +608,7 @@ static void axjoint_post_process_yolofastbody(axpi_results_t *results, axjoint_m
         axobj.bbox.y = obj.rect.y;
         axobj.bbox.w = obj.rect.width;
         axobj.bbox.h = obj.rect.height;
-        axobj.objname = "person";
+        strcpy(axobj.objname, "person");
 
         results->objects.push_back(axobj);
     }

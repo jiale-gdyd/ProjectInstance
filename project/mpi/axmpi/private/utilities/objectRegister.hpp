@@ -9,6 +9,8 @@
 namespace axpi {
 typedef void *(*create_function)();
 
+extern std::map<std::string, int> &getModelTypeTable();
+
 class ObjectFactory {
 public:
     ~ObjectFactory() {
@@ -75,10 +77,9 @@ public:
     }
 
     void registClass(int clsid, std::string name, create_function fun) {
-        extern std::map<std::string, int> g_modelTypeTable;
-        mNameMap[name] = fun;
         mIdMap[clsid] = fun;
-        g_modelTypeTable[name] = clsid;
+        mNameMap[name] = fun;
+        getModelTypeTable()[name] = clsid;
     }
 
     static ObjectFactory &getInstance() {

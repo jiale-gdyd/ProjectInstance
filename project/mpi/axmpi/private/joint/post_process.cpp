@@ -368,12 +368,12 @@ static int _axjoint_inference_face_recognition(axjoint_models_t *handler, const 
 
         if (maxidx >= 0) {
             if (max_score >= face_recgnition_threahold) {
-                obj.objname = face_ids[maxidx].name;
+                strcpy(obj.objname, face_ids[maxidx].name.c_str());
             } else {
-                obj.objname = "unknow";
+                strcpy(obj.objname, "unknow");
             }
         } else {
-            obj.objname = "unknow";
+            strcpy(obj.objname, "unknow");
         }
     }
 
@@ -488,7 +488,7 @@ int _axjoint_inference_license_plate_recognition(axjoint_models_t *handler, cons
         if (plate.length() < OBJ_NAME_MAX_LEN) {
             char name[OBJ_NAME_MAX_LEN] = {0};
             sprintf(name, "%.*s", plate.length(), plate.c_str());
-            results->objects[i].objname = name;
+            strcpy(results->objects[i].objname, name);
         }
     }
 

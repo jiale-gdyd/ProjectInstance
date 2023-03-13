@@ -20,14 +20,14 @@ static void *vencGetFrameThread(void *arg)
     AX_VENC_RECV_PIC_PARAM_S stRecvParam;
     axpipe_t *pipe = reinterpret_cast<axpipe_t *>(arg);
 
-    ret = AX_VENC_StartRecvFrame(pipe->vencConfig.vencChannel, &stRecvParam);
+    ret = AX_VENC_StartRecvFrame(pipe->venc.channel, &stRecvParam);
     if (ret != 0) {
-        axmpi_error("venc chn:[%d] start recv frame failed, return:[%d]", pipe->vencConfig.vencChannel, ret);
+        axmpi_error("venc chn:[%d] start recv frame failed, return:[%d]", pipe->venc.channel, ret);
         return NULL;
     }
 
     while (!pipe->bThreadQuit) {
-        ret = AX_VENC_GetStream(pipe->vencConfig.vencChannel, &stStream, milliSec);
+        ret = AX_VENC_GetStream(pipe->venc.channel, &stStream, milliSec);
         if (ret == 0) {
             switch (pipe->outType) {
                 case AXPIPE_OUTPUT_RTSP_H264:
@@ -63,7 +63,7 @@ static void *vencGetFrameThread(void *arg)
                 pipe->frameCallback(&buff, pipe->userData);
             }
 
-            ret = AX_VENC_ReleaseStream(pipe->vencConfig.vencChannel, &stStream);
+            ret = AX_VENC_ReleaseStream(pipe->venc.channel, &stStream);
             if (ret != 0) {
                 usleep(30000);
             }
@@ -81,16 +81,16 @@ static bool setJpegParam(axpipe_t *pipe)
     AX_VENC_JPEG_PARAM_S stJpegParam;
 
     memset(&stJpegParam, 0, sizeof(stJpegParam));
-    ret = AX_VENC_GetJpegParam(pipe->vencConfig.vencChannel, &stJpegParam);
+    ret = AX_VENC_GetJpegParam(pipe->venc.channel, &stJpegParam);
     if (ret != 0) {
-        axmpi_error("venc chn:[%d] get jpeg param failed, return:[%d]", pipe->vencConfig.vencChannel, ret);
+        axmpi_error("venc chn:[%d] get jpeg param failed, return:[%d]", pipe->venc.channel, ret);
         return false;
     }
 
     stJpegParam.u32Qfactor = 90;
-    ret = AX_VENC_SetJpegParam(pipe->vencConfig.vencChannel, &stJpegParam);
+    ret = AX_VENC_SetJpegParam(pipe->venc.channel, &stJpegParam);
     if (ret != 0) {
-        axmpi_error("venc chn:[%d] set jpeg param failed, return:[%d]", pipe->vencConfig.vencChannel, ret);
+        axmpi_error("venc chn:[%d] set jpeg param failed, return:[%d]", pipe->venc.channel, ret);
         return false;
     }
 
@@ -102,9 +102,9 @@ static bool setRcParam(axpipe_t *pipe, int enRcMode)
     int ret = 0;
     AX_VENC_RC_PARAM_S stRcParam;
 
-    ret = AX_VENC_GetRcParam(pipe->vencConfig.vencChannel, &stRcParam);
+    ret = AX_VENC_GetRcParam(pipe->venc.channel, &stRcParam);
     if (ret != 0) {
-        axmpi_error("venc chn:[%d] get rc param failed, return:[%d]", pipe->vencConfig.vencChannel, ret);
+        axmpi_error("venc chn:[%d] get rc param failed, return:[%d]", pipe->venc.channel, ret);
         return false;
     }
 
@@ -120,9 +120,9 @@ static bool setRcParam(axpipe_t *pipe, int enRcMode)
         stRcParam.stMjpegFixQp.s32FixedQp = 22;
     }
 
-    ret = AX_VENC_SetRcParam(pipe->vencConfig.vencChannel, &stRcParam);
+    ret = AX_VENC_SetRcParam(pipe->venc.channel, &stRcParam);
     if (ret != 0) {
-        axmpi_error("venc chn:[%d] set rc param failed, return:[%d]", pipe->vencConfig.vencChannel, ret);
+        axmpi_error("venc chn:[%d] set rc param failed, return:[%d]", pipe->venc.channel, ret);
         return false;
     }
 
@@ -131,8 +131,8 @@ static bool setRcParam(axpipe_t *pipe, int enRcMode)
 
 int axpipe_create_venc(axpipe_t *pipe)
 {
-    if (pipe->vencConfig.vencChannel >= VENC_CHN_COUNT) {
-        axmpi_error("Invalid venc chn:[%d], only support:[%d, %d]", pipe->vencConfig.vencChannel, 0, VENC_CHN_COUNT - 1);
+    if (pipe->venc.channel >= VENC_CHN_COUNT) {
+        axmpi_error("Invalid venc chn:[%d], only support:[%d, %d]", pipe->venc.channel, 0, VENC_CHN_COUNT - 1);
         return -1;
     }
 
@@ -201,15 +201,15 @@ int axpipe_create_venc(axpipe_t *pipe)
             return -2;
     }
 
-    config.nInWidth = pipe->ivpsConfig.ivpsWidth;
-    config.nInHeight = pipe->ivpsConfig.ivpsHeight;
+    config.nInWidth = pipe->ivps.width;
+    config.nInHeight = pipe->ivps.height;
     config.nStride = config.nInWidth;
 
-    switch (pipe->ivpsConfig.ivpsRotate) {
+    switch (pipe->ivps.rotate) {
         case 90:
         case 270:
-            config.nInWidth = pipe->ivpsConfig.ivpsHeight;
-            config.nInHeight = pipe->ivpsConfig.ivpsWidth;
+            config.nInWidth = pipe->ivps.height;
+            config.nInHeight = pipe->ivps.width;
             config.nStride = config.nInWidth;
             break;
 
@@ -217,8 +217,8 @@ int axpipe_create_venc(axpipe_t *pipe)
             break;
     }
 
-    config.nSrcFrameRate = pipe->ivpsConfig.ivpsFramerate;
-    config.nDstFrameRate = pipe->ivpsConfig.ivpsFramerate;
+    config.nSrcFrameRate = pipe->ivps.framerate;
+    config.nDstFrameRate = pipe->ivps.framerate;
 
     memset(&stVencChnAttr, 0, sizeof(AX_VENC_CHN_ATTR_S));
     stVencChnAttr.stVencAttr.u32MaxPicWidth = 0;
@@ -378,9 +378,9 @@ int axpipe_create_venc(axpipe_t *pipe)
             return -3;
     }
 
-    int ret = AX_VENC_CreateChn(pipe->vencConfig.vencChannel, &stVencChnAttr);
+    int ret = AX_VENC_CreateChn(pipe->venc.channel, &stVencChnAttr);
     if (ret != 0) {
-        axmpi_error("venc chn:[%d] create failed, return:[%d]", pipe->vencConfig.vencChannel, ret);
+        axmpi_error("venc chn:[%d] create failed, return:[%d]", pipe->venc.channel, ret);
         return -4;
     }
 
@@ -389,7 +389,7 @@ int axpipe_create_venc(axpipe_t *pipe)
         setJpegParam(pipe);
     }
 
-    if (pthread_create(&pipe->vencConfig.threadId, NULL, vencGetFrameThread, pipe) != 0) {
+    if (pthread_create(&pipe->venc.threadId, NULL, vencGetFrameThread, pipe) != 0) {
         axmpi_error("create venc get frame thread failed");
         return -5;
     }
@@ -399,16 +399,16 @@ int axpipe_create_venc(axpipe_t *pipe)
 
 int axpipe_release_venc(axpipe_t *pipe)
 {
-    pthread_join(pipe->vencConfig.threadId, NULL);
-    int ret = AX_VENC_StopRecvFrame(pipe->vencConfig.vencChannel);
+    pthread_join(pipe->venc.threadId, NULL);
+    int ret = AX_VENC_StopRecvFrame(pipe->venc.channel);
     if (ret != 0) {
-        axmpi_error("venc chn:[%d] stop recv frame failed, return:[%d]", pipe->vencConfig.vencChannel, ret);
+        axmpi_error("venc chn:[%d] stop recv frame failed, return:[%d]", pipe->venc.channel, ret);
         return -1;
     }
 
-    ret = AX_VENC_DestroyChn(pipe->vencConfig.vencChannel);
+    ret = AX_VENC_DestroyChn(pipe->venc.channel);
     if (ret != 0) {
-        axmpi_error("venc chn:[%d] destroy failed, return:[%d]", pipe->vencConfig.vencChannel, ret);
+        axmpi_error("venc chn:[%d] destroy failed, return:[%d]", pipe->venc.channel, ret);
         return -2;
     }
 

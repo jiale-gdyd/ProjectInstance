@@ -105,7 +105,7 @@ typedef struct {
 
     int                       label;
     float                     prob;
-    std::string               objname;
+    char                      objname[OBJ_NAME_MAX_LEN];
 } axpi_object_t;
 
 typedef struct {
