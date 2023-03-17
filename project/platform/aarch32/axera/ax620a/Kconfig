@@ -13,6 +13,13 @@ config AX620A_EMS
     bool "Electronic rearview mirror system"
     select AXERA_MPI
 
+config AX620A_EDGE_BOX
+    bool "The AX620A computing box"
+    select AXERA_MPI
+    select RTSP
+    select RTSP_SERVER
+    select RTSP_SERVER_CLIENT
+
 config AX620A_UNKNOWN
     bool "Unknown Application"
 endchoice

@@ -10,9 +10,10 @@
 CONFIG_PARENT_PROCESS=y
 
 #
-# EMS
+# Application
 #
-CONFIG_AX620A_EMS=y
+# CONFIG_AX620A_EMS is not set
+CONFIG_AX620A_EDGE_BOX=y
 
 #
 # mpi

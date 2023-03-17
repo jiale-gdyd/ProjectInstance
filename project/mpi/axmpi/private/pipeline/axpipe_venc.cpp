@@ -60,7 +60,7 @@ static void *vencGetFrameThread(void *arg)
                 buff.virAddr = stStream.stPack.pu8Addr;
                 buff.phyAddr = stStream.stPack.ulPhyAddr;
                 buff.userData = pipe;
-                pipe->frameCallback(&buff, pipe->userData);
+                pipe->frameCallback(&buff, pipe->userData, pipe->userData2);
             }
 
             ret = AX_VENC_ReleaseStream(pipe->venc.channel, &stStream);

@@ -100,7 +100,7 @@ typedef struct {
 } axpipe_buffer_t;
 
 // typedef void (*axpipe_frame_t)(axpipe_buffer_t *buff, void *user_data);
-using axpipe_frame_t = std::function<void (axpipe_buffer_t *buff, void *user_data)>;
+using axpipe_frame_t = std::function<void (axpipe_buffer_t *buff, void *user_data, void *user_data2)>;
 
 typedef struct {
     bool                 enable;            // 是否启用
@@ -116,6 +116,7 @@ typedef struct {
     axpipe_ivps_config_t ivps;              // IVPS配置
     axpipe_frame_t       frameCallback;     // 帧回调函数
     void                 *userData;         // 用户数据
+    void                 *userData2;        // 用户数据
 } axpipe_t;
 
 /**

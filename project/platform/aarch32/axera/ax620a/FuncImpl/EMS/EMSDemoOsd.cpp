@@ -1,6 +1,6 @@
 #include "EMSDemo.hpp"
 
-namespace EMS {
+namespace ems {
 void EMSDemo::osdProcessThread()
 {
     axpi::axpi_results_t results;

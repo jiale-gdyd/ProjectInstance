@@ -10,7 +10,7 @@
 #include <utils/RingBuffer.hpp>
 #include <mpi/axmpi/mediaBase.hpp>
 
-namespace EMS {
+namespace ems {
 class EMSDemo : public axpi::MediaBase {
 public:
     EMSDemo();
@@ -30,7 +30,7 @@ private:
     void osdProcessThread();
 
     /* 算法推理回调函数 */
-    static void inferenceProcess(axpi::axpipe_buffer_t *buff, void *user_data);
+    static void inferenceProcess(axpi::axpipe_buffer_t *buff, void *user_data, void *user_data2);
 
 private:
     bool                                    mInitFin;           // EMS是否初始化完成

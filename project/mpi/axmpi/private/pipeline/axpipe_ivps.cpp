@@ -68,7 +68,7 @@ static void *ivpsGetFrameThread(void *arg)
             buff.virAddr = (unsigned char *)stVideoFrame.u64VirAddr[0];
             buff.phyAddr = stVideoFrame.u64PhyAddr[0];
             buff.userData = pipe;
-            pipe->frameCallback(&buff, pipe->userData);
+            pipe->frameCallback(&buff, pipe->userData, pipe->userData2);
         }
 
         AX_IVPS_ReleaseChnFrame(pipe->ivps.group, 0, &stVideoFrame);

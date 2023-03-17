@@ -1,6 +1,6 @@
 #include "EMSDemo.hpp"
 
-namespace EMS {
+namespace ems {
 EMSDemo::EMSDemo() : mInitFin(false), mAlgoInit(false), mQuitThread(false), mStartID(0x90015),
     mAlgoWidth(960), mAlgoHeight(540), mHandler(nullptr), mCamFPS(25), mIvpsFPS(60),
     mVoRotateAngle(90), mScreenWidth(480), mScreenHeight(854)

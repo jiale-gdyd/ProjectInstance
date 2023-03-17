@@ -6,7 +6,7 @@ source ${TOPSHELL}/shell/buildConf.sh
 # jetson-nx-jp51-sd-card-image.zip
 # deepstream-6.2_6.2.0-1_arm64.deb
 
-JETSON_MEDIA_EMS_CONFIG=jetson_media_ems_defconfig
+JETSON_MEDIA_CONFIG=jetson_media_defconfig
 
 if [ -e /opt/toolchain/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu/bin/aarch64-linux-gnu-g++ ]; then
     JETSON_CROSS_COMPILE=/opt/toolchain/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu/bin/aarch64-linux-gnu-
@@ -16,11 +16,11 @@ fi
 
 function jetson_clean()
 {
-    rm -rf JetsonEMSApp
+    rm -rf jetsonApp
     remove_gitcommit
 }
 
-function jetson_media_ems()
+function jetson_media_app()
 {
     begin=`get_timestamp`
     type=$(uname)
@@ -34,11 +34,11 @@ function jetson_media_ems()
 
     export SOC=jetson
     export Platform=nvidia
-    export APP_NAME=JetsonEMSApp
+    export APP_NAME=jetsonApp
     export USE_STDCPP_VERSION=-std=gnu++11
     generate_gitcommit
 
-    make ${JETSON_MEDIA_EMS_CONFIG} && make ARCH=arm64 CROSS_COMPILE=${JETSON_CROSS_COMPILE} -j$[$(nproc)-1]
+    make ${JETSON_MEDIA_CONFIG} && make ARCH=arm64 CROSS_COMPILE=${JETSON_CROSS_COMPILE} -j$[$(nproc)-1]
     if [ $? -ne 0 ]; then
         error_exit "Unfortunately, build ${PROJECT_NAME} failed"
     fi

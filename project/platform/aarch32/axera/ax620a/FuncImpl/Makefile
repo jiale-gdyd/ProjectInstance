@@ -1,1 +1,2 @@
 obj-$(CONFIG_AX620A_EMS) += EMS/
+obj-$(CONFIG_AX620A_EDGE_BOX) += EDGE/

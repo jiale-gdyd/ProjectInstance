@@ -1,4 +1,4 @@
-ifeq ($(APP_NAME),Ax620aEMSApp)
+ifeq ($(APP_NAME),ax620aApp)
 VERSION = 0
 PATCHLEVEL = 0
 SUBLEVEL = 0

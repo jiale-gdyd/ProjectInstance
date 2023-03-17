@@ -1,4 +1,4 @@
-ifeq ($(APP_NAME),Rv11xxEMSApp)
+ifeq ($(APP_NAME),rv1126App)
 VERSION = 0
 PATCHLEVEL = 0
 SUBLEVEL = 0

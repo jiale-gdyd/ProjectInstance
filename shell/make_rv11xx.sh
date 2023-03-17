@@ -3,7 +3,7 @@
 source ${TOPSHELL}/shell/buildFunc.sh
 source ${TOPSHELL}/shell/buildConf.sh
 
-RV11XX_MEDIA_EMS_CONFIG=rv11xx_media_ems_defconfig
+RV11XX_MEDIA_CONFIG=rv11xx_media_defconfig
 
 if [ -e /opt/toolchain/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++ ]; then
     RV11XX_CROSS_COMPILE=/opt/toolchain/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
@@ -13,11 +13,11 @@ fi
 
 function rv11xx_clean()
 {
-    rm -rf Rv11xxEMSApp
+    rm -rf rv1126App
     remove_gitcommit
 }
 
-function rv11xx_media_ems()
+function rv11xx_media_app()
 {
     begin=`get_timestamp`
     type=$(uname)
@@ -31,11 +31,11 @@ function rv11xx_media_ems()
 
     export SOC=rv11xx
     export Platform=rockchip
-    export APP_NAME=Rv11xxEMSApp
+    export APP_NAME=rv1126App
     export USE_STDCPP_VERSION=-std=gnu++11
     generate_gitcommit
 
-    make ${RV11XX_MEDIA_EMS_CONFIG} && make ARCH=arm CROSS_COMPILE=${RV11XX_CROSS_COMPILE} -j$[$(nproc)-1]
+    make ${RV11XX_MEDIA_CONFIG} && make ARCH=arm CROSS_COMPILE=${RV11XX_CROSS_COMPILE} -j$[$(nproc)-1]
     if [ $? -ne 0 ]; then
         error_exit "Unfortunately, build ${PROJECT_NAME} failed"
     fi

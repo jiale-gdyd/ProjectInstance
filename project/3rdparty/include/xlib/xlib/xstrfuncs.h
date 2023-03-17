@@ -134,19 +134,6 @@ xboolean (x_str_has_prefix)(const xchar *str, const xchar *prefix);
         })                                                                                                                                  \
     : (x_str_has_suffix)(STR, SUFFIX))
 
-#define x_strdup(STR)                                                                                                                       \
-    (__builtin_constant_p((STR)) ?                                                                                                          \
-        (X_LIKELY((STR) != NULL) ?                                                                                                          \
-        X_GNUC_EXTENSION ({                                                                                                                 \
-            const char *const ___str = ((STR));                                                                                             \
-            const char *const __str = _X_STR_NONNULL(___str);                                                                               \
-            const size_t __str_len = strlen(__str) + 1;                                                                                     \
-            char *__dup_str = (char *)x_malloc(__str_len);                                                                                  \
-            (char *)memcpy(__dup_str, __str, __str_len);                                                                                    \
-        })                                                                                                                                  \
-        : (char *)(NULL))                                                                                                                   \
-    : (x_strdup)((STR)))
-
 #endif
 
 XLIB_AVAILABLE_IN_ALL
@@ -222,6 +209,25 @@ xchar *x_strconcat(const xchar *string1, ...) X_GNUC_MALLOC X_GNUC_NULL_TERMINAT
 
 XLIB_AVAILABLE_IN_ALL
 xchar *x_strjoin(const xchar *separator, ...) X_GNUC_MALLOC X_GNUC_NULL_TERMINATED;
+
+#if X_GNUC_CHECK_VERSION(2, 0)
+X_ALWAYS_INLINE static inline char *x_strdup_inline(const char *str)
+{
+    if (__builtin_constant_p(!str) && !str) {
+        return NULL;
+    }
+
+    if (__builtin_constant_p(!!str) && !!str && __builtin_constant_p(strlen(str))) {
+        const size_t len = strlen(str) + 1;
+        char *dup_str = (char *)x_malloc(len);
+        return (char *)memcpy(dup_str, str, len);
+    }
+
+    return x_strdup(str);
+}
+
+#define x_strdup(x)         x_strdup_inline(x)
+#endif
 
 XLIB_AVAILABLE_IN_ALL
 xchar *x_strcompress(const xchar *source) X_GNUC_MALLOC;

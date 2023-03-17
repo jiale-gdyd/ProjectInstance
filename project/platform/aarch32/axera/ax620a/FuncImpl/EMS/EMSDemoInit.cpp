@@ -1,6 +1,6 @@
 #include "EMSDemo.hpp"
 
-namespace EMS {
+namespace ems {
 int EMSDemo::pipelineCreate()
 {
     mPipelines.clear();
@@ -61,6 +61,7 @@ int EMSDemo::pipelineCreate()
     pipe.vinChn = 0;
     pipe.frameCallback = inferenceProcess;
     pipe.userData = this;
+    pipe.userData2 = NULL;
     mPipelines.push_back(pipe);
 
     /* vin[0:0]->ivps[2]->vo */

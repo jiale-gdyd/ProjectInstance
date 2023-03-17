@@ -1,4 +1,4 @@
-ifeq ($(APP_NAME),JetsonEMSApp)
+ifeq ($(APP_NAME),jetsonApp)
 VERSION = 0
 PATCHLEVEL = 0
 SUBLEVEL = 0
