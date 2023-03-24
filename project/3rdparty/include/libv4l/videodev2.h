@@ -328,6 +328,9 @@ struct v4l2_pix_format {
 #define V4L2_PIX_FMT_RGBX32                                         v4l2_fourcc('X', 'B', '2', '4')     /* 32  RGBX-8-8-8-8  */
 #define V4L2_PIX_FMT_ARGB32                                         v4l2_fourcc('B', 'A', '2', '4')     /* 32  ARGB-8-8-8-8  */
 #define V4L2_PIX_FMT_XRGB32                                         v4l2_fourcc('B', 'X', '2', '4')     /* 32  XRGB-8-8-8-8  */
+#define V4L2_PIX_FMT_RGBX1010102                                    v4l2_fourcc('R', 'X', '3', '0')     /* 32  RGBX-10-10-10-2 */
+#define V4L2_PIX_FMT_RGBA1010102                                    v4l2_fourcc('R', 'A', '3', '0')     /* 32  RGBA-10-10-10-2 */
+#define V4L2_PIX_FMT_ARGB2101010                                    v4l2_fourcc('A', 'R', '3', '0')     /* 32  ARGB-2-10-10-10 */
 
 #define V4L2_PIX_FMT_GREY                                           v4l2_fourcc('G', 'R', 'E', 'Y')     /*  8  Greyscale     */
 #define V4L2_PIX_FMT_Y4                                             v4l2_fourcc('Y', '0', '4', ' ')     /*  4  Greyscale     */
@@ -363,6 +366,10 @@ struct v4l2_pix_format {
 #define V4L2_PIX_FMT_YUVA32                                         v4l2_fourcc('Y', 'U', 'V', 'A')     /* 32  YUVA-8-8-8-8  */
 #define V4L2_PIX_FMT_YUVX32                                         v4l2_fourcc('Y', 'U', 'V', 'X')     /* 32  YUVX-8-8-8-8  */
 #define V4L2_PIX_FMT_M420                                           v4l2_fourcc('M', '4', '2', '0')     /* 12  YUV 4:2:0 2 lines y, 1 line uv interleaved */
+
+#define V4L2_PIX_FMT_Y210                                           v4l2_fourcc('Y', '2', '1', '0')     /* 32  YUYV 4:2:2 */
+#define V4L2_PIX_FMT_Y212                                           v4l2_fourcc('Y', '2', '1', '2')     /* 32  YUYV 4:2:2 */
+#define V4L2_PIX_FMT_Y216                                           v4l2_fourcc('Y', '2', '1', '6')     /* 32  YUYV 4:2:2 */
 
 #define V4L2_PIX_FMT_NV12                                           v4l2_fourcc('N', 'V', '1', '2')     /* 12  Y/CbCr 4:2:0  */
 #define V4L2_PIX_FMT_NV21                                           v4l2_fourcc('N', 'V', '2', '1')     /* 12  Y/CrCb 4:2:0  */
