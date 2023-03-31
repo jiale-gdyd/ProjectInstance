@@ -104,7 +104,7 @@ int AxPiModelHumanPoseAxppl::inference(axpi_image_t *pstFrame, axpi_bbox_t *crop
         }
     }
 
-    int count = MIN(idxs.size(), MAX_POSE_COUNT);
+    int count = MIN(idxs.size(), mMaxSubInferCount);
     results->objects.resize(count);
 
     for (int i = 0; i < count; i++) {
@@ -217,7 +217,9 @@ int AxPiModelHandPose::inference(axpi_image_t *pstFrame, axpi_bbox_t *crop_resiz
         return ret;
     }
 
-    for (size_t i = 0; i < results->objects.size(); i++) {
+    int count = MIN(results->objects.size(), mMaxSubInferCount);
+    results->objects.resize(count);
+    for (int i = 0; i < count; i++) {
         mModel1->setCurrentIndex(i);
         ret = mModel1->inference(pstFrame, crop_resize_box, results);
         if (ret) {
@@ -269,8 +271,8 @@ int AxPiModelFaceRecognition::inference(axpi_image_t *pstFrame, axpi_bbox_t *cro
                     continue;
                 }
 
-                faceid.feat.resize(FACE_FEAT_LEN);
-                memcpy(faceid.feat.data(), Results.objects[0].faceFeat.data, FACE_FEAT_LEN * sizeof(float));
+                faceid.feat.resize(mFaceFeatLength);
+                memcpy(faceid.feat.data(), Results.objects[0].faceFeat.data, mFaceFeatLength * sizeof(float));
             }
 
             axpi_memfree(npu_image.phy, npu_image.vir);
@@ -284,7 +286,9 @@ int AxPiModelFaceRecognition::inference(axpi_image_t *pstFrame, axpi_bbox_t *cro
         return ret;
     }
 
-    for (int i = 0; i < results->objects.size(); i++) {
+    int count = MIN(results->objects.size(), mMaxSubInferCount);
+    results->objects.resize(count);
+    for (int i = 0; i < count; i++) {
         mModel1->setCurrentIndex(i);
         ret = mModel1->inference(pstFrame, crop_resize_box, results);
         if (ret) {
@@ -295,11 +299,11 @@ int AxPiModelFaceRecognition::inference(axpi_image_t *pstFrame, axpi_bbox_t *cro
         int maxidx = -1;
         float max_score = 0;
         for (size_t j = 0; j < mFaceRegisterIds.size(); j++) {
-            if (mFaceRegisterIds[j].feat.size() != FACE_FEAT_LEN) {
+            if (mFaceRegisterIds[j].feat.size() != mFaceFeatLength) {
                 continue;
             }
 
-            float sim = _calcSimilar((float *)results->objects[i].faceFeat.data, mFaceRegisterIds[j].feat.data(), FACE_FEAT_LEN);
+            float sim = _calcSimilar((float *)results->objects[i].faceFeat.data, mFaceRegisterIds[j].feat.data(), mFaceFeatLength);
             if ((sim > max_score) && (sim > mFaceRecThreshold)) {
                 maxidx = j;
                 max_score = sim;
@@ -313,7 +317,7 @@ int AxPiModelFaceRecognition::inference(axpi_image_t *pstFrame, axpi_bbox_t *cro
                 strcpy(results->objects[i].objname, "unknown");
             }
         } else {
-           strcpy(results->objects[i].objname,"unknown");
+           strcpy(results->objects[i].objname, "unknown");
         }
     }
 
@@ -327,7 +331,9 @@ int AxPiModelVehicleLicenseRecognition::inference(axpi_image_t *pstFrame, axpi_b
         return ret;
     }
 
-    for (int i = 0; i < results->objects.size(); i++) {
+    int count = MIN(results->objects.size(), mMaxSubInferCount);
+    results->objects.resize(count);
+    for (int i = 0; i < count; i++) {
         mModel1->setCurrentIndex(i);
         ret = mModel1->inference(pstFrame, crop_resize_box, results);
         if (ret) {

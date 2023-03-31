@@ -16,8 +16,6 @@ protected:
 
 class AxPiModelPoseHrnetSub : public AxPiModelMLSub {
 protected:
-    bool use_warp_preprocess = false;
-
     int preprocess(axpi_image_t *srcFrame, axpi_bbox_t *crop_resize_box, axpi_results_t *results) override;
     int post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resize_box, axpi_results_t *results) override;
 };

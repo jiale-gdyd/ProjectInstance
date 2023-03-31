@@ -14,6 +14,14 @@ static int g_classCount = 80;
 static float g_probThreshold = 0.4f;
 static float g_nmsThreshold = 0.45f;
 
+#ifndef MAX_YOLOV5_MASK_OBJ_COUNT
+#define MAX_YOLOV5_MASK_OBJ_COUNT   8
+#endif
+
+#ifndef MAX_HAND_BBOX_COUNT
+#define MAX_HAND_BBOX_COUNT         2
+#endif
+
 static std::vector<float> g_anchors = {
     12, 16, 19, 36, 40, 28,
     36, 75, 76, 55, 72, 146,

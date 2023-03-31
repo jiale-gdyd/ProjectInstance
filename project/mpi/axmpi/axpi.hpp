@@ -6,13 +6,8 @@
 
 namespace axpi {
 #define MAX_BBOX_COUNT                   64
-#define MAX_FACE_BBOX_COUNT              64
-#define MAX_YOLOV5_MASK_OBJ_COUNT        8
-#define MAX_POSE_COUNT                   3
 #define OBJ_NAME_MAX_LEN                 20
-#define MAX_HAND_BBOX_COUNT              2
 #define RINGBUFFER_CACHE_COUNT           8
-#define FACE_FEAT_LEN                    512
 
 #define PLATE_LMK_SIZE                  4
 #define FACE_LMK_SIZE                   5

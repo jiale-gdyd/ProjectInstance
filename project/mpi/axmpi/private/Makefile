@@ -1,3 +1,4 @@
+obj-y += mp4/
 obj-y += joint/
 obj-y += common/
 obj-y += axpipe/

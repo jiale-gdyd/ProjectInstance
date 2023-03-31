@@ -30,7 +30,7 @@ int AxPiModelPoseHrnetSub::preprocess(axpi_image_t *pstFrame, axpi_bbox_t *crop_
             mMalloc = true;
         }
 
-        if (use_warp_preprocess) {
+        if (mUseWarpPreprocess) {
             cv::Point2f src_pts[4];
 
             if ((HumObj.bbox.w / HumObj.bbox.h) > (float(getAlgoWidth()) / float(getAlgoHeight()))) {
@@ -86,7 +86,7 @@ int AxPiModelPoseHrnetSub::preprocess(axpi_image_t *pstFrame, axpi_bbox_t *crop_
 int AxPiModelPoseHrnetSub::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resize_box, axpi_results_t *results)
 {
     if (mSimpleRingBuffer.size() == 0) {
-        mSimpleRingBuffer.resize(RINGBUFFER_CACHE_COUNT);
+        mSimpleRingBuffer.resize(RINGBUFFER_CACHE_COUNT * mMaxSubInferCount);
     }
 
     pose::ai_body_parts_s ai_point_result;
@@ -100,7 +100,7 @@ int AxPiModelPoseHrnetSub::post_process(axpi_image_t *pstFrame, axpi_bbox_t *cro
     // results->objects[mCurrentIdx].landmark = points;
 
     std::vector<axpi_point_t> landmark;
-    if (use_warp_preprocess) {
+    if (mUseWarpPreprocess) {
         for (size_t i = 0; i < BODY_LMK_SIZE; i++) {
             axpi_point_t point;
 
@@ -130,7 +130,7 @@ int AxPiModelPoseHrnetSub::post_process(axpi_image_t *pstFrame, axpi_bbox_t *cro
 int AxPiModelPoseAxpplSub::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resize_box, axpi_results_t *results)
 {
     if (mSimpleRingBuffer.size() == 0) {
-        mSimpleRingBuffer.resize(RINGBUFFER_CACHE_COUNT);
+        mSimpleRingBuffer.resize(RINGBUFFER_CACHE_COUNT * mMaxSubInferCount);
     }
 
     pose::ai_body_parts_s ai_point_result;
@@ -146,7 +146,7 @@ int AxPiModelPoseAxpplSub::post_process(axpi_image_t *pstFrame, axpi_bbox_t *cro
     // results->objects[mCurrentIdx].landmark = points;
 
     std::vector<axpi_point_t> landmark;
-    if (use_warp_preprocess) {
+    if (mUseWarpPreprocess) {
         for (size_t i = 0; i < BODY_LMK_SIZE; i++) {
             axpi_point_t point;
 
@@ -175,7 +175,7 @@ int AxPiModelPoseAxpplSub::post_process(axpi_image_t *pstFrame, axpi_bbox_t *cro
 int AxPiModelPoseHrnetAnimalSub::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resize_box, axpi_results_t *results)
 {
     if (mSimpleRingBuffer.size() == 0) {
-        mSimpleRingBuffer.resize(RINGBUFFER_CACHE_COUNT);
+        mSimpleRingBuffer.resize(RINGBUFFER_CACHE_COUNT * mMaxSubInferCount);
     }
 
     pose::ai_body_parts_s ai_point_result;
@@ -189,7 +189,7 @@ int AxPiModelPoseHrnetAnimalSub::post_process(axpi_image_t *pstFrame, axpi_bbox_
     // results->objects[mCurrentIdx].landmark = points;
 
     std::vector<axpi_point_t> landmark;
-    if (use_warp_preprocess) {
+    if (mUseWarpPreprocess) {
         for (size_t i = 0; i < ANIMAL_LMK_SIZE; i++) {
             axpi_point_t point;
 
@@ -272,7 +272,7 @@ int AxPiModelPoseHandSub::preprocess(axpi_image_t *pstFrame, axpi_bbox_t *crop_r
 int AxPiModelPoseHandSub::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resize_box, axpi_results_t *results)
 {
     if (mSimpleRingBuffer.size() == 0) {
-        mSimpleRingBuffer.resize(RINGBUFFER_CACHE_COUNT * MAX_HAND_BBOX_COUNT);
+        mSimpleRingBuffer.resize(RINGBUFFER_CACHE_COUNT * mMaxSubInferCount);
     }
 
     auto &info_point = mRunner->getSpecOutput(0);
@@ -340,11 +340,12 @@ int AxPiModelFaceFeatExtractorSub::post_process(axpi_image_t *pstFrame, axpi_bbo
     }
 
     auto &feat = mSimpleRingBuffer_FaceFeat.next();
-    feat.resize(FACE_FEAT_LEN);
-    memcpy(feat.data(), mRunner->getSpecOutput(0).pVirAddr, FACE_FEAT_LEN * sizeof(float));
-    _normalize(feat.data(), FACE_FEAT_LEN);
 
-    results->objects[mCurrentIdx].faceFeat.w = FACE_FEAT_LEN * 4;
+    feat.resize(mFaceFeatLength);
+    memcpy(feat.data(), mRunner->getSpecOutput(0).pVirAddr, mFaceFeatLength * sizeof(float));
+    _normalize(feat.data(), mFaceFeatLength);
+
+    results->objects[mCurrentIdx].faceFeat.w = mFaceFeatLength * 4;
     results->objects[mCurrentIdx].faceFeat.h = 1;
     results->objects[mCurrentIdx].faceFeat.data = (unsigned char *)feat.data();
 

@@ -7,6 +7,8 @@
 #include <pthread.h>
 #include <functional>
 
+#include "private/mp4/mp4Demuxer.hpp"
+
 namespace axpi {
 #define OSD_RGN_COUNT               5
 #define IVPS_GRP_COUNT              20

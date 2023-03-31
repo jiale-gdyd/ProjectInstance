@@ -57,6 +57,10 @@ int AxPiModelYolov5::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resi
 
 int AxPiModelYolov5Seg::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resize_box, axpi_results_t *results)
 {
+    if (mSimpleRingBuffer.size()) {
+        mSimpleRingBuffer.resize(mMaxMaskObjectCount * RINGBUFFER_CACHE_COUNT);
+    }
+
     std::vector<detect::Object> objects;
     std::vector<detect::Object> proposals;
 
@@ -81,13 +85,13 @@ int AxPiModelYolov5Seg::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_r
     auto &output = pOutputsInfo[3];
     auto ptr = (float *)output.pVirAddr;
 
-    detect::get_out_bbox_mask(proposals, objects, MAX_YOLOV5_MASK_OBJ_COUNT, ptr, DEFAULT_MASK_PROTO_DIM, DEFAULT_MASK_SAMPLE_STRIDE, mNmsThreshold, getAlgoHeight(), getAlgoWidth(), mDetBboxRestoreHeight, mDetBboxRestoreWidth);
+    detect::get_out_bbox_mask(proposals, objects, mMaxMaskObjectCount, ptr, DEFAULT_MASK_PROTO_DIM, DEFAULT_MASK_SAMPLE_STRIDE, mNmsThreshold, getAlgoHeight(), getAlgoWidth(), mDetBboxRestoreHeight, mDetBboxRestoreWidth);
 
     std::sort(objects.begin(), objects.end(), [&](detect::Object &a, detect::Object &b) {
         return a.rect.area() > b.rect.area();
     });
 
-    static SimpleRingBuffer<cv::Mat> mSimpleRingBuffer(MAX_YOLOV5_MASK_OBJ_COUNT * RINGBUFFER_CACHE_COUNT);
+    static SimpleRingBuffer<cv::Mat> mSimpleRingBuffer(mMaxMaskObjectCount * RINGBUFFER_CACHE_COUNT);
 
     size_t objsSize = MIN(objects.size(), MAX_BBOX_COUNT);
     for (size_t i = 0; i < objsSize; i++) {
@@ -151,7 +155,7 @@ void AxPiModelYolov5Seg::drawCustom(cv::Mat &image, axpi_results_t *results, flo
 int AxPiModelYolov5Face::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resize_box, axpi_results_t *results)
 {
     if (mSimpleRingBuffer.size() == 0) {
-        mSimpleRingBuffer.resize(RINGBUFFER_CACHE_COUNT * MAX_FACE_BBOX_COUNT);
+        mSimpleRingBuffer.resize(RINGBUFFER_CACHE_COUNT * MAX_BBOX_COUNT);
     }
 
     std::vector<detect::Object> objects;
@@ -177,7 +181,7 @@ int AxPiModelYolov5Face::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_
         return a.rect.area() > b.rect.area();
     });
 
-    size_t objsSize = MIN(objects.size(), MAX_FACE_BBOX_COUNT);
+    size_t objsSize = MIN(objects.size(), MAX_BBOX_COUNT);
     for (size_t i = 0; i < objsSize; i++) {
         axpi_object_t axobj;
         const detect::Object &obj = objects[i];
@@ -413,7 +417,7 @@ int AxPiModelYolov7::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resi
 int AxPiModelYolov7Face::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resize_box, axpi_results_t *results)
 {
     if (mSimpleRingBuffer.size() == 0) {
-        mSimpleRingBuffer.resize(RINGBUFFER_CACHE_COUNT * MAX_FACE_BBOX_COUNT);
+        mSimpleRingBuffer.resize(RINGBUFFER_CACHE_COUNT * MAX_BBOX_COUNT);
     }
 
     std::vector<detect::Object> objects;
@@ -439,7 +443,7 @@ int AxPiModelYolov7Face::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_
         return a.rect.area() > b.rect.area();
     });
 
-    size_t objSize = MIN(objects.size(), MAX_FACE_BBOX_COUNT);
+    size_t objSize = MIN(objects.size(), MAX_BBOX_COUNT);
     for (size_t i = 0; i < objSize; i++) {
         axpi_object_t axobj;
         const detect::Object &obj = objects[i];
@@ -500,7 +504,7 @@ int AxPiModelYolov7FacePlamHand::post_process(axpi_image_t *pstFrame, axpi_bbox_
         return a.rect.area() > b.rect.area();
     });
 
-    size_t objSize = MIN(objects.size(), MAX_HAND_BBOX_COUNT);
+    size_t objSize = MIN(objects.size(), MAX_BBOX_COUNT);
     for (size_t i = 0; i < objSize; i++) {
         axpi_object_t axobj;
         const detect::PalmObject &obj = objects[i];
@@ -554,7 +558,7 @@ int AxPiModelPlamHand::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_re
         return a.rect.area() > b.rect.area();
     });
 
-    size_t objSize = MIN(objects.size(), MAX_HAND_BBOX_COUNT);
+    size_t objSize = MIN(objects.size(), MAX_BBOX_COUNT);
     for (size_t i = 0; i < objSize; i++) {
         axpi_object_t axobj;
         const detect::PalmObject &obj = objects[i];
@@ -916,7 +920,7 @@ int AxPiModelNanoDetect::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_
 int AxPiModelSCRFD::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resize_box, axpi_results_t *results)
 {
     if (mSimpleRingBuffer.size() == 0) {
-        mSimpleRingBuffer.resize(RINGBUFFER_CACHE_COUNT * MAX_FACE_BBOX_COUNT);
+        mSimpleRingBuffer.resize(RINGBUFFER_CACHE_COUNT * MAX_BBOX_COUNT);
     }
 
     std::vector<detect::Object> objects;
@@ -948,7 +952,7 @@ int AxPiModelSCRFD::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resiz
         return a.rect.area() > b.rect.area();
     });
 
-    size_t objSize = MIN(objects.size(), MAX_FACE_BBOX_COUNT);
+    size_t objSize = MIN(objects.size(), MAX_BBOX_COUNT);
     for (size_t i = 0; i < objSize; i++) {
         axpi_object_t axobj;
         const detect::Object &obj = objects[i];
@@ -1036,6 +1040,10 @@ int AxPiModelYolov8::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resi
 
 int AxPiModelYolov8Seg::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_resize_box, axpi_results_t *results)
 {
+    if (mSimpleRingBuffer.size()) {
+        mSimpleRingBuffer.resize(mMaxMaskObjectCount * RINGBUFFER_CACHE_COUNT);
+    }
+
     std::vector<detect::Object> objects;
     std::vector<detect::Object> proposals;
     const axpi_runner_tensor_t *pOutputsInfo = mRunner->getOutputsPtr();
@@ -1060,13 +1068,13 @@ int AxPiModelYolov8Seg::post_process(axpi_image_t *pstFrame, axpi_bbox_t *crop_r
     auto &output = pOutputsInfo[9];
     auto ptr = (float *)output.pVirAddr;
 
-    detect::get_out_bbox_mask(proposals, objects, MAX_YOLOV5_MASK_OBJ_COUNT, ptr, DEFAULT_MASK_PROTO_DIM, DEFAULT_MASK_SAMPLE_STRIDE, mNmsThreshold, getAlgoHeight(), getAlgoWidth(), mDetBboxRestoreHeight, mDetBboxRestoreWidth);
+    detect::get_out_bbox_mask(proposals, objects, mMaxMaskObjectCount, ptr, DEFAULT_MASK_PROTO_DIM, DEFAULT_MASK_SAMPLE_STRIDE, mNmsThreshold, getAlgoHeight(), getAlgoWidth(), mDetBboxRestoreHeight, mDetBboxRestoreWidth);
 
     std::sort(objects.begin(), objects.end(), [&](detect::Object &a, detect::Object &b) {
         return a.rect.area() > b.rect.area();
     });
 
-    static SimpleRingBuffer<cv::Mat> mSimpleRingBuffer(MAX_YOLOV5_MASK_OBJ_COUNT * RINGBUFFER_CACHE_COUNT);
+    static SimpleRingBuffer<cv::Mat> mSimpleRingBuffer(mMaxMaskObjectCount * RINGBUFFER_CACHE_COUNT);
 
     size_t objSize = MIN(objects.size(), MAX_BBOX_COUNT);
     for (size_t i = 0; i < objSize; i++) {

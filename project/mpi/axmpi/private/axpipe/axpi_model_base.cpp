@@ -174,6 +174,15 @@ int AxPiModelSingleBase::init(void *jsonData)
     update_val(jsondata, "model_path", &mModelPath);
     update_val(jsondata, "strides", &mStrides);
 
+    update_val(jsondata, "max_mask_object_count", &mMaxMaskObjectCount);
+    mMaxMaskObjectCount = MIN(mMaxMaskObjectCount, MAX_BBOX_COUNT);
+
+    update_val(jsondata, "max_sub_infer_count", &mMaxSubInferCount);
+    mMaxSubInferCount = MIN(mMaxSubInferCount, MAX_BBOX_COUNT);
+
+    update_val(jsondata, "face_feat_length", &mFaceFeatLength);
+    update_val(jsondata, "use_warp_preprocess", &mUseWarpPreprocess);
+
     std::string strModelType;
     mModelType = getModelType(&jsondata, strModelType);
 
@@ -290,9 +299,28 @@ int AxPiModelMultiBase::init(void *jsonData)
             }
         }
 
-        update_val(json_minor, "face_recognition_threshold", &mFaceRecThreshold);
         mModel1->init((void *)&json_minor);
-    }else {
+
+        update_val(json_minor, "face_recognition_threshold", &mFaceRecThreshold);
+
+        update_val(jsondata, "max_mask_object_count", &mMaxMaskObjectCount);
+        mMaxMaskObjectCount = MIN(mMaxMaskObjectCount, MAX_BBOX_COUNT);
+    
+        update_val(jsondata, "max_sub_infer_count", &mMaxSubInferCount);
+        mMaxSubInferCount = MIN(mMaxSubInferCount, MAX_BBOX_COUNT);
+
+        update_val(jsondata, "face_feat_length", &mFaceFeatLength);
+
+        mModel0->setFaceRecognitionThreshold(mFaceRecThreshold);
+        mModel0->setMaxMaskObjectCount(mMaxMaskObjectCount);
+        mModel0->setSubInferCount(mMaxSubInferCount);
+        mModel0->setFaceFeatLength(mFaceFeatLength);
+
+        mModel1->setFaceRecognitionThreshold(mFaceRecThreshold);
+        mModel1->setMaxMaskObjectCount(mMaxMaskObjectCount);
+        mModel1->setSubInferCount(mMaxSubInferCount);
+        mModel1->setFaceFeatLength(mFaceFeatLength);
+    } else {
         return -1;
     }
 

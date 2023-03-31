@@ -12,6 +12,10 @@
 #include "../utilities/multikeymap.hpp"
 #include "../utilities/matPixelAffine.hpp"
 
+#ifndef FACE_FEAT_LEN
+#define FACE_FEAT_LEN   512
+#endif
+
 namespace axpi {
 typedef struct {
     std::string        name;

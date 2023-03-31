@@ -16,6 +16,11 @@ protected:
     int   mDetBboxRestoreWidth = 1920;
     int   mDetBboxRestoreHeight = 1080;
 
+    int   mFaceFeatLength = 512;
+    int   mMaxSubInferCount = 3;
+    int   mMaxMaskObjectCount = 8;
+    bool  mUseWarpPreprocess = false;
+
     int   mClassCount = 80;
     float mProbThreshold = 0.4f;
     float mNmsThreshold = 0.45f;
@@ -81,6 +86,30 @@ protected:
     }
 
 public:
+    int getSubInferCount() {
+        return mMaxSubInferCount;
+    }
+
+    void setSubInferCount(int count) {
+        mMaxSubInferCount = count;
+    }
+
+    int getMaxMaskObjectCount() {
+        return mMaxMaskObjectCount;
+    }
+
+    void setMaxMaskObjectCount(int count) {
+        mMaxMaskObjectCount = count;
+    }
+
+    int getFaceFeatLength() {
+        return mFaceFeatLength;
+    }
+
+    void setFaceFeatLength(int length) {
+        mFaceFeatLength = length;
+    }
+
     void setCurrentIndex(int idx) {
         mCurrentIdx = idx;
     }
