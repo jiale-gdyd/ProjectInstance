@@ -279,10 +279,10 @@
 #define X_PASTE_ARGS(identifier1, identifier2)              identifier1 ## identifier2
 #define X_PASTE(identifier1, identifier2)                   X_PASTE_ARGS(identifier1, identifier2)
 
-#if (X_C_STD_CHECK_VERSION(11) || x_macro__has_feature(c_static_assert) || x_macro__has_extension(c_static_assert))
-#define X_STATIC_ASSERT(expr)                               _Static_assert(expr, "Expression evaluates to false")
-#elif X_CXX_STD_CHECK_VERSION(11)
+#if X_CXX_STD_CHECK_VERSION(11)
 #define X_STATIC_ASSERT(expr)                               static_assert(expr, "Expression evaluates to false")
+#elif (X_C_STD_CHECK_VERSION(11) || x_macro__has_feature(c_static_assert) || x_macro__has_extension(c_static_assert))
+#define X_STATIC_ASSERT(expr)                               _Static_assert(expr, "Expression evaluates to false")
 #else
 #ifdef __COUNTER__
 #define X_STATIC_ASSERT(expr)                               typedef char X_PASTE(_XStaticAssertCompileTimeAssertion_, __COUNTER__)[(expr) ? 1 : -1] X_GNUC_UNUSED
