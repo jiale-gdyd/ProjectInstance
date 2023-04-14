@@ -10,12 +10,12 @@
 ### 构建基于瑞星微rv1109/rv1126的应用
 + 构建基于rv1109/rv1126 soc的简单EMS应用
    ```shell
-   ./build.sh rv11xx_media_ems   最终生成Rv11xxEMSApp可执行文件，可修改build.rv11xx.version中对应名字的版本号
+   ./build.sh rv11xx_media_app   最终生成Rv11xxEMSApp可执行文件，可修改build.rv11xx.version中对应名字的版本号
    ```
 ### 构建基于爱心元智AX620A的应用
 + 构建基于爱心元智AX620A soc的简单EMS应用
    ```shell
-   ./build.sh ax620a_media_ems   最终生成Ax620aEMSApp可执行文件，可修改build.ax620a.version中对应名字的版本号
+   ./build.sh ax620a_media_app   最终生成Ax620aEMSApp可执行文件，可修改build.ax620a.version中对应名字的版本号
    ```
 
 ### 工程清理与帮助
