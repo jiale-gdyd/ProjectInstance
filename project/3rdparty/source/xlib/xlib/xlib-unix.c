@@ -33,9 +33,9 @@ static xboolean x_unix_set_error_from_errno(XError **error, xint saved_errno)
 
 xboolean x_unix_open_pipe(int *fds, int flags, XError **error)
 {
-    x_return_val_if_fail((flags & (FD_CLOEXEC)) == flags, FALSE);
+    x_return_val_if_fail((flags & (FD_CLOEXEC | O_NONBLOCK)) == flags, FALSE);
 
-    if (!x_unix_open_pipe_internal(fds, (flags & FD_CLOEXEC) != 0)) {
+    if (!x_unix_open_pipe_internal(fds, (flags & FD_CLOEXEC) != 0, (flags & O_NONBLOCK) != 0)) {
         return x_unix_set_error_from_errno(error, errno);
     }
 

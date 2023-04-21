@@ -199,7 +199,7 @@ static void stack_trace(const char *const *args)
     stack_trace_done = FALSE;
     signal(SIGCHLD, stack_trace_sigchld);
 
-    if (!x_unix_open_pipe_internal(in_fd, TRUE) || !x_unix_open_pipe_internal(out_fd, TRUE)) {
+    if (!x_unix_open_pipe_internal(in_fd, TRUE, FALSE) || !x_unix_open_pipe_internal(out_fd, TRUE, FALSE)) {
         perror("unable to open pipe");
         _exit(0);
     }

@@ -1915,7 +1915,7 @@ xuint x_signal_handlers_block_matched(xpointer instance, XSignalMatchType mask, 
     x_return_val_if_fail(X_TYPE_CHECK_INSTANCE(instance), 0);
     x_return_val_if_fail((mask & ~X_SIGNAL_MATCH_MASK) == 0, 0);
 
-    if (mask & (X_SIGNAL_MATCH_CLOSURE | X_SIGNAL_MATCH_FUNC | X_SIGNAL_MATCH_DATA)) {
+    if (mask & (X_SIGNAL_MATCH_ID | X_SIGNAL_MATCH_CLOSURE | X_SIGNAL_MATCH_FUNC | X_SIGNAL_MATCH_DATA)) {
         SIGNAL_LOCK();
         n_handlers = signal_handlers_foreach_matched_unlocked_R(instance, mask, signal_id, detail, closure, func, data, signal_handler_block_unlocked);
         SIGNAL_UNLOCK();
@@ -1931,7 +1931,7 @@ xuint x_signal_handlers_unblock_matched(xpointer instance, XSignalMatchType mask
     x_return_val_if_fail(X_TYPE_CHECK_INSTANCE(instance), 0);
     x_return_val_if_fail((mask & ~X_SIGNAL_MATCH_MASK) == 0, 0);
 
-    if (mask & (X_SIGNAL_MATCH_CLOSURE | X_SIGNAL_MATCH_FUNC | X_SIGNAL_MATCH_DATA)) {
+    if (mask & (X_SIGNAL_MATCH_ID | X_SIGNAL_MATCH_CLOSURE | X_SIGNAL_MATCH_FUNC | X_SIGNAL_MATCH_DATA)) {
         SIGNAL_LOCK();
         n_handlers = signal_handlers_foreach_matched_unlocked_R(instance, mask, signal_id, detail, closure, func, data, signal_handler_unblock_unlocked);
         SIGNAL_UNLOCK();
@@ -1947,7 +1947,7 @@ xuint x_signal_handlers_disconnect_matched(xpointer instance, XSignalMatchType m
     x_return_val_if_fail(X_TYPE_CHECK_INSTANCE(instance), 0);
     x_return_val_if_fail((mask & ~X_SIGNAL_MATCH_MASK) == 0, 0);
 
-    if (mask & (X_SIGNAL_MATCH_CLOSURE | X_SIGNAL_MATCH_FUNC | X_SIGNAL_MATCH_DATA)) {
+    if (mask & (X_SIGNAL_MATCH_ID | X_SIGNAL_MATCH_CLOSURE | X_SIGNAL_MATCH_FUNC | X_SIGNAL_MATCH_DATA)) {
         SIGNAL_LOCK();
         n_handlers = signal_handlers_foreach_matched_unlocked_R(instance, mask, signal_id, detail, closure, func, data, signal_handler_disconnect_unlocked);
         SIGNAL_UNLOCK();

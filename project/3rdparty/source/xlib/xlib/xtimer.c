@@ -101,6 +101,10 @@ xboolean x_timer_is_active(XTimer *timer)
 
 void x_usleep(xulong microseconds)
 {
+    if X_UNLIKELY(microseconds == 0) {
+        return;
+    }
+
     struct timespec request, remaining;
 
     request.tv_sec = microseconds / X_USEC_PER_SEC;

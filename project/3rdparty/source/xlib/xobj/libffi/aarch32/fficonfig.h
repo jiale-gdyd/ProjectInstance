@@ -76,7 +76,7 @@
 #define HAVE_MEMCPY 1
 
 /* Define to 1 if you have the `memfd_create' function. */
-/*#define HAVE_MEMFD_CREATE 1*/
+/* #define HAVE_MEMFD_CREATE 1 */
 
 /* Define to 1 if you have the `mkostemp' function. */
 #define HAVE_MKOSTEMP 1

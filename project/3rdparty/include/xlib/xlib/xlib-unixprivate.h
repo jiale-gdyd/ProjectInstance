@@ -22,13 +22,22 @@ X_BEGIN_DECLS
 
 extern int pipe2(int pipefd[2], int flags);
 
-static inline xboolean x_unix_open_pipe_internal(int *fds, xboolean close_on_exec)
+static inline xboolean x_unix_open_pipe_internal(int *fds, xboolean close_on_exec, xboolean nonblock)
 {
 #ifdef HAVE_PIPE2
     do {
         int ecode;
+        int flags = 0;
 
-        ecode = pipe2(fds, close_on_exec ? O_CLOEXEC : 0);
+        if (close_on_exec) {
+            flags |= O_CLOEXEC;
+        }
+
+        if (nonblock) {
+            flags |= O_NONBLOCK;
+        }
+
+        ecode = pipe2(fds, flags);
         if ((ecode == -1) && (errno != ENOSYS)) {
             return FALSE;
         } else if (ecode == 0) {
@@ -42,19 +51,36 @@ static inline xboolean x_unix_open_pipe_internal(int *fds, xboolean close_on_exe
     }
 
     if (!close_on_exec) {
-        return TRUE;
+        if (fcntl(fds[0], F_SETFD, FD_CLOEXEC) == -1 || fcntl(fds[1], F_SETFD, FD_CLOEXEC) == -1) {
+            int saved_errno = errno;
+
+            close(fds[0]);
+            close(fds[1]);
+            fds[0] = -1;
+            fds[1] = -1;
+
+            errno = saved_errno;
+            return FALSE;
+        }
     }
 
-    if ((fcntl(fds[0], F_SETFD, FD_CLOEXEC) == -1) || (fcntl(fds[1], F_SETFD, FD_CLOEXEC) == -1)) {
-        int saved_errno = errno;
+    if (nonblock) {
+#ifdef O_NONBLOCK
+        int flags = O_NONBLOCK;
+#else
+        int flags = O_NDELAY;
+#endif
 
-        close(fds[0]);
-        close(fds[1]);
-        fds[0] = -1;
-        fds[1] = -1;
+        if (fcntl(fds[0], F_SETFL, flags) == -1 || fcntl(fds[1], F_SETFL, flags) == -1) {
+            int saved_errno = errno;
+            close(fds[0]);
+            close(fds[1]);
+            fds[0] = -1;
+            fds[1] = -1;
 
-        errno = saved_errno;
-        return FALSE;
+            errno = saved_errno;
+            return FALSE;
+        }
     }
 
     return TRUE;

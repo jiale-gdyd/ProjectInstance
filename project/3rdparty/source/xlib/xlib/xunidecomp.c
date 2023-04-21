@@ -227,10 +227,27 @@ xunichar *_x_utf8_normalize_wc(const xchar *str, xssize max_len, XNormalizeMode 
     p = str;
 
     while ((max_len < 0 || p < str + max_len) && *p) {
+        xunichar wc;
         const xchar *decomp;
-        xunichar wc = x_utf8_get_char(p);
+        const char *next, *between;
 
-        if (wc >= SBase && wc < SBase + SCount) {
+        next = x_utf8_next_char(p);
+        if (max_len < 0) {
+            for (between = &p[1]; between < next; between++) {
+                if (X_UNLIKELY(!*between)) {
+                    return NULL;
+                }
+            }
+        } else {
+            if (X_UNLIKELY(next > str + max_len)) {
+                return NULL;
+            }
+        }
+
+        wc = x_utf8_get_char(p);
+        if (X_UNLIKELY(wc == (xunichar)-1)) {
+            return NULL;
+        } else if (wc >= SBase && wc < SBase + SCount) {
             xsize result_len;
             decompose_hangul(wc, NULL, &result_len);
             n_wc += result_len;
@@ -243,7 +260,7 @@ xunichar *_x_utf8_normalize_wc(const xchar *str, xssize max_len, XNormalizeMode 
             }
         }
 
-        p = x_utf8_next_char(p);
+        p = next;
     }
 
     wc_buffer = x_new(xunichar, n_wc + 1);
@@ -332,11 +349,13 @@ xunichar *_x_utf8_normalize_wc(const xchar *str, xssize max_len, XNormalizeMode 
 
 xchar *x_utf8_normalize(const xchar *str, xssize len, XNormalizeMode mode)
 {
-    xchar *result;
+    xchar *result = NULL;
     xunichar *result_wc = _x_utf8_normalize_wc(str, len, mode);
 
-    result = x_ucs4_to_utf8(result_wc, -1, NULL, NULL, NULL);
-    x_free(result_wc);
+    if (X_LIKELY(result_wc != NULL)) {
+        result = x_ucs4_to_utf8(result_wc, -1, NULL, NULL, NULL);
+        x_free(result_wc);
+    }
 
     return result;
 }

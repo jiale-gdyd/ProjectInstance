@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2023-03-22 [mpp_dec/enc_cfg]: fix out of bounds issue";
+static const char *mpp_last_commit_message = "2023-04-18 [misc]: Fix Clang warning";
 
 void show_mpp_version(void)
 {

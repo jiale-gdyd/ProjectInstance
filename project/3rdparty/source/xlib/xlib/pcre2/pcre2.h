@@ -6,7 +6,7 @@
 #define PCRE2_MAJOR                                             10
 #define PCRE2_MINOR                                             43
 #define PCRE2_PRERELEASE
-#define PCRE2_DATE                                              2023-01-15
+#define PCRE2_DATE                                              2023-04-14
 
 #ifndef PCRE2_EXP_DECL
 #ifdef __cplusplus
@@ -72,6 +72,7 @@ extern "C" {
 #define PCRE2_EXTRA_ASCII_BSS                                   0x00000200u
 #define PCRE2_EXTRA_ASCII_BSW                                   0x00000400u
 #define PCRE2_EXTRA_ASCII_POSIX                                 0x00000800u
+#define PCRE2_EXTRA_ASCII_DIGIT                                 0x00001000u
 
 #define PCRE2_JIT_COMPLETE                                      0x00000001u
 #define PCRE2_JIT_PARTIAL_SOFT                                  0x00000002u

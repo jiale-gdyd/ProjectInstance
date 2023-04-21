@@ -266,7 +266,7 @@ XVariant *x_variant_new_from_data(const XVariantType *type, xconstpointer data, 
 
 typedef struct _XVariantIter XVariantIter;
 struct _XVariantIter {
-    xsize x[16];
+    xuintptr x[16];
 };
 
 XLIB_AVAILABLE_IN_ALL
@@ -299,10 +299,10 @@ struct _XVariantBuilder {
         struct {
             xsize              partial_magic;
             const XVariantType *type;
-            xsize              y[14];
+            xuintptr           y[14];
         } s;
 
-        xsize                  x[16];
+        xuintptr               x[16];
     } u;
 };
 
@@ -414,10 +414,10 @@ struct _XVariantDict {
         struct {
             XVariant *asv;
             xsize    partial_magic;
-            xsize    y[14];
+            xuintptr y[14];
         } s;
 
-        xsize        x[16];
+        xuintptr     x[16];
     } u;
 };
 

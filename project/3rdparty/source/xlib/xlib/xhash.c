@@ -22,7 +22,7 @@
 #define BIG_ENTRY_SIZE                          (SIZEOF_VOID_P)
 #define SMALL_ENTRY_SIZE                        (SIZEOF_INT)
 
-#if SMALL_ENTRY_SIZE < BIG_ENTRY_SIZE
+#if SMALL_ENTRY_SIZE < BIG_ENTRY_SIZE && BIG_ENTRY_SIZE <= 8
 #define USE_SMALL_ARRAYS
 #endif
 
@@ -43,7 +43,7 @@ struct _XHashTable {
     XHashFunc       hash_func;
     XEqualFunc      key_equal_func;
     xatomicrefcount ref_count;
-    int             version;
+    xintptr         version;
     XDestroyNotify  key_destroy_func;
     XDestroyNotify  value_destroy_func;
 };

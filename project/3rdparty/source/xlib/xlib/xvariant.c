@@ -1360,6 +1360,8 @@ struct heap_iter {
     xsize             magic;
 };
 
+X_STATIC_ASSERT(sizeof(struct heap_iter) <= sizeof(XVariantIter));
+
 #define GVSI(i)                     ((struct stack_iter *)(i))
 #define GVHI(i)                     ((struct heap_iter *)(i))
 #define GVSI_MAGIC                  ((xsize)3579507750u)
@@ -1468,7 +1470,7 @@ struct heap_builder {
 #define is_valid_builder(b)                 (GVSB(b)->magic == GVSB_MAGIC)
 #define is_valid_heap_builder(b)            (GVHB(b)->magic == GVHB_MAGIC)
 
-X_STATIC_ASSERT(sizeof(XVariantBuilder) == sizeof(xsize[16]));
+X_STATIC_ASSERT(sizeof(XVariantBuilder) == sizeof(xuintptr[16]));
 
 static xboolean ensure_valid_builder(XVariantBuilder *builder)
 {
@@ -1767,7 +1769,7 @@ struct heap_dict {
 #define is_valid_dict(d)                (GVSD(d)->magic == GVSD_MAGIC)
 #define is_valid_heap_dict(d)           (GVHD(d)->magic == GVHD_MAGIC)
 
-X_STATIC_ASSERT(sizeof(XVariantDict) == sizeof(xsize[16]));
+X_STATIC_ASSERT(sizeof(XVariantDict) == sizeof(xuintptr[16]));
 
 static xboolean ensure_valid_dict(XVariantDict *dict)
 {

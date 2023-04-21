@@ -539,12 +539,20 @@ xboolean x_cond_wait_until(XCond *cond, XMutex *mutex, xint64 end_time)
 
 #ifdef __NR_futex
     {
+#ifdef __kernel_long_t
+#define KERNEL_SPAN_SEC_TYPE __kernel_long_t
         struct {
             __kernel_long_t tv_sec;
             __kernel_long_t tv_nsec;
         } span_arg;
-
-        if (X_UNLIKELY(sizeof(__kernel_long_t) < 8 && span.tv_sec > X_MAXINT32)) {
+#else
+#define KERNEL_SPAN_SEC_TYPE __kernel_time_t
+    struct {
+      __kernel_time_t tv_sec;
+      long            tv_nsec;
+    } span_arg;
+#endif
+        if (X_UNLIKELY(sizeof(KERNEL_SPAN_SEC_TYPE) < 8 && span.tv_sec > X_MAXINT32)) {
             x_error("%s: Can’t wait for more than %us", X_STRFUNC, X_MAXINT32);
         }
 
@@ -557,6 +565,8 @@ xboolean x_cond_wait_until(XCond *cond, XMutex *mutex, xint64 end_time)
 
         return success;
     }
+
+#undef KERNEL_SPAN_SEC_TYPE
 #endif
 
     x_assert_not_reached ();
