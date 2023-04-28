@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2023-04-18 [misc]: Fix Clang warning";
+static const char *mpp_last_commit_message = "2023-04-27 [mpp_mem_pool]: fix MppMemPoolNode double put issue";
 
 void show_mpp_version(void)
 {

@@ -30,6 +30,9 @@ xboolean x_atomic_ref_count_dec(xatomicrefcount *arc);
 XLIB_AVAILABLE_IN_2_58
 xboolean x_atomic_ref_count_compare(xatomicrefcount *arc, xint val);
 
+#define X_REF_COUNT_INIT          -1 XLIB_AVAILABLE_MACRO_IN_2_78
+#define X_ATOMIC_REF_COUNT_INIT   1  XLIB_AVAILABLE_MACRO_IN_2_78
+
 #if defined(__GNUC__) && defined(X_DISABLE_CHECKS)
 
 #define x_ref_count_init(rc)                                                                \

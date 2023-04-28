@@ -1,4 +1,5 @@
 obj-y += dummy/
+obj-y += common/
 obj-$(CONFIG_RKMPP_AV1D) += av1/
 obj-$(CONFIG_RKMPP_AVSD) += avs/
 obj-$(CONFIG_RKMPP_VP8D) += vp8/

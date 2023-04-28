@@ -183,7 +183,14 @@ static void x_source_set_priority_unlocked(XSource *source, XMainContext *contex
 
 static void x_child_source_remove_internal(XSource *child_source, XMainContext *context);
 
-static void x_main_context_poll(XMainContext *context, xint timeout, xint priority, XPollFD *fds, xint n_fds);
+static xboolean x_main_context_acquire_unlocked(XMainContext *context);
+static void x_main_context_release_unlocked(XMainContext *context);
+static xboolean x_main_context_prepare_unlocked(XMainContext *context, xint *priority);
+static xint x_main_context_query_unlocked(XMainContext *context, xint max_priority, xint *timeout, XPollFD *fds, xint n_fds);
+static xboolean x_main_context_check_unlocked(XMainContext *context, xint max_priority, XPollFD *fds, xint n_fds);
+static void x_main_context_dispatch_unlocked(XMainContext *context);
+static void x_main_context_poll_unlocked(XMainContext *context, int timeout, int priority, XPollFD *fds, int n_fds);
+
 static void x_main_context_add_poll_unlocked(XMainContext *context, xint priority, XPollFD *fd);
 static void x_main_context_remove_poll_unlocked(XMainContext *context, XPollFD *fd);
 
@@ -1826,13 +1833,21 @@ static void x_main_dispatch(XMainContext *context)
 xboolean x_main_context_acquire(XMainContext *context)
 {
     xboolean result = FALSE;
-    XThread *self = X_THREAD_SELF;
 
     if (context == NULL) {
         context = x_main_context_default();
     }
 
     LOCK_CONTEXT(context);
+    result = x_main_context_acquire_unlocked(context);
+    UNLOCK_CONTEXT(context); 
+
+    return result;
+}
+
+static xboolean x_main_context_acquire_unlocked(XMainContext *context)
+{
+    XThread *self = X_THREAD_SELF;
 
     if (!context->owner) {
         context->owner = self;
@@ -1842,13 +1857,11 @@ xboolean x_main_context_acquire(XMainContext *context)
 
     if (context->owner == self) {
         context->owner_count++;
-        result = TRUE;
+        return TRUE;
     } else {
         TRACE(XLIB_MAIN_CONTEXT_ACQUIRE(context, FALSE));
+        return FALSE;
     }
-
-    UNLOCK_CONTEXT(context); 
-    return result;
 }
 
 void x_main_context_release(XMainContext *context)
@@ -1858,7 +1871,22 @@ void x_main_context_release(XMainContext *context)
     }
 
     LOCK_CONTEXT(context);
+#if 0
+    if (X_UNLIKELY(context->owner != X_THREAD_SELF || context->owner_count == 0))  {
+        XThread *context_owner = context->owner;
+        xuint context_owner_count = context->owner_count;
 
+        UNLOCK_CONTEXT(context);
+        x_critical("x_main_context_release() called on a context (%p, owner %p, owner count %u) which is not acquired by the current thread", context, context_owner, context_owner_count);
+    }
+#endif
+    x_main_context_release_unlocked(context);
+
+    UNLOCK_CONTEXT(context);
+}
+
+static void x_main_context_release_unlocked(XMainContext *context)
+{
     context->owner_count--;
     if (context->owner_count == 0) {
         TRACE(XLIB_MAIN_CONTEXT_RELEASE(context));
@@ -1879,8 +1907,6 @@ void x_main_context_release(XMainContext *context)
             }
         }
     }
-
-    UNLOCK_CONTEXT(context); 
 }
 
 static xboolean x_main_context_wait_internal(XMainContext *context, XCond *cond, XMutex *mutex)
@@ -1950,23 +1976,31 @@ xboolean x_main_context_wait(XMainContext *context, XCond *cond, XMutex *mutex)
 
 xboolean x_main_context_prepare(XMainContext *context, xint *priority)
 {
-    xuint i;
-    XSource *source;
-    XSourceIter iter;
-    xint n_ready = 0;
-    xint current_priority = X_MAXINT;
+    xboolean ready;
 
     if (context == NULL) {
         context = x_main_context_default();
     }
 
     LOCK_CONTEXT(context);
+    ready = x_main_context_prepare_unlocked(context, priority);
+    UNLOCK_CONTEXT(context);
+
+    return ready;
+}
+
+static xboolean x_main_context_prepare_unlocked(XMainContext *context, xint *priority)
+{
+    xuint i;
+    XSource *source;
+    XSourceIter iter;
+    xint n_ready = 0;
+    xint current_priority = X_MAXINT;
 
     context->time_is_fresh = FALSE;
 
     if (context->in_check_or_prepare) {
-        x_warning("x_main_context_prepare() called recursively from within a source's check() or prepare() member.");
-        UNLOCK_CONTEXT(context);
+        x_warning("x_main_context_prepare_unlocked() called recursively from within a source's check() or prepare() member.");
         return FALSE;
     }
 
@@ -2064,7 +2098,6 @@ xboolean x_main_context_prepare(XMainContext *context, xint *priority)
     x_source_iter_clear(&iter);
 
     TRACE(XLIB_MAIN_CONTEXT_AFTER_PREPARE(context, current_priority, n_ready));
-    UNLOCK_CONTEXT(context);
 
     if (priority) {
         *priority = current_priority;
@@ -2076,14 +2109,23 @@ xboolean x_main_context_prepare(XMainContext *context, xint *priority)
 xint x_main_context_query(XMainContext *context, xint max_priority, xint *timeout, XPollFD *fds, xint n_fds)
 {
     xint n_poll;
-    xushort events;
-    XPollRec *pollrec, *lastpollrec;
 
     if (context == NULL) {
         context = x_main_context_default();
     }
 
     LOCK_CONTEXT(context);
+    n_poll = x_main_context_query_unlocked(context, max_priority, timeout, fds, n_fds);
+    UNLOCK_CONTEXT(context);
+
+    return n_poll;
+}
+
+static xint x_main_context_query_unlocked(XMainContext *context, xint max_priority, xint *timeout, XPollFD *fds, xint n_fds)
+{
+    xint n_poll;
+    xushort events;
+    XPollRec *pollrec, *lastpollrec;
 
     TRACE(XLIB_MAIN_CONTEXT_BEFORE_QUERY(context, max_priority));
 
@@ -2121,12 +2163,22 @@ xint x_main_context_query(XMainContext *context, xint max_priority, xint *timeou
     }
 
     TRACE(xLIB_MAIN_CONTEXT_AFTER_QUERY(context, context->timeout, fds, n_poll));
-    UNLOCK_CONTEXT(context);
 
     return n_poll;
 }
 
 xboolean x_main_context_check(XMainContext *context, xint max_priority, XPollFD *fds, xint n_fds)
+{
+    xboolean ready;
+
+    LOCK_CONTEXT(context);
+    ready = x_main_context_check_unlocked(context, max_priority, fds, n_fds);
+    UNLOCK_CONTEXT(context);
+
+    return ready;
+}
+
+static xboolean x_main_context_check_unlocked(XMainContext *context, xint max_priority, XPollFD *fds, xint n_fds)
 {
     xint i;
     XSource *source;
@@ -2137,8 +2189,6 @@ xboolean x_main_context_check(XMainContext *context, xint max_priority, XPollFD 
     if (context == NULL) {
         context = x_main_context_default();
     }
-
-    LOCK_CONTEXT(context);
 
     if (context->in_check_or_prepare) {
         x_warning("x_main_context_check() called recursively from within a source's check() or prepare() member.");
@@ -2161,8 +2211,6 @@ xboolean x_main_context_check(XMainContext *context, xint max_priority, XPollFD 
 
     if (context->poll_changed) {
         TRACE(XLIB_MAIN_CONTEXT_AFTER_CHECK(context, 0));
-
-        UNLOCK_CONTEXT(context);
         return FALSE;
     }
 
@@ -2265,7 +2313,6 @@ xboolean x_main_context_check(XMainContext *context, xint max_priority, XPollFD 
     x_source_iter_clear(&iter);
 
     TRACE(XLIB_MAIN_CONTEXT_AFTER_CHECK(context, n_ready));
-    UNLOCK_CONTEXT(context);
 
     return n_ready > 0;
 }
@@ -2277,6 +2324,12 @@ void x_main_context_dispatch(XMainContext *context)
     }
 
     LOCK_CONTEXT(context);
+    x_main_context_dispatch_unlocked(context);
+    UNLOCK_CONTEXT(context);
+}
+
+static void x_main_context_dispatch_unlocked(XMainContext *context)
+{
     TRACE(XLIB_MAIN_CONTEXT_BEFORE_DISPATCH(context));
 
     if (context->pending_dispatches->len > 0) {
@@ -2284,10 +2337,9 @@ void x_main_context_dispatch(XMainContext *context)
     }
 
     TRACE(XLIB_MAIN_CONTEXT_AFTER_DISPATCH(context));
-    UNLOCK_CONTEXT(context);
 }
 
-static xboolean x_main_context_iterate(XMainContext *context, xboolean block, xboolean dispatch, XThread *self)
+static xboolean x_main_context_iterate_unlocked(XMainContext *context, xboolean block, xboolean dispatch, XThread *self)
 {
     xint timeout;
     XPollFD *fds = NULL;
@@ -2296,14 +2348,10 @@ static xboolean x_main_context_iterate(XMainContext *context, xboolean block, xb
     xint nfds, allocated_nfds;
     xint64 begin_time_nsec X_GNUC_UNUSED;
 
-    UNLOCK_CONTEXT(context);
-
     begin_time_nsec = X_TRACE_CURRENT_TIME;
 
-    if (!x_main_context_acquire(context)) {
+    if (!x_main_context_acquire_unlocked(context)) {
         xboolean got_ownership;
-
-        LOCK_CONTEXT(context);
 
         if (!block) {
             return FALSE;
@@ -2313,8 +2361,6 @@ static xboolean x_main_context_iterate(XMainContext *context, xboolean block, xb
         if (!got_ownership) {
             return FALSE;
         }
-    } else {
-        LOCK_CONTEXT(context);
     }
 
     if (!context->cached_poll_array) {
@@ -2325,32 +2371,27 @@ static xboolean x_main_context_iterate(XMainContext *context, xboolean block, xb
     allocated_nfds = context->cached_poll_array_size;
     fds = context->cached_poll_array;
 
-    UNLOCK_CONTEXT(context);
+    x_main_context_prepare_unlocked(context, &max_priority); 
 
-    x_main_context_prepare(context, &max_priority); 
-
-    while ((nfds = x_main_context_query(context, max_priority, &timeout, fds, allocated_nfds)) > allocated_nfds) {
-        LOCK_CONTEXT(context);
+    while ((nfds = x_main_context_query_unlocked(context, max_priority, &timeout, fds, allocated_nfds)) > allocated_nfds) {
         x_free(fds);
         context->cached_poll_array_size = allocated_nfds = nfds;
         context->cached_poll_array = fds = x_new(XPollFD, nfds);
-        UNLOCK_CONTEXT(context);
     }
 
     if (!block) {
         timeout = 0;
     }
 
-    x_main_context_poll(context, timeout, max_priority, fds, nfds);
-    some_ready = x_main_context_check(context, max_priority, fds, nfds);
+    x_main_context_poll_unlocked(context, timeout, max_priority, fds, nfds);
+    some_ready = x_main_context_check_unlocked(context, max_priority, fds, nfds);
 
     if (dispatch) {
-        x_main_context_dispatch (context);
+        x_main_context_dispatch_unlocked(context);
     }
-    x_main_context_release(context);
+    x_main_context_release_unlocked(context);
 
     x_trace_mark(begin_time_nsec, X_TRACE_CURRENT_TIME - begin_time_nsec, "XLib", "x_main_context_iterate", "Context %p, %s ⇒ %s", context, block ? "blocking" : "non-blocking", some_ready ? "dispatched" : "nothing");
-    LOCK_CONTEXT(context);
 
     return some_ready;
 }
@@ -2364,7 +2405,7 @@ xboolean x_main_context_pending(XMainContext *context)
     }
 
     LOCK_CONTEXT(context);
-    retval = x_main_context_iterate(context, FALSE, FALSE, X_THREAD_SELF);
+    retval = x_main_context_iterate_unlocked(context, FALSE, FALSE, X_THREAD_SELF);
     UNLOCK_CONTEXT(context);
 
     return retval;
@@ -2379,7 +2420,7 @@ xboolean x_main_context_iteration(XMainContext *context, xboolean may_block)
     }
 
     LOCK_CONTEXT(context);
-    retval = x_main_context_iterate(context, may_block, TRUE, X_THREAD_SELF);
+    retval = x_main_context_iterate_unlocked(context, may_block, TRUE, X_THREAD_SELF);
     UNLOCK_CONTEXT(context);
 
     return retval;
@@ -2434,10 +2475,9 @@ void x_main_loop_run(XMainLoop *loop)
 
     x_atomic_int_inc(&loop->ref_count);
 
-    if (!x_main_context_acquire(loop->context)) {
+    LOCK_CONTEXT(loop->context);
+    if (!x_main_context_acquire_unlocked(loop->context)) {
         xboolean got_ownership = FALSE;
-
-        LOCK_CONTEXT(loop->context);
 
         x_atomic_int_set(&loop->is_running, TRUE);
 
@@ -2446,34 +2486,35 @@ void x_main_loop_run(XMainLoop *loop)
         }
 
         if (!x_atomic_int_get(&loop->is_running)) {
-            UNLOCK_CONTEXT(loop->context);
             if (got_ownership) {
-                x_main_context_release(loop->context);
+                x_main_context_release_unlocked(loop->context);
             }
 
+            UNLOCK_CONTEXT(loop->context);
             x_main_loop_unref(loop);
             return;
         }
 
         x_assert(got_ownership);
-    } else {
-        LOCK_CONTEXT(loop->context);
     }
 
-    if (loop->context->in_check_or_prepare) {
+    if X_UNLIKELY(loop->context->in_check_or_prepare) {
         x_warning("x_main_loop_run(): called recursively from within a source's check() or prepare() member, iteration not possible.");
+        x_main_context_release_unlocked(loop->context);
+        UNLOCK_CONTEXT(loop->context);
         x_main_loop_unref(loop);
+
         return;
     }
 
     x_atomic_int_set(&loop->is_running, TRUE);
     while (x_atomic_int_get(&loop->is_running)) {
-        x_main_context_iterate(loop->context, TRUE, TRUE, self);
+        x_main_context_iterate_unlocked(loop->context, TRUE, TRUE, self);
     }
 
+    x_main_context_release_unlocked(loop->context);
     UNLOCK_CONTEXT(loop->context);
 
-    x_main_context_release(loop->context);
     x_main_loop_unref(loop);
 }
 
@@ -2508,18 +2549,18 @@ XMainContext *x_main_loop_get_context(XMainLoop *loop)
     return loop->context;
 }
 
-static void x_main_context_poll(XMainContext *context, xint timeout, xint priority, XPollFD *fds, xint n_fds)
+static void x_main_context_poll_unlocked(XMainContext *context, int timeout, int priority, XPollFD *fds, int n_fds)
 {
     XPollFunc poll_func;
 
     if (n_fds || timeout != 0) {
         int ret, errsv;
 
-        LOCK_CONTEXT(context);
         poll_func = context->poll_func;
         UNLOCK_CONTEXT(context);
 
         ret = (*poll_func)(fds, n_fds, timeout);
+        LOCK_CONTEXT(context);
         errsv = errno;
         if (ret < 0 && errsv != EINTR) {
             x_warning("poll(2) failed due to: %s.", x_strerror(errsv));

@@ -1266,32 +1266,34 @@ xchar *x_get_current_dir(void)
     const xchar *pwd;
     xchar *dir = NULL;
     xchar *buffer = NULL;
-    static xulong max_len = 0;
     struct stat pwdbuf, dotbuf;
+    static xsize buffer_size = 0;
 
     pwd = x_getenv("PWD");
     if (pwd != NULL && x_stat(".", &dotbuf) == 0 && x_stat(pwd, &pwdbuf) == 0 && dotbuf.st_dev == pwdbuf.st_dev && dotbuf.st_ino == pwdbuf.st_ino) {
         return x_strdup(pwd);
     }
 
-    if (max_len == 0) {
-        max_len = (X_PATH_LENGTH == -1) ? 2048 : X_PATH_LENGTH;
+    if (buffer_size == 0) {
+        buffer_size = (X_PATH_LENGTH == -1) ? 2048 : X_PATH_LENGTH;
     }
 
-    while (max_len < X_MAXULONG / 2) {
+    while (buffer_size < X_MAXSIZE / 2) {
         x_free(buffer);
-        buffer = x_new(xchar, max_len + 1);
+        buffer = x_new(xchar, buffer_size);
         *buffer = 0;
-        dir = getcwd(buffer, max_len);
+        dir = getcwd(buffer, buffer_size);
 
         if (dir || errno != ERANGE) {
             break;
         }
 
-        max_len *= 2;
+        buffer_size *= 2;
     }
 
+    x_assert(dir == NULL || strnlen(dir, buffer_size) < buffer_size);
     if (!dir || !*buffer) {
+        x_assert(buffer_size >= 2);
         buffer[0] = X_DIR_SEPARATOR;
         buffer[1] = 0;
     }

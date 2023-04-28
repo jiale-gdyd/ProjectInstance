@@ -27,8 +27,10 @@ struct _XRealThread {
 #if defined(__NR_futex) && defined(__NR_futex_time64)
 #define x_futex_simple(uaddr, futex_op, ...)                                                    \
     X_STMT_START {                                                                              \
+        int saved_errno = errno;                                                                \
         int res = syscall(__NR_futex_time64, uaddr, (xsize)futex_op, __VA_ARGS__);              \
         if ((res < 0) && (errno == ENOSYS)) {                                                   \
+            errno = saved_errno;                                                                \
             syscall(__NR_futex, uaddr, (xsize)futex_op, __VA_ARGS__);                           \
         }                                                                                       \
     } X_STMT_END
