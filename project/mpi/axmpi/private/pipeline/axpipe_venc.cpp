@@ -399,7 +399,10 @@ int axpipe_create_venc(axpipe_t *pipe)
 
 int axpipe_release_venc(axpipe_t *pipe)
 {
-    pthread_join(pipe->venc.threadId, NULL);
+    if (pipe->venc.threadId) {
+        pthread_join(pipe->venc.threadId, NULL);
+    }
+
     int ret = AX_VENC_StopRecvFrame(pipe->venc.channel);
     if (ret != 0) {
         axmpi_error("venc chn:[%d] stop recv frame failed, return:[%d]", pipe->venc.channel, ret);

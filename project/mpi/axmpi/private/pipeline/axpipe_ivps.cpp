@@ -250,7 +250,9 @@ int axpipe_create_ivps(axpipe_t *pipe)
 
 int axpipe_release_ivps(axpipe_t *pipe)
 {
-    pthread_join(pipe->ivps.threadId, NULL);
+    if (pipe->ivps.threadId) {
+        pthread_join(pipe->ivps.threadId, NULL);
+    }
 
     int ret = AX_IVPS_StopGrp(pipe->ivps.group);
     if (ret != 0) {

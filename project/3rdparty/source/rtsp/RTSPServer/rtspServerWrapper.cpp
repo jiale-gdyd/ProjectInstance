@@ -6,6 +6,10 @@
 #include "xop/RtspServer.h"
 
 namespace rtsp {
+struct rtsp_session_wapper_t {
+    xop::MediaSessionId session_id = 0;
+};
+
 class RtspServerWarpper {
 public:
     RtspServerWarpper(uint16_t port) {
@@ -110,28 +114,32 @@ rtsp_session_t rtsp_new_session(rtsp_server_t rtsp_server, const char *url_suffi
 {
     RtspServerWarpper *rtsp_wapper = (RtspServerWarpper *)rtsp_server;
     if (!rtsp_wapper) {
-        return -1;
+        return nullptr;
     }
 
-    xop::MediaSessionId session_id = rtsp_wapper->AddSession(url_suffix, bH265);
-    return session_id;
+    rtsp_session_wapper_t *tmp = new rtsp_session_wapper_t;
+    tmp->session_id = rtsp_wapper->AddSession(url_suffix, bH265);
+    return tmp;
 }
 
 void rtsp_release_session(rtsp_server_t rtsp_server, rtsp_session_t rtsp_session)
 {
     RtspServerWarpper *rtsp_wapper = (RtspServerWarpper *)rtsp_server;
-    if (!rtsp_wapper) {
+    rtsp_session_wapper_t *tmp = (rtsp_session_wapper_t *)rtsp_session;
+    if (!rtsp_wapper || !tmp) {
         return;
     }
 
-    rtsp_wapper->RemoveSession(rtsp_session);
+    rtsp_wapper->RemoveSession(tmp->session_id);
+    delete tmp;
 }
 
 int rtsp_push(rtsp_server_t rtsp_server, rtsp_session_t rtsp_session, rtsp_buff_t *buff)
 {
     if (buff->vsize > 0) {
         RtspServerWarpper *rtsp_wapper = (RtspServerWarpper *)rtsp_server;
-        if (!rtsp_wapper) {
+        rtsp_session_wapper_t *tmp = (rtsp_session_wapper_t *)rtsp_session;
+        if (!rtsp_wapper || !tmp) {
             return -1;
         }
 
@@ -145,7 +153,7 @@ int rtsp_push(rtsp_server_t rtsp_server, rtsp_session_t rtsp_session, rtsp_buff_
         videoFrame.buffer.reset(new uint8_t[videoFrame.size]);
         memcpy(videoFrame.buffer.get(), buff->vbuff, videoFrame.size);
 
-        bool ret = rtsp_wapper->PushFrame(rtsp_session, xop::channel_0, videoFrame);
+        bool ret = rtsp_wapper->PushFrame(tmp->session_id, xop::channel_0, videoFrame);
         return ret ? 0 : -1;
     }
 

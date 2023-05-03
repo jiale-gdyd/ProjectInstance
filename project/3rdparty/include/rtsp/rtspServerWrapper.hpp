@@ -22,7 +22,7 @@ typedef struct {
 } rtsp_buff_t;
 
 using rtsp_server_t = void *;
-using rtsp_session_t = uint32_t;
+using rtsp_session_t = void *;
 
 rtsp_server_t rtsp_new_server(uint16_t port);
 void rtsp_release_server(rtsp_server_t *server);
