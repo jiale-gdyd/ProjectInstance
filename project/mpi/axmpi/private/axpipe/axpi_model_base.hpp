@@ -19,7 +19,7 @@ protected:
     int   mFaceFeatLength = 512;
     int   mMaxSubInferCount = 3;
     int   mMaxMaskObjectCount = 8;
-    bool  mUseWarpPreprocess = false;
+    bool  mUseWarpPreprocess = true;
 
     int   mClassCount = 80;
     float mProbThreshold = 0.4f;
