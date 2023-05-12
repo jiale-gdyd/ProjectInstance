@@ -458,7 +458,7 @@ void x_key_file_unref(XKeyFile *key_file)
 
     if (x_atomic_int_dec_and_test(&key_file->ref_count)) {
         x_key_file_clear(key_file);
-        x_free_sized(key_file, sizeof(XKeyFile))
+        x_free_sized(key_file, sizeof(XKeyFile));
     }
 }
 

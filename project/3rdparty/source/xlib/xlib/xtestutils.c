@@ -1793,7 +1793,7 @@ void x_assertion_message_cmpnum(const char *domain, const char *file, int line, 
     switch (numtype) {
         case 'i':
         case 'x':
-            s = x_assertion_message_cmpint(domain, file, line, func, expr, (xuint64) arg1, cmp, (xuint64)arg2, numtype);
+            x_assertion_message_cmpint(domain, file, line, func, expr, (xuint64) arg1, cmp, (xuint64)arg2, numtype);
             break;
 
         case 'f':
