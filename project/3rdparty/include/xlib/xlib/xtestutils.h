@@ -29,6 +29,37 @@ typedef void (*XTestFixtureFunc)(xpointer fixture, xconstpointer user_data);
         }                                                                                                                                                       \
     } X_STMT_END
 
+#if XLIB_VERSION_MIN_REQUIRED >= XLIB_VERSION_2_78
+#define x_assert_cmpint(n1, cmp, n2)                                                                                                                            \
+    X_STMT_START {                                                                                                                                              \
+        xint64 __n1 = (n1), __n2 = (n2);                                                                                                                        \
+        if (__n1 cmp __n2) {                                                                                                                                    \
+            ;                                                                                                                                                   \
+        } else {                                                                                                                                                \
+            x_assertion_message_cmpint(X_LOG_DOMAIN, __FILE__, __LINE__, X_STRFUNC, #n1 " " #cmp " " #n2, __n1, #cmp, __n2, 'i');                               \
+        }                                                                                                                                                       \
+    } X_STMT_END
+
+#define x_assert_cmpuint(n1, cmp, n2)                                                                                                                           \
+    X_STMT_START {                                                                                                                                              \
+        xuint64 __n1 = (n1), __n2 = (n2);                                                                                                                       \
+        if (__n1 cmp __n2) {                                                                                                                                    \
+            ;                                                                                                                                                   \
+        } else {                                                                                                                                                \
+            x_assertion_message_cmpint(X_LOG_DOMAIN, __FILE__, __LINE__, X_STRFUNC, #n1 " " #cmp " " #n2, __n1, #cmp, __n2, 'u');                               \
+        }                                                                                                                                                       \
+    } X_STMT_END
+
+#define x_assert_cmphex(n1, cmp, n2)                                                                                                                            \
+    X_STMT_START {                                                                                                                                              \
+        xuint64 __n1 = (n1), __n2 = (n2);                                                                                                                       \
+        if (__n1 cmp __n2) {                                                                                                                                    \
+            ;                                                                                                                                                   \
+        } else {                                                                                                                                                \
+            x_assertion_message_cmpint(X_LOG_DOMAIN, __FILE__, __LINE__, X_STRFUNC, #n1 " " #cmp " " #n2, __n1, #cmp, __n2, 'x');                               \
+        }                                                                                                                                                       \
+    } X_STMT_END
+#else
 #define x_assert_cmpint(n1, cmp, n2)                                                                                                                            \
     X_STMT_START {                                                                                                                                              \
         xint64 __n1 = (n1), __n2 = (n2);                                                                                                                        \
@@ -58,6 +89,7 @@ typedef void (*XTestFixtureFunc)(xpointer fixture, xconstpointer user_data);
             x_assertion_message_cmpnum(X_LOG_DOMAIN, __FILE__, __LINE__, X_STRFUNC, #n1 " " #cmp " " #n2, (long double)__n1, #cmp, (long double)__n2, 'x');     \
         }                                                                                                                                                       \
     } X_STMT_END
+#endif
 
 #define x_assert_cmpfloat(n1, cmp, n2)                                                                                                                          \
     X_STMT_START {                                                                                                                                              \
@@ -79,6 +111,22 @@ typedef void (*XTestFixtureFunc)(xpointer fixture, xconstpointer user_data);
         }                                                                                                                                                       \
     } X_STMT_END
 
+#if XLIB_VERSION_MIN_REQUIRED >= XLIB_VERSION_2_78
+#define x_assert_cmpmem(m1, l1, m2, l2)                                                                                                                         \
+    X_STMT_START {                                                                                                                                              \
+        xconstpointer __m1 = m1, __m2 = m2;                                                                                                                     \
+        size_t __l1 = (size_t)l1, __l2 = (size_t)l2;                                                                                                            \
+        if (__l1 != 0 && __m1 == NULL) {                                                                                                                        \
+            x_assertion_message(X_LOG_DOMAIN, __FILE__, __LINE__, X_STRFUNC, "assertion failed (" #l1 " == 0 || " #m1 " != NULL)");                             \
+        } else if (__l2 != 0 && __m2 == NULL) {                                                                                                                 \
+            x_assertion_message(X_LOG_DOMAIN, __FILE__, __LINE__, X_STRFUNC, "assertion failed (" #l2 " == 0 || " #m2 " != NULL)");                             \
+        } else if (__l1 != __l2) {                                                                                                                              \
+            x_assertion_message_cmpint(X_LOG_DOMAIN, __FILE__, __LINE__, X_STRFUNC, #l1 " (len(" #m1 ")) == " #l2 " (len(" #m2 "))", __l1, "==", __l2, 'u');    \
+        } else if (__l1 != 0 && __m2 != NULL && memcmp(__m1, __m2, __l1) != 0) {                                                                                \
+            x_assertion_message(X_LOG_DOMAIN, __FILE__, __LINE__, X_STRFUNC, "assertion failed (" #m1 " == " #m2 ")");                                          \
+        }                                                                                                                                                       \
+    } X_STMT_END
+#else
 #define x_assert_cmpmem(m1, l1, m2, l2)                                                                                                                         \
     X_STMT_START {                                                                                                                                              \
         xconstpointer __m1 = m1, __m2 = m2;                                                                                                                     \
@@ -93,6 +141,7 @@ typedef void (*XTestFixtureFunc)(xpointer fixture, xconstpointer user_data);
             x_assertion_message(X_LOG_DOMAIN, __FILE__, __LINE__, X_STRFUNC, "assertion failed (" #m1 " == " #m2 ")");                                          \
         }                                                                                                                                                       \
     } X_STMT_END
+#endif
 
 #define x_assert_cmpvariant(v1, v2)                                                                                                                             \
     X_STMT_START {                                                                                                                                              \
@@ -459,6 +508,9 @@ void x_assertion_message_cmpstr(const char *domain, const char *file, int line, 
 
 XLIB_AVAILABLE_IN_2_68
 void x_assertion_message_cmpstrv(const char *domain, const char *file, int line, const char *func, const char *expr, const char *const *arg1, const char *const *arg2, xsize first_wrong_idx) X_ANALYZER_NORETURN;
+
+XLIB_AVAILABLE_IN_2_78
+void x_assertion_message_cmpint(const char *domain, const char *file, int line, const char *func, const char *expr, xuint64 arg1, const char *cmp, xuint64 arg2, char numtype) X_ANALYZER_NORETURN;
 
 XLIB_AVAILABLE_IN_ALL
 void x_assertion_message_cmpnum(const char *domain, const char *file, int line, const char *func, const char *expr, long double arg1, const char *cmp, long double arg2, char numtype) X_ANALYZER_NORETURN;

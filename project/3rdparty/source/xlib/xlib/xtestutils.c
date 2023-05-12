@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <inttypes.h>
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -1760,22 +1761,47 @@ void x_assertion_message_expr(const char *domain, const char *file, int line, co
     }
 }
 
+void x_assertion_message_cmpint(const char *domain, const char *file, int line, const char *func, const char *expr, xuint64 arg1, const char *cmp, xuint64 arg2, char numtype)
+{
+    char *s = NULL;
+
+    switch (numtype) {
+        case 'i':
+            s = x_strdup_printf("assertion failed (%s): (%" PRIi64 " %s %" PRIi64 ")", expr, (int64_t)arg1, cmp, (int64_t)arg2);
+            break;
+
+        case 'u':
+            s = x_strdup_printf("assertion failed (%s): (%" PRIu64 " %s %" PRIu64 ")", expr, (uint64_t)arg1, cmp, (uint64_t)arg2);
+            break;
+
+        case 'x':
+            s = x_strdup_printf("assertion failed (%s): (0x%08" PRIx64 " %s 0x%08" PRIx64 ")", expr, (uint64_t)arg1, cmp, (uint64_t)arg2);
+            break;
+
+        default:
+            x_assert_not_reached();
+    }
+
+    x_assertion_message(domain, file, line, func, s);
+    x_free(s);
+}
+
 void x_assertion_message_cmpnum(const char *domain, const char *file, int line, const char *func, const char *expr, long double arg1, const char *cmp, long double arg2, char numtype)
 {
     char *s = NULL;
 
     switch (numtype) {
         case 'i':
-            s = x_strdup_printf("assertion failed (%s): (%" X_XINT64_MODIFIER "i %s %" X_XINT64_MODIFIER "i)", expr, (xint64)arg1, cmp, (xint64)arg2);
-            break;
-
         case 'x':
-            s = x_strdup_printf("assertion failed (%s): (0x%08" X_XINT64_MODIFIER "x %s 0x%08" X_XINT64_MODIFIER "x)", expr, (xuint64)arg1, cmp, (xuint64)arg2);
+            s = x_assertion_message_cmpint(domain, file, line, func, expr, (xuint64) arg1, cmp, (xuint64)arg2, numtype);
             break;
 
         case 'f':
             s = x_strdup_printf("assertion failed (%s): (%.9g %s %.9g)", expr, (double)arg1, cmp, (double)arg2);
             break;
+
+        default:
+            x_assert_not_reached();
     }
 
     x_assertion_message(domain, file, line, func, s);

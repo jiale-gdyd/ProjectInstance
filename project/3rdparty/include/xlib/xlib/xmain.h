@@ -388,6 +388,9 @@ xuint x_timeout_add_seconds_full(xint priority, xuint interval, XSourceFunc func
 XLIB_AVAILABLE_IN_ALL
 xuint x_timeout_add_seconds(xuint interval, XSourceFunc function, xpointer data);
 
+XLIB_AVAILABLE_IN_2_78
+xuint x_timeout_add_seconds_once(xuint interval, XSourceOnceFunc function, xpointer data);
+
 XLIB_AVAILABLE_IN_ALL
 xuint x_child_watch_add_full(xint priority, XPid pid, XChildWatchFunc function, xpointer data, XDestroyNotify notify);
 

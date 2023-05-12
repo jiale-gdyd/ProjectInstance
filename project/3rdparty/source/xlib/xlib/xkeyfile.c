@@ -47,7 +47,6 @@ typedef struct _XKeyFileKeyValuePair XKeyFileKeyValuePair;
 
 struct _XKeyFileGroup {
     const xchar          *name;
-    XKeyFileKeyValuePair *comment;
     XList                *key_value_pairs;
     XHashTable           *lookup_map;
 };
@@ -73,7 +72,7 @@ static void x_key_file_remove_key_value_pair_node(XKeyFile *key_file, XKeyFileGr
 static void x_key_file_add_key_value_pair(XKeyFile *key_file, XKeyFileGroup *group, XKeyFileKeyValuePair *pair);
 static void x_key_file_add_key(XKeyFile *key_file, XKeyFileGroup *group, const xchar *key, const xchar *value);
 
-static void x_key_file_add_group(XKeyFile *key_file, const xchar *group_name);
+static void x_key_file_add_group(XKeyFile *key_file, const xchar *group_name, xboolean created);
 static xboolean x_key_file_is_group_name(const xchar *name);
 static xboolean x_key_file_is_key_name(const xchar *name, xsize len);
 
@@ -102,7 +101,7 @@ X_DEFINE_QUARK(x-key-file-error-quark, x_key_file_error)
 
 static void x_key_file_init(XKeyFile *key_file)
 {
-    key_file->current_group = x_slice_new0(XKeyFileGroup);
+    key_file->current_group = x_new0(XKeyFileGroup, 1);
     key_file->groups = x_list_prepend(NULL, key_file->current_group);
     key_file->group_hash = NULL;
     key_file->start_group = NULL;
@@ -145,7 +144,7 @@ XKeyFile *x_key_file_new(void)
 {
     XKeyFile *key_file;
 
-    key_file = x_slice_new0(XKeyFile);
+    key_file = x_new0(XKeyFile, 1);
     key_file->ref_count = 1;
     x_key_file_init(key_file);
 
@@ -447,7 +446,7 @@ void x_key_file_free(XKeyFile *key_file)
 
     x_key_file_clear(key_file);
     if (x_atomic_int_dec_and_test(&key_file->ref_count)) {
-        x_slice_free(XKeyFile, key_file);
+        x_free_sized(key_file, sizeof(XKeyFile));
     } else {
         x_key_file_init(key_file);
     }
@@ -459,7 +458,7 @@ void x_key_file_unref(XKeyFile *key_file)
 
     if (x_atomic_int_dec_and_test(&key_file->ref_count)) {
         x_key_file_clear(key_file);
-        x_slice_free(XKeyFile, key_file);
+        x_free_sized(key_file, sizeof(XKeyFile))
     }
 }
 
@@ -528,7 +527,7 @@ static void x_key_file_parse_comment(XKeyFile *key_file, const xchar *line, xsiz
 
     x_warn_if_fail(key_file->current_group != NULL);
 
-    pair = x_slice_new(XKeyFileKeyValuePair);
+    pair = x_new(XKeyFileKeyValuePair, 1);
     pair->key = NULL;
     pair->value = x_strndup(line, length);
     key_file->current_group->key_value_pairs = x_list_prepend(key_file->current_group->key_value_pairs, pair);
@@ -554,7 +553,7 @@ static void x_key_file_parse_group(XKeyFile *key_file, const xchar *line, xsize 
         return;
     }
 
-    x_key_file_add_group(key_file, group_name);
+    x_key_file_add_group(key_file, group_name, FALSE);
     x_free(group_name);
 }
 
@@ -613,7 +612,7 @@ static void x_key_file_parse_key_value_pair(XKeyFile *key_file, const xchar *lin
     if (locale == NULL || x_key_file_locale_is_interesting(key_file, locale, locale_len)) {
         XKeyFileKeyValuePair *pair;
 
-        pair = x_slice_new(XKeyFileKeyValuePair);
+        pair = x_new(XKeyFileKeyValuePair, 1);
         pair->key = x_steal_pointer(&key);
         pair->value = x_strndup(value_start, value_len);
 
@@ -734,15 +733,6 @@ xchar *x_key_file_to_data(XKeyFile *key_file, xsize *length, XError **error)
         XKeyFileGroup *group;
 
         group = (XKeyFileGroup *)group_node->data;
-
-        if (data_string->len >= 2 && data_string->str[data_string->len - 2] != '\n') {
-            x_string_append_c(data_string, '\n');
-        }
-
-        if (group->comment != NULL) {
-            x_string_append_printf(data_string, "%s\n", group->comment->value);
-        }
-
         if (group->name != NULL) {
             x_string_append_printf(data_string, "[%s]\n", group->name);
         }
@@ -900,7 +890,7 @@ void x_key_file_set_value(XKeyFile *key_file, const xchar *group_name, const xch
 
     group = x_key_file_lookup_group(key_file, group_name);
     if (!group) {
-        x_key_file_add_group(key_file, group_name);
+        x_key_file_add_group(key_file, group_name, TRUE);
         group = (XKeyFileGroup *)key_file->groups->data;
         x_key_file_add_key(key_file, group, key, value);
     } else {
@@ -1661,40 +1651,12 @@ static xboolean x_key_file_set_key_comment(XKeyFile *key_file, const xchar *grou
         return TRUE;
     }
 
-    pair = x_slice_new(XKeyFileKeyValuePair);
+    pair = x_new(XKeyFileKeyValuePair, 1);
     pair->key = NULL;
     pair->value = x_key_file_parse_comment_as_value(key_file, comment);
     
     key_node = x_list_insert(key_node, pair, 1);
     (void)key_node;
-
-    return TRUE;
-}
-
-static xboolean x_key_file_set_group_comment(XKeyFile *key_file, const xchar *group_name, const xchar *comment, XError **error)
-{
-    XKeyFileGroup *group;
-
-    x_return_val_if_fail(group_name != NULL && x_key_file_is_group_name(group_name), FALSE);
-
-    group = x_key_file_lookup_group(key_file, group_name);
-    if (!group) {
-        x_set_error(error, X_KEY_FILE_ERROR, X_KEY_FILE_ERROR_GROUP_NOT_FOUND, _("Key file does not have group “%s”"), group_name);
-        return FALSE;
-    }
-
-    if (group->comment) {
-        x_key_file_key_value_pair_free(group->comment);
-        group->comment = NULL;
-    }
-
-    if (comment == NULL) {
-        return TRUE;
-    }
-
-    group->comment = x_slice_new(XKeyFileKeyValuePair);
-    group->comment->key = NULL;
-    group->comment->value = x_key_file_parse_comment_as_value(key_file, comment);
 
     return TRUE;
 }
@@ -1707,7 +1669,7 @@ static xboolean x_key_file_set_top_comment(XKeyFile *key_file, const xchar *comm
 
     x_warn_if_fail(key_file->groups != NULL);
     group_node = x_list_last(key_file->groups);
-    group = (XKeyFileGroup *) group_node->data;
+    group = (XKeyFileGroup *)group_node->data;
     x_warn_if_fail(group->name == NULL);
 
     x_list_free_full(group->key_value_pairs, (XDestroyNotify)x_key_file_key_value_pair_free);
@@ -1717,7 +1679,50 @@ static xboolean x_key_file_set_top_comment(XKeyFile *key_file, const xchar *comm
         return TRUE;
     }
 
-    pair = x_slice_new(XKeyFileKeyValuePair);
+    pair = x_new(XKeyFileKeyValuePair, 1);
+    pair->key = NULL;
+    pair->value = x_key_file_parse_comment_as_value(key_file, comment);
+
+    group->key_value_pairs = x_list_prepend(group->key_value_pairs, pair);
+    return TRUE;
+}
+
+static xboolean x_key_file_set_group_comment(XKeyFile *key_file, const xchar *group_name, const xchar *comment, XError **error)
+{
+    XList *group_node;
+    XKeyFileGroup *group;
+    XKeyFileKeyValuePair *pair;
+    
+    x_return_val_if_fail(group_name != NULL && x_key_file_is_group_name(group_name), FALSE);
+
+    group = x_key_file_lookup_group(key_file, group_name);
+    if (!group) {
+        x_set_error(error, X_KEY_FILE_ERROR, X_KEY_FILE_ERROR_GROUP_NOT_FOUND, _("Key file does not have group “%s”"), group_name);
+        return FALSE;
+    }
+
+    if (group == key_file->start_group) {
+        return x_key_file_set_top_comment(key_file, comment, error);
+    }
+
+    group_node = x_key_file_lookup_group_node(key_file, group_name);
+    group = group_node->next->data;
+    for (XList *lp = group->key_value_pairs; lp != NULL; ) {
+        XList *lnext = lp->next;
+        pair = lp->data;
+        if (pair->key != NULL) {
+            break;
+        }
+
+        x_key_file_remove_key_value_pair_node(key_file, group, lp);
+        lp = lnext;
+    }
+
+    if (comment == NULL) {
+        return TRUE;
+    }
+
+    pair = x_new(XKeyFileKeyValuePair, 1);
     pair->key = NULL;
     pair->value = x_key_file_parse_comment_as_value(key_file, comment);
     group->key_value_pairs = x_list_prepend(group->key_value_pairs, pair);
@@ -1868,10 +1873,6 @@ static xchar *x_key_file_get_group_comment(XKeyFile *key_file, const xchar *grou
         return NULL;
     }
 
-    if (group->comment) {
-        return x_strdup(group->comment->value);
-    }
-
     group_node = x_key_file_lookup_group_node(key_file, group_name);
     group_node = group_node->next;
     group = (XKeyFileGroup *)group_node->data;
@@ -1963,7 +1964,7 @@ xboolean x_key_file_has_key(XKeyFile *key_file, const xchar *group_name, const x
     }
 }
 
-static void x_key_file_add_group(XKeyFile *key_file, const xchar *group_name)
+static void x_key_file_add_group(XKeyFile *key_file, const xchar *group_name, xboolean created)
 {
     XKeyFileGroup *group;
 
@@ -1976,7 +1977,7 @@ static void x_key_file_add_group(XKeyFile *key_file, const xchar *group_name)
         return;
     }
 
-    group = x_slice_new0(XKeyFileGroup);
+    group = x_new0(XKeyFileGroup, 1);
     group->name = x_strdup(group_name);
     group->lookup_map = x_hash_table_new(x_str_hash, x_str_equal);
     key_file->groups = x_list_prepend(key_file->groups, group);
@@ -1984,6 +1985,14 @@ static void x_key_file_add_group(XKeyFile *key_file, const xchar *group_name)
 
     if (key_file->start_group == NULL) {
         key_file->start_group = group;
+    } else if (!(key_file->flags & X_KEY_FILE_KEEP_COMMENTS) || created) {
+        XKeyFileGroup *next_group = key_file->groups->next->data;
+        if (next_group->key_value_pairs == NULL || ((XKeyFileKeyValuePair *)next_group->key_value_pairs->data)->key != NULL) {
+            XKeyFileKeyValuePair *pair = x_new(XKeyFileKeyValuePair, 1);
+            pair->key = NULL;
+            pair->value = x_strdup("");
+            next_group->key_value_pairs = x_list_prepend(next_group->key_value_pairs, pair);
+        }
     }
 
     if (!key_file->group_hash) {
@@ -1998,10 +2007,10 @@ static void x_key_file_key_value_pair_free(XKeyFileKeyValuePair *pair)
     if (pair != NULL) {
         x_free(pair->key);
         x_free(pair->value);
-        x_slice_free(XKeyFileKeyValuePair, pair);
+        x_free_sized(pair, sizeof(XKeyFileKeyValuePair));
     }
 }
- 
+
 static void x_key_file_remove_key_value_pair_node(XKeyFile *key_file, XKeyFileGroup *group, XList *pair_node)
 {
     XKeyFileKeyValuePair *pair;
@@ -2064,18 +2073,13 @@ static void x_key_file_remove_group_node(XKeyFile *key_file, XList *group_node)
 
     x_warn_if_fail(group->key_value_pairs == NULL);
 
-    if (group->comment) {
-        x_key_file_key_value_pair_free(group->comment);
-        group->comment = NULL;
-    }
-
     if (group->lookup_map) {
         x_hash_table_destroy(group->lookup_map);
         group->lookup_map = NULL;
     }
 
     x_free((xchar *)group->name);
-    x_slice_free(XKeyFileGroup, group);
+    x_free_sized(group, sizeof(XKeyFileGroup));
     x_list_free_1(group_node);
 }
 
@@ -2106,7 +2110,7 @@ static void x_key_file_add_key(XKeyFile *key_file, XKeyFileGroup *group, const x
 {
     XKeyFileKeyValuePair *pair;
 
-    pair = x_slice_new(XKeyFileKeyValuePair);
+    pair = x_new(XKeyFileKeyValuePair, 1);
     pair->key = x_strdup(key);
     pair->value = x_strdup(value);
 

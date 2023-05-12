@@ -2887,28 +2887,18 @@ xuint x_timeout_add_once(xuint32 interval, XSourceOnceFunc function, xpointer da
 
 xuint x_timeout_add_seconds_full(xint priority, xuint32 interval, XSourceFunc function, xpointer data, XDestroyNotify notify)
 {
-    xuint id;
-    XSource *source;
-
-    x_return_val_if_fail(function != NULL, 0);
-
-    source = x_timeout_source_new_seconds(interval);
-
-    if (priority != X_PRIORITY_DEFAULT) {
-        x_source_set_priority(source, priority);
-    }
-
-    x_source_set_callback(source, function, data, notify);
-    id = x_source_attach(source, NULL);
-    x_source_unref(source);
-
-    return id;
+    return timeout_add_full(priority, interval, TRUE, FALSE, function, data, notify);
 }
 
 xuint x_timeout_add_seconds(xuint interval, XSourceFunc function, xpointer data)
 {
     x_return_val_if_fail(function != NULL, 0);
     return x_timeout_add_seconds_full(X_PRIORITY_DEFAULT, interval, function, data, NULL);
+}
+
+xuint x_timeout_add_seconds_once(xuint interval, XSourceOnceFunc function, xpointer data)
+{
+    return timeout_add_full(X_PRIORITY_DEFAULT, interval, TRUE, TRUE, (XSourceFunc)function, data, NULL);
 }
 
 static void wake_source(XSource *source)
