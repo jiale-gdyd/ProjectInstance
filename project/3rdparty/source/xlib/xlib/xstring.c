@@ -62,6 +62,23 @@ XString *x_string_new(const xchar *init)
     return string;
 }
 
+XString *x_string_new_take(xchar *init)
+{
+    XString *str;
+
+    if (init == NULL) {
+        return x_string_new(NULL);
+    }
+
+    str = x_slice_new(XString);
+
+    str->str = init;
+    str->len = strlen(str->str);
+    str->allocated_len = str->len + 1;
+
+    return str;
+}
+
 XString *x_string_new_len(const xchar *init, xssize len)
 {
     XString *string;

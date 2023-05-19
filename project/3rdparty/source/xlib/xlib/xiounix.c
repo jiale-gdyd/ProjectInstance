@@ -76,7 +76,6 @@ static xboolean x_io_unix_prepare(XSource *source, xint *timeout)
     XIOUnixWatch *watch = (XIOUnixWatch *)source;
     XIOCondition buffer_condition = x_io_channel_get_buffer_condition(watch->channel);
 
-    *timeout = -1;
     return ((watch->condition & buffer_condition) == watch->condition);
 }
 

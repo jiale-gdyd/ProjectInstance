@@ -113,6 +113,10 @@ namespace asio2::detail
 		inline std::atomic<std::size_t>                & pending() noexcept { return    this->pending_  ; }
 		inline std::unordered_set<asio::steady_timer*> & timers () noexcept { return    this->timers_   ; }
 
+		inline asio::io_context                        const& context() const noexcept { return (*(this->context_)); }
+		inline std::atomic<std::size_t>                const& pending() const noexcept { return    this->pending_  ; }
+		inline std::unordered_set<asio::steady_timer*> const& timers () const noexcept { return    this->timers_   ; }
+
 		template<class Object>
 		inline void regobj(Object* p)
 		{
@@ -205,7 +209,7 @@ namespace asio2::detail
 		/**
 		 * @brief return the thread id of the current io_context running in.
 		 */
-		inline std::thread::id get_thread_id() noexcept
+		inline std::thread::id get_thread_id() const noexcept
 		{
 			return this->thread_id_;
 		}
@@ -213,7 +217,7 @@ namespace asio2::detail
 		/**
 		 * @brief Determine whether the current io_context is running in the current thread.
 		 */
-		inline bool running_in_this_thread() noexcept
+		inline bool running_in_this_thread() const noexcept
 		{
 			return (std::this_thread::get_id() == this->thread_id_);
 		}
@@ -297,6 +301,70 @@ namespace asio2::detail
 	class iopool
 	{
 		template<class, class> friend class iopool_cp;
+
+		// used fo fix the compile error under vs2017
+		template<class R, class P, class F, class T>
+		struct post_lambda_1
+		{
+			std::atomic<std::size_t>& pending;
+
+			P p;
+			F f;
+			T t;
+
+			template<class X = P, class Y = F, class Z = T>
+			explicit post_lambda_1(std::atomic<std::size_t>& pd, X&& x, Y&& y, Z&& z)
+				: pending(pd), p(std::forward<X>(x)), f(std::forward<Y>(y)), t(std::forward<Z>(z))
+			{
+			}
+
+			template<class U = R>
+			void operator()()
+			{
+				if constexpr (std::is_void_v<R>)
+				{
+					std::apply(std::move(f), std::move(t));
+
+					p.set_value();
+				}
+				else
+				{
+					p.set_value(std::apply(std::move(f), std::move(t)));
+				}
+
+				pending--;
+			}
+		};
+
+		// used fo fix the compile error under vs2017
+		template<class R, class P, class F, class T>
+		struct post_lambda_2
+		{
+			P p;
+			F f;
+			T t;
+
+			template<class X = P, class Y = F, class Z = T>
+			explicit post_lambda_2(X&& x, Y&& y, Z&& z)
+				: p(std::forward<X>(x)), f(std::forward<Y>(y)), t(std::forward<Z>(z))
+			{
+			}
+
+			template<class U = R>
+			void operator()()
+			{
+				if constexpr (std::is_void_v<U>)
+				{
+					std::apply(std::move(f), std::move(t));
+
+					p.set_value();
+				}
+				else
+				{
+					p.set_value(std::apply(std::move(f), std::move(t)));
+				}
+			}
+		};
 
 	public:
 		/**
@@ -432,9 +500,15 @@ namespace asio2::detail
 					// If an exception occurs here, what should we do ?
 					// We should handle exceptions in other business functions to ensure that
 					// exceptions will not be triggered here.
+
+					// You can define ASIO2_NO_EXCEPTIONS in the /asio2/config.hpp to disable the
+					// exception. so when the exception occurs, you can check the stack trace.
+				#if !defined(ASIO2_NO_EXCEPTIONS)
 					try
 					{
+				#endif
 						iot->context().run();
+				#if !defined(ASIO2_NO_EXCEPTIONS)
 					}
 					catch (system_error const& e)
 					{
@@ -458,6 +532,7 @@ namespace asio2::detail
 
 						ASIO2_ASSERT(false);
 					}
+				#endif
 
 					// memory leaks occur when SSL is used in multithreading
 					// https://github.com/chriskohlhoff/asio/issues/368
@@ -560,7 +635,7 @@ namespace asio2::detail
 		/**
 		 * @brief check whether the io_context pool is started
 		 */
-		inline bool started() noexcept
+		inline bool started() const noexcept
 		{
 			asio2::shared_locker guard(this->mutex_);
 
@@ -570,7 +645,7 @@ namespace asio2::detail
 		/**
 		 * @brief check whether the io_context pool is stopped
 		 */
-		inline bool stopped() noexcept
+		inline bool stopped() const noexcept
 		{
 			asio2::shared_locker guard(this->mutex_);
 
@@ -604,7 +679,7 @@ namespace asio2::detail
 		/**
 		 * @brief Determine whether current code is running in the io_context pool threads.
 		 */
-		inline bool running_in_threads() noexcept
+		inline bool running_in_threads() const noexcept
 		{
 			asio2::shared_locker guard(this->mutex_);
 
@@ -614,7 +689,7 @@ namespace asio2::detail
 		/**
 		 * @brief Determine whether current code is running in the io_context thread by index
 		 */
-		inline bool running_in_thread(std::size_t index) noexcept
+		inline bool running_in_thread(std::size_t index) const noexcept
 		{
 			asio2::shared_locker guard(this->mutex_);
 
@@ -629,7 +704,7 @@ namespace asio2::detail
 		/**
 		 * @brief get io_context pool size.
 		 */
-		inline std::size_t size() noexcept
+		inline std::size_t size() const noexcept
 		{
 			asio2::shared_locker guard(this->mutex_);
 
@@ -639,7 +714,7 @@ namespace asio2::detail
 		/**
 		 * @brief Get the thread id of the specified thread index.
 		 */
-		inline std::thread::id get_thread_id(std::size_t index) noexcept
+		inline std::thread::id get_thread_id(std::size_t index) const noexcept
 		{
 			asio2::shared_locker guard(this->mutex_);
 
@@ -914,22 +989,18 @@ namespace asio2::detail
 			std::promise<return_type> promise;
 			std::future<return_type> future = promise.get_future();
 
-			asio::post(*(this->iocs_[index]),
-			[&pending, promise = std::move(promise), fun = std::forward<Fun>(fun),
-				args = std::make_tuple(std::forward<Args>(args) ...)]() mutable
+			using lambda_t = post_lambda_1<
+				return_type,
+				std::promise<return_type>,
+				detail::remove_cvref_t<Fun>,
+				std::tuple<detail::remove_cvref_t<Args>...>>;
+
+			asio::post(*(this->iocs_[index]), lambda_t
 			{
-				if constexpr (std::is_void_v<return_type>)
-				{
-					std::apply(std::move(fun), std::move(args));
-
-					promise.set_value();
-				}
-				else
-				{
-					promise.set_value(std::apply(std::move(fun), std::move(args)));
-				}
-
-				pending--;
+				pending,
+				std::move(promise),
+				std::forward<Fun>(fun),
+				std::tuple(std::forward<Args>(args) ...)
 			});
 
 			return future;
@@ -954,27 +1025,24 @@ namespace asio2::detail
 			std::promise<return_type> promise;
 			std::future<return_type> future = promise.get_future();
 
-			asio::post(*(this->iocs_[thread_index % this->iocs_.size()]),
-			[promise = std::move(promise), fun = std::forward<Fun>(fun),
-				args = std::make_tuple(std::forward<Args>(args) ...)]() mutable
-			{
-				if constexpr (std::is_void_v<return_type>)
-				{
-					std::apply(std::move(fun), std::move(args));
+			using lambda_t = post_lambda_2<
+				return_type,
+				std::promise<return_type>,
+				detail::remove_cvref_t<Fun>,
+				std::tuple<detail::remove_cvref_t<Args>...>>;
 
-					promise.set_value();
-				}
-				else
-				{
-					promise.set_value(std::apply(std::move(fun), std::move(args)));
-				}
+			asio::post(*(this->iocs_[thread_index % this->iocs_.size()]), lambda_t
+			{
+				std::move(promise),
+				std::forward<Fun>(fun),
+				std::tuple(std::forward<Args>(args) ...)
 			});
 
 			return future;
 		}
 
 	protected:
-		inline bool running_in_threads_impl() noexcept ASIO2_NO_THREAD_SAFETY_ANALYSIS
+		inline bool running_in_threads_impl() const noexcept ASIO2_NO_THREAD_SAFETY_ANALYSIS
 		{
 			std::thread::id curr_tid = std::this_thread::get_id();
 
@@ -1343,7 +1411,8 @@ namespace asio2::detail
 
 			#if defined(_DEBUG) || defined(DEBUG)
 				derived_t& derive = static_cast<derived_t&>(*this);
-				static_cast<default_iopool*>(this->iopool_.get())->impl_.derive_pointer_ = [&derive]() {};
+				static_cast<default_iopool*>(this->iopool_.get())->impl_.derive_pointer_ =
+					[&derive]() { detail::ignore_unused(derive); };
 			#endif
 			}
 			else if constexpr (std::is_same_v<type, detail::iopool>)
@@ -1544,6 +1613,11 @@ namespace asio2::detail
 		 */
 		inline iopool_base& iopool() noexcept { return (*(this->iopool_)); }
 
+		/**
+		 * Get the iopool_base interface reference.
+		 */
+		inline iopool_base const& iopool() const noexcept { return (*(this->iopool_)); }
+
 	protected:
 		inline io_t& _get_io(std::size_t index = static_cast<std::size_t>(-1)) noexcept
 		{
@@ -1553,12 +1627,12 @@ namespace asio2::detail
 			return *(this->iots_[n]);
 		}
 
-		inline bool is_iopool_started() noexcept
+		inline bool is_iopool_started() const noexcept
 		{
 			return this->iopool_->started();
 		}
 
-		inline bool is_iopool_stopped() noexcept
+		inline bool is_iopool_stopped() const noexcept
 		{
 			return this->iopool_->stopped();
 		}

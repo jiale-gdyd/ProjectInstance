@@ -137,28 +137,48 @@ namespace asio2::detail
 			return reinterpret_cast<key_type>(this);
 		}
 
-		inline bool is_websocket() noexcept { return (bool(this->websocket_router_)); }
-		inline bool is_http     () noexcept { return (!(this->is_websocket()));       }
+		inline bool is_websocket() const noexcept { return (bool(this->websocket_router_)); }
+		inline bool is_http     () const noexcept { return (!(this->is_websocket()));       }
 
 		/**
 		 * @brief get the request object, same as get_request
 		 */
-		inline const http::web_request & request() noexcept { return this->req_; }
+		inline       http::web_request & request()       noexcept { return this->req_; }
+
+		/**
+		 * @brief get the request object, same as get_request
+		 */
+		inline const http::web_request & request() const noexcept { return this->req_; }
 
 		/**
 		 * @brief get the response object, same as get_response
 		 */
-		inline const http::web_response& response() noexcept { return this->rep_; }
+		inline       http::web_response& response()       noexcept { return this->rep_; }
+
+		/**
+		 * @brief get the response object, same as get_response
+		 */
+		inline const http::web_response& response() const noexcept { return this->rep_; }
 
 		/**
 		 * @brief get the request object
 		 */
-		inline const http::web_request & get_request() noexcept { return this->req_; }
+		inline       http::web_request & get_request()       noexcept { return this->req_; }
+
+		/**
+		 * @brief get the request object
+		 */
+		inline const http::web_request & get_request() const noexcept { return this->req_; }
 
 		/**
 		 * @brief get the response object
 		 */
-		inline const http::web_response& get_response() noexcept { return this->rep_; }
+		inline       http::web_response& get_response()       noexcept { return this->rep_; }
+
+		/**
+		 * @brief get the response object
+		 */
+		inline const http::web_response& get_response() const noexcept { return this->rep_; }
 
 		/**
 		 * @brief set how to send the http response in the bind_recv callback
@@ -174,7 +194,7 @@ namespace asio2::detail
 		/**
 		 * @brief get the response mode
 		 */
-		inline asio2::response_mode get_response_mode() { return this->response_mode_; }
+		inline asio2::response_mode get_response_mode() const { return this->response_mode_; }
 
 	protected:
 		inline http_router_t<derived_t, args_t>& _router() noexcept
@@ -229,6 +249,8 @@ namespace asio2::detail
 		inline void _send_http_response(
 			std::shared_ptr<derived_t> this_ptr, std::shared_ptr<ecs_t<C>> ecs, MessageT& msg)
 		{
+			ASIO2_ASSERT(this->derived().io().running_in_this_thread());
+
 			if (this->rep_.defer_guard_)
 			{
 				this->rep_.defer_guard_.reset();
@@ -238,6 +260,20 @@ namespace asio2::detail
 				if (this->response_mode_ == asio2::response_mode::automatic)
 				{
 					this->derived()._do_send_http_response(std::move(this_ptr), std::move(ecs), msg);
+				}
+				// if the manual mode is used, then the user maybe use async send to send the 
+				// response by self, at this time, the post recv will can't be called automaticly,
+				// so we need to call it manualy.
+				// But there may be some drawbacks in this situation:
+				// we can't call the post recv inside the async send callback, beacuse the 
+				// user maybe call async send with a string, and the string is just half of
+				// http protocol data, and we don't know when the all completed http protocol
+				// data will send finished.
+				// so we have to call the post recv directly at here.
+				// So the user should be best to send a completed http protocol packet at once.
+				else
+				{
+					this->derived()._post_recv(std::move(this_ptr), std::move(ecs));
 				}
 			}
 		}

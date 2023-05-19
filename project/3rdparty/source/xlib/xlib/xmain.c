@@ -135,10 +135,8 @@ struct _XTimeoutSource {
 struct _XChildWatchSource {
     XSource  source;
     XPid     pid;
-    xint     child_status;
     XPollFD  poll;
-    xboolean child_exited;
-    xboolean using_pidfd;
+    xboolean child_maybe_exited;
 };
 
 struct _XUnixSignalWatchSource {
@@ -206,6 +204,7 @@ static xboolean x_child_watch_prepare(XSource *source, xint *timeout);
 static xboolean x_child_watch_dispatch(XSource *source, XSourceFunc callback, xpointer user_data);
 
 static void x_child_watch_finalize(XSource *source);
+static void unref_unix_signal_handler_unlocked(int signum);
 
 static void x_unix_signal_handler(int signum);
 static void x_unix_signal_watch_finalize(XSource *source);
@@ -2048,7 +2047,6 @@ static xboolean x_main_context_prepare_unlocked(XMainContext *context, xint *pri
                 LOCK_CONTEXT(context);
                 context->in_check_or_prepare--;
             } else {
-                source_timeout = -1;
                 result = FALSE;
             }
 
@@ -2929,22 +2927,8 @@ static void dispatch_unix_signals_unlocked(void)
         for (node = unix_child_watches; node; node = node->next) {
             XChildWatchSource *source = (XChildWatchSource *)node->data;
 
-            if (!source->using_pidfd && !x_atomic_int_get(&source->child_exited)) {
-                pid_t pid;
-                do {
-                    x_assert(source->pid > 0);
-
-                    pid = waitpid(source->pid, &source->child_status, WNOHANG);
-                    if (pid > 0) {
-                        x_atomic_int_set(&source->child_exited, TRUE);
-                        wake_source ((XSource *) source);
-                    } else if (pid == -1 && errno == ECHILD) {
-                        x_warning("XChildWatchSource: Exit status of a child process was requested but ECHILD was received by waitpid(). See the documentation of x_child_watch_source_new() for possible causes.");
-                        source->child_status = 0;
-                        x_atomic_int_set(&source->child_exited, TRUE);
-                        wake_source ((XSource *) source);
-                    }
-                } while (pid == -1 && errno == EINTR);
+            if (x_atomic_int_compare_and_exchange(&source->child_maybe_exited, FALSE, TRUE)) {
+                wake_source((XSource *)source);
             }
         }
     }
@@ -2965,23 +2949,15 @@ static void dispatch_unix_signals(void)
     X_UNLOCK(unix_signal_lock);
 }
 
-static xboolean x_child_watch_prepare(XSource *source, xint *timeout)
-{
-    XChildWatchSource *child_watch_source;
-    child_watch_source = (XChildWatchSource *)source;
-
-    return x_atomic_int_get(&child_watch_source->child_exited);
-}
-
 #ifdef HAVE_PIDFD
-static int siginfo_t_to_wait_status (const siginfo_t *info)
+static int siginfo_t_to_wait_status(const siginfo_t *info)
 {
     switch (info->si_code) {
         case CLD_EXITED:
             return W_EXITCODE(info->si_status, 0);
 
         case CLD_KILLED:
-            return W_EXITCODE(0, info->si_status);
+         return W_EXITCODE (0, info->si_status);
 
         case CLD_DUMPED:
             return W_EXITCODE(0, info->si_status | WCOREFLAG);
@@ -2997,28 +2973,31 @@ static int siginfo_t_to_wait_status (const siginfo_t *info)
 }
 #endif
 
+static xboolean x_child_watch_prepare(XSource *source, xint *timeout)
+{
+    XChildWatchSource *child_watch_source;
+    child_watch_source = (XChildWatchSource *)source;
+
+    if (child_watch_source->poll.fd >= 0) {
+        return FALSE;
+    }
+
+    return x_atomic_int_get(&child_watch_source->child_maybe_exited);
+}
+
 static xboolean x_child_watch_check(XSource *source)
 {
     XChildWatchSource *child_watch_source;
     child_watch_source = (XChildWatchSource *)source;
 
 #ifdef HAVE_PIDFD
-    if (child_watch_source->using_pidfd) {
-        xboolean child_exited = child_watch_source->poll.revents & X_IO_IN;
-
-        if (child_exited) {
-            siginfo_t child_info = { 0, };
-            if (waitid(P_PIDFD, child_watch_source->poll.fd, &child_info, WEXITED | WNOHANG) >= 0 && child_info.si_pid != 0) {
-                child_watch_source->child_status = siginfo_t_to_wait_status(&child_info);
-                child_watch_source->child_exited = TRUE;
-            }
-        }
-
+    if (child_watch_source->poll.fd >= 0) {
+        xboolean child_exited = !!(child_watch_source->poll.revents & X_IO_IN);
         return child_exited;
     }
 #endif
 
-    return x_atomic_int_get(&child_watch_source->child_exited);
+    return x_atomic_int_get(&child_watch_source->child_maybe_exited);
 }
 
 static xboolean x_unix_signal_watch_prepare(XSource *source, xint *timeout)
@@ -3156,7 +3135,7 @@ XSource *_x_main_create_unix_signal_watch(int signum)
     X_LOCK(unix_signal_lock);
     ref_unix_signal_handler_unlocked (signum);
     unix_signal_watches = x_slist_prepend(unix_signal_watches, unix_signal_source);
-    dispatch_unix_signals_unlocked ();
+    dispatch_unix_signals_unlocked();
     X_UNLOCK(unix_signal_lock);
 
     return source;
@@ -3177,7 +3156,7 @@ static void x_child_watch_finalize(XSource *source)
 {
     XChildWatchSource *child_watch_source = (XChildWatchSource *)source;
 
-    if (child_watch_source->using_pidfd) {
+    if (child_watch_source->poll.fd >= 0) {
         if (child_watch_source->poll.fd >= 0) {
             close (child_watch_source->poll.fd);
         }
@@ -3193,17 +3172,59 @@ static void x_child_watch_finalize(XSource *source)
 
 static xboolean x_child_watch_dispatch(XSource *source, XSourceFunc callback, xpointer user_data)
 {
+    int wait_status;
     XChildWatchSource *child_watch_source;
     XChildWatchFunc child_watch_callback = (XChildWatchFunc)callback;
 
     child_watch_source = (XChildWatchSource *)source;
+
+    {
+        xboolean child_exited = FALSE;
+
+        wait_status = -1;
+
+#ifdef HAVE_PIDFD
+        if (child_watch_source->poll.fd >= 0) {
+            siginfo_t child_info = { 0, };
+
+            if (waitid(P_PIDFD, child_watch_source->poll.fd, &child_info, WEXITED | WNOHANG) >= 0 && child_info.si_pid != 0) {
+                wait_status = siginfo_t_to_wait_status(&child_info);
+            } else {
+                x_warning(X_STRLOC ": pidfd signaled ready but failed");
+            }
+
+            child_exited = TRUE;
+        }
+#endif
+
+        if (!child_exited) {
+            pid_t pid;
+            int wstatus;
+
+waitpid_again:
+            x_atomic_int_set(&child_watch_source->child_maybe_exited, FALSE);
+
+            pid = waitpid(child_watch_source->pid, &wstatus, WNOHANG);
+            if (pid == 0) {
+                return TRUE;
+            }
+
+            if (pid > 0) {
+                wait_status = wstatus;
+            } else if (errno == ECHILD) {
+                x_warning("XChildWatchSource: Exit status of a child process was requested but ECHILD was received by waitpid(). See the documentation of x_child_watch_source_new() for possible causes.");
+            } else if (errno == EINTR) {
+                goto waitpid_again;
+            }
+        }
+    }
 
     if (!callback) {
         x_warning("Child watch source dispatched without callback. You must call x_source_set_callback().");
         return FALSE;
     }
 
-    (child_watch_callback)(child_watch_source->pid, child_watch_source->child_status, user_data);
+    (child_watch_callback)(child_watch_source->pid, wait_status, user_data);
     return FALSE;
 }
 
@@ -3242,26 +3263,23 @@ XSource *x_child_watch_source_new(XPid pid)
 
 #ifdef HAVE_PIDFD
     child_watch_source->poll.fd = (int)syscall(SYS_pidfd_open, pid, 0);
-    errsv = errno;
 
     if (child_watch_source->poll.fd >= 0) {
-        child_watch_source->using_pidfd = TRUE;
         child_watch_source->poll.events = X_IO_IN;
         x_source_add_poll(source, &child_watch_source->poll);
-
         return source;
-    } else {
-        x_debug("pidfd_open(%" X_PID_FORMAT ") failed with error: %s", pid, x_strerror(errsv));
-
     }
+
+    errsv = errno;
+    x_debug("pidfd_open(%" X_PID_FORMAT ") failed with error: %s", pid, x_strerror(errsv));
 #endif
+
+    child_watch_source->child_maybe_exited = TRUE;
+    child_watch_source->poll.fd = -1;
 
     X_LOCK(unix_signal_lock);
     ref_unix_signal_handler_unlocked (SIGCHLD);
     unix_child_watches = x_slist_prepend(unix_child_watches, child_watch_source);
-    if (waitpid(pid, &child_watch_source->child_status, WNOHANG) > 0) {
-        child_watch_source->child_exited = TRUE;
-    }
     X_UNLOCK(unix_signal_lock);
 
     return source;
@@ -3275,7 +3293,7 @@ xuint x_child_watch_add_full(xint priority, XPid pid, XChildWatchFunc function, 
     x_return_val_if_fail(function != NULL, 0);
     x_return_val_if_fail(pid > 0, 0);
 
-    source = x_child_watch_source_new (pid);
+    source = x_child_watch_source_new(pid);
     if (priority != X_PRIORITY_DEFAULT) {
         x_source_set_priority(source, priority);
     }

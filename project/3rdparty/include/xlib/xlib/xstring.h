@@ -22,6 +22,9 @@ struct _XString {
 XLIB_AVAILABLE_IN_ALL
 XString *x_string_new(const xchar *init);
 
+XLIB_AVAILABLE_IN_2_78
+XString *x_string_new_take(xchar *init);
+
 XLIB_AVAILABLE_IN_ALL
 XString *x_string_new_len(const xchar *init, xssize len);
 
