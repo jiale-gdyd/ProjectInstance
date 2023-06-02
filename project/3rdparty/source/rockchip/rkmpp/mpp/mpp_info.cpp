@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2023-05-18 [hal_jpege1]: Fix spliting ECS not work problem";
+static const char *mpp_last_commit_message = "2023-05-30 [hal_h264e]: fix log2_max_frm_num config error. ";
 
 void show_mpp_version(void)
 {

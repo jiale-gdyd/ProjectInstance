@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2023-05-29
+  * libv4l: sync with latest media staging tree
+
 ## 2023-05-26
   * 更新rkmpp源码
 

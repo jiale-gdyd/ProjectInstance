@@ -33,6 +33,8 @@ XDir *x_dir_open_with_errno(const xchar *path, xuint flags);
 
 char *x_find_program_for_path(const char *program, const char *path, const char *working_dir);
 
+int x_uri_get_default_scheme_port(const char *scheme);
+
 #define XLIB_PRIVATE_CALL(symbol)       (xlib__private__()->symbol)
 #define XLIB_DEFAULT_LOCALE             ""
 
@@ -54,6 +56,8 @@ typedef struct {
     void (*xlib_init)(void);
 
     char *(*x_find_program_for_path)(const char *program, const char *path, const char *working_dir);
+
+    int (*x_uri_get_default_scheme_port)(const char *scheme);
 } XLibPrivateVTable;
 
 XLIB_AVAILABLE_IN_ALL

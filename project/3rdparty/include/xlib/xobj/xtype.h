@@ -234,17 +234,37 @@ struct _XInterfaceInfo {
     xpointer               interface_data;
 };
 
-struct _XTypeValueTable {
-    void (*value_init)(XValue *value);
-    void (*value_free)(XValue *value);
-    void (*value_copy)(const XValue *src_value, XValue *dest_value);
+XLIB_AVAILABLE_TYPE_IN_2_78
+typedef void (*XTypeValueInitFunc)(XValue *value);
 
-    xpointer (*value_peek_pointer)(const XValue *value);
-    const xchar *collect_format;
-    xchar *(*collect_value)(XValue *value, xuint n_collect_values, XTypeCValue *collect_values, xuint collect_flags);
-    const xchar *lcopy_format;
-    xchar *(*lcopy_value)(const XValue *value, xuint n_collect_values, XTypeCValue *collect_values, xuint collect_flags);
+XLIB_AVAILABLE_TYPE_IN_2_78
+typedef void (*XTypeValueFreeFunc)(XValue *value);
+
+XLIB_AVAILABLE_TYPE_IN_2_78
+typedef void (*XTypeValueCopyFunc)(const XValue *src_value, XValue *dest_value);
+
+XLIB_AVAILABLE_TYPE_IN_2_78
+typedef xpointer (*XTypeValuePeekPointerFunc)(const XValue *value);
+
+XLIB_AVAILABLE_TYPE_IN_2_78
+typedef xchar *(*XTypeValueCollectFunc)(XValue *value, xuint n_collect_values, XTypeCValue *collect_values, xuint collect_flags);
+
+XLIB_AVAILABLE_TYPE_IN_2_78
+typedef xchar *(*XTypeValueLCopyFunc)(const XValue *value, xuint n_collect_values, XTypeCValue *collect_values, xuint collect_flags);
+
+X_GNUC_BEGIN_IGNORE_DEPRECATIONS
+struct _XTypeValueTable {
+    XTypeValueInitFunc        value_init;
+    XTypeValueFreeFunc        value_free;
+    XTypeValueCopyFunc        value_copy;
+    XTypeValuePeekPointerFunc value_peek_pointer;
+
+    const xchar               *collect_format;
+    XTypeValueCollectFunc     collect_value;
+    const xchar               *lcopy_format;
+    XTypeValueLCopyFunc       lcopy_value;
 };
+X_GNUC_END_IGNORE_DEPRECATIONS
 
 XLIB_AVAILABLE_IN_ALL
 XType x_type_register_static(XType parent_type, const xchar *type_name, const XTypeInfo *info, XTypeFlags flags);

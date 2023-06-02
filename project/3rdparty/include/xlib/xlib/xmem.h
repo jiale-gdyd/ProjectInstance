@@ -15,7 +15,7 @@ typedef struct _XMemVTable XMemVTable;
 #endif
 
 XLIB_AVAILABLE_IN_ALL
-void x_free(xpointer mem);
+void (x_free)(xpointer mem);
 
 XLIB_AVAILABLE_IN_2_76
 void x_free_sized(xpointer mem, size_t size);
@@ -101,6 +101,11 @@ void x_aligned_free_sized(xpointer mem, size_t alignment, size_t size);
         }                                                                                   \
     } X_STMT_END                                                                            \
     XLIB_AVAILABLE_MACRO_IN_2_34
+#endif
+
+#if X_GNUC_CHECK_VERSION(4, 1) && XLIB_VERSION_MAX_ALLOWED >= XLIB_VERSION_2_78
+#define x_free(mem)                                                                         \
+    (__builtin_object_size((mem), 0) != ((size_t) - 1)) ? x_free_sized(mem, __builtin_object_size((mem), 0)) : (x_free)(mem)
 #endif
 
 XLIB_AVAILABLE_STATIC_INLINE_IN_2_44

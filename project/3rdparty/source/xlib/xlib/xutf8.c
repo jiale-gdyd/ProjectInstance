@@ -219,6 +219,53 @@ xchar *x_utf8_strncpy(xchar *dest, const xchar *src, xsize n)
     return dest;
 }
 
+xchar *x_utf8_truncate_middle(const xchar *string, xsize truncate_length)
+{
+    const xchar *ellipsis = "…";
+    const xsize ellipsis_bytes = strlen(ellipsis);
+
+    xsize length;
+    xchar *result;
+    xsize left_bytes;
+    xsize right_bytes;
+    xchar *left_substring_end;
+    xchar *right_substring_end;
+    xsize left_substring_length;
+    xchar *right_substring_begin;
+
+    x_return_val_if_fail(string != NULL, NULL);
+
+    length = x_utf8_strlen(string, -1);
+    if (length <= truncate_length) {
+        return x_strdup(string);
+    }
+
+    if (truncate_length == 0) {
+        return x_strdup("");
+    }
+
+    truncate_length -= 1;
+    left_substring_length = truncate_length / 2;
+
+    left_substring_end = x_utf8_offset_to_pointer(string, left_substring_length);
+    right_substring_begin = x_utf8_offset_to_pointer(left_substring_end, length - truncate_length);
+    right_substring_end = x_utf8_offset_to_pointer(right_substring_begin, truncate_length - left_substring_length);
+
+    x_assert(*right_substring_end == '\0');
+
+    left_bytes = left_substring_end - string;
+    right_bytes = right_substring_end - right_substring_begin;
+
+    result = x_malloc(left_bytes + ellipsis_bytes + right_bytes + 1);
+
+    strncpy(result, string, left_bytes);
+    memcpy(result + left_bytes, ellipsis, ellipsis_bytes);
+    strncpy(result + left_bytes + ellipsis_bytes, right_substring_begin, right_bytes);
+    result[left_bytes + ellipsis_bytes + right_bytes] = '\0';
+
+    return result;
+}
+
 int x_unichar_to_utf8(xunichar c, xchar *outbuf)
 {
     int i;

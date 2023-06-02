@@ -110,6 +110,7 @@ KBUILD_CFLAGS += -Wall -O2 \
             -Wno-array-bounds \
             -Wno-int-in-bool-context \
             -Wno-restrict \
-            -Wno-array-compare
+            -Wno-array-compare \
+            -Wno-alloca-larger-than
 
 export KBUILD_CPPFLAGS KBUILD_CXXFLAGS KBUILD_CFLAGS KBUILD_CFLAGS_KERNEL KBUILD_CXXFLAGS_KERNEL

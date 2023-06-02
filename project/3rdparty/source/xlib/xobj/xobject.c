@@ -1974,15 +1974,13 @@ static xuint object_floating_flag_handler(XObject *object, xint job)
     switch (job) {
         xpointer oldvalue;
         case +1:
-            do {
-                oldvalue = x_atomic_pointer_get(&object->qdata);
-            } while (!x_atomic_pointer_compare_and_exchange((void **)&object->qdata, oldvalue, (xpointer)((xsize)oldvalue | OBJECT_FLOATING_FLAG)));
-            return (xsize) oldvalue & OBJECT_FLOATING_FLAG;
+            oldvalue = x_atomic_pointer_get(&object->qdata);
+            while (!x_atomic_pointer_compare_and_exchange_full((void **)&object->qdata, oldvalue, (void *)((xsize)oldvalue | OBJECT_FLOATING_FLAG), &oldvalue));
+            return (xsize)oldvalue & OBJECT_FLOATING_FLAG;
 
         case -1:
-            do {
-                oldvalue = x_atomic_pointer_get(&object->qdata);
-            } while (!x_atomic_pointer_compare_and_exchange((void **)&object->qdata, oldvalue, (xpointer) ((xsize)oldvalue & ~(xsize) OBJECT_FLOATING_FLAG)));
+            oldvalue = x_atomic_pointer_get(&object->qdata);
+            while (!x_atomic_pointer_compare_and_exchange_full((void **)&object->qdata, oldvalue, (void *)((xsize)oldvalue & ~(xsize)OBJECT_FLOATING_FLAG), &oldvalue));
             return (xsize) oldvalue & OBJECT_FLOATING_FLAG;
 
         default:

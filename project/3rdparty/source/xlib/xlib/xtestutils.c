@@ -130,6 +130,13 @@ const XTestConfig *const x_test_config_vars = &mutable_test_config_vars;
 static xboolean no_g_set_prgname = FALSE;
 static XPrintFunc x_default_print_func = NULL;
 
+enum {
+    X_TEST_CASE_LARGS_RESULT         = 0,
+    X_TEST_CASE_LARGS_RUN_FORKS      = 1,
+    X_TEST_CASE_LARGS_EXECUTION_TIME = 2,
+    X_TEST_CASE_LARGS_MAX
+};
+
 static inline xboolean is_subtest(void)
 {
     return test_is_subtest || test_in_forked_child || test_in_subprocess;
@@ -262,6 +269,7 @@ static void x_test_log_send(xuint n_bytes, const xuint8 *buffer)
 static void x_test_log(XTestLogType lbit, const xchar *string1, const xchar *string2, xuint n_args, long double *largs)
 {
     xboolean fail;
+    xdouble timing;
     XTestLogMsg msg;
     xuint8 *dbuffer;
     XTestResult result;
@@ -274,12 +282,12 @@ static void x_test_log(XTestLogType lbit, const xchar *string1, const xchar *str
         x_assert_nonnull(x_default_print_func);
     }
 
-    subtest_level = is_subtest () ? 1 : 0;
+    subtest_level = is_subtest() ? 1 : 0;
 
     switch (lbit) {
         case X_TEST_LOG_START_BINARY:
             if (test_tap_log) {
-                if (!is_subtest ()) {
+                if (!is_subtest()) {
                     x_test_tap_print(0, FALSE, "TAP version " TAP_VERSION "\n");
                 } else {
                     x_test_tap_print(subtest_level > 0 ? subtest_level - 1 : 0, TRUE, "Subtest: %s\n", test_argv0);
@@ -312,7 +320,8 @@ static void x_test_log(XTestLogType lbit, const xchar *string1, const xchar *str
             break;
 
         case X_TEST_LOG_STOP_CASE:
-            result = (XTestResult)largs[0];
+            result = (XTestResult)largs[X_TEST_CASE_LARGS_RESULT];
+            timing = largs[X_TEST_CASE_LARGS_EXECUTION_TIME];
             fail = result == X_TEST_RUN_FAILURE;
             if (test_tap_log) {
                 XString *tap_output;
@@ -339,6 +348,13 @@ static void x_test_log(XTestLogType lbit, const xchar *string1, const xchar *str
                 x_string_append_c(tap_output, '\n');
                 x_default_print_func(tap_output->str);
                 x_string_free(x_steal_pointer(&tap_output), TRUE);
+
+                if (timing > 0.5) {
+                    tap_output = x_string_new("# ");
+                    x_string_append_printf(tap_output, "slow test %s executed in %0.2lf secs\n", string1, timing);
+                    x_default_print_func(tap_output->str);
+                    x_string_free(x_steal_pointer(&tap_output), TRUE);
+                }
             } else if (x_test_verbose()) {
                 x_print("XTest: result: %s\n", x_test_result_names[result]);
             } else if (!x_test_quiet() && !test_in_subprocess) {
@@ -1426,7 +1442,7 @@ static xboolean test_case_run(XTestCase *tc)
         x_test_log(X_TEST_LOG_LIST_CASE, test_run_name, NULL, 0, NULL);
     } else {
         void *fixture;
-        long double largs[3];
+        long double largs[X_TEST_CASE_LARGS_MAX];
         XTimer *test_run_timer = x_timer_new();
 
         x_test_log(X_TEST_LOG_START_CASE, test_run_name, NULL, 0, NULL);
@@ -1478,9 +1494,9 @@ static xboolean test_case_run(XTestCase *tc)
 
         success = test_run_success;
         test_run_success = X_TEST_RUN_FAILURE;
-        largs[0] = success;
-        largs[1] = test_run_forks;
-        largs[2] = x_timer_elapsed(test_run_timer, NULL);
+        largs[X_TEST_CASE_LARGS_RESULT] = success;
+        largs[X_TEST_CASE_LARGS_RUN_FORKS] = test_run_forks;
+        largs[X_TEST_CASE_LARGS_EXECUTION_TIME] = x_timer_elapsed(test_run_timer, NULL);
 
         x_test_log(X_TEST_LOG_STOP_CASE, test_run_name, test_run_msg, X_N_ELEMENTS(largs), largs);
         x_clear_pointer(&test_run_msg, x_free);

@@ -1507,7 +1507,6 @@ void x_signal_chain_from_overridden_handler(xpointer instance, ...)
         }
 
         SIGNAL_UNLOCK();
-        instance_and_params->x_type = 0;
         x_value_init_from_instance(instance_and_params, instance);
         SIGNAL_LOCK();
 
@@ -1993,7 +1992,16 @@ xboolean x_signal_has_handler_pending(xpointer instance, xuint signal_id, XQuark
     return has_pending;
 }
 
+static void signal_emitv_unlocked(const XValue *instance_and_params, xuint signal_id, XQuark detail, XValue *return_value);
+
 void x_signal_emitv(const XValue *instance_and_params, xuint signal_id, XQuark detail, XValue *return_value)
+{
+    SIGNAL_LOCK();
+    signal_emitv_unlocked(instance_and_params, signal_id, detail, return_value);
+    SIGNAL_UNLOCK();
+}
+
+static void signal_emitv_unlocked(const XValue *instance_and_params, xuint signal_id, XQuark detail, XValue *return_value)
 {
     SignalNode *node;
     xpointer instance;
@@ -2003,11 +2011,9 @@ void x_signal_emitv(const XValue *instance_and_params, xuint signal_id, XQuark d
     x_return_if_fail(X_TYPE_CHECK_INSTANCE(instance));
     x_return_if_fail(signal_id > 0);
 
-    SIGNAL_LOCK();
     node = LOOKUP_SIGNAL_NODE(signal_id);
     if (!node || !x_type_is_a(X_TYPE_FROM_INSTANCE(instance), node->itype)) {
         x_critical("%s: signal id '%u' is invalid for instance '%p'", X_STRLOC, signal_id, instance);
-        SIGNAL_UNLOCK();
         return;
     }
 
@@ -2025,13 +2031,12 @@ void x_signal_emitv(const XValue *instance_and_params, xuint signal_id, XQuark d
         }
 
         if (hlist == NULL || hlist->handlers == NULL) {
-            SIGNAL_UNLOCK();
             return;
         }
     }
 
-    SIGNAL_UNLOCK();
-    signal_emit_unlocked_R(node, detail, instance, return_value, instance_and_params);
+    SignalNode node_copy = *node;
+    signal_emit_unlocked_R(&node_copy, detail, instance, return_value, instance_and_params);
 }
 
 static inline xboolean accumulate(XSignalInvocationHint *ihint, XValue *return_accu, XValue *handler_return, SignalAccumulator *accumulator)
@@ -2049,34 +2054,42 @@ static inline xboolean accumulate(XSignalInvocationHint *ihint, XValue *return_a
     return continue_emission;
 }
 
+static xboolean signal_emit_valist_unlocked(xpointer instance, xuint signal_id, XQuark detail, va_list var_args);
+
 void x_signal_emit_valist(xpointer instance, xuint signal_id, XQuark detail, va_list var_args)
 {
+    SIGNAL_LOCK();
+    if (signal_emit_valist_unlocked(instance, signal_id, detail, var_args)) {
+        SIGNAL_UNLOCK();
+    }
+}
+
+static xboolean signal_emit_valist_unlocked(xpointer instance, xuint signal_id, XQuark detail, va_list var_args)
+{
+    xuint i;
     SignalNode *node;
-    xuint i, n_params;
     XValue *param_values;
-    XType signal_return_type;
     XValue *instance_and_params;
 
-    x_return_if_fail(X_TYPE_CHECK_INSTANCE(instance));
-    x_return_if_fail(signal_id > 0);
+    x_return_val_if_fail(X_TYPE_CHECK_INSTANCE(instance), TRUE);
+    x_return_val_if_fail(signal_id > 0, TRUE);
 
-    SIGNAL_LOCK();
     node = LOOKUP_SIGNAL_NODE(signal_id);
     if (!node || !x_type_is_a(X_TYPE_FROM_INSTANCE(instance), node->itype)) {
         x_critical("%s: signal id '%u' is invalid for instance '%p'", X_STRLOC, signal_id, instance);
-        SIGNAL_UNLOCK();
-        return;
+        return TRUE;
     }
 
     if (detail && !(node->flags & X_SIGNAL_DETAILED)) {
         x_critical("%s: signal id '%u' does not support detail (%u)", X_STRLOC, signal_id, detail);
-        SIGNAL_UNLOCK();
-        return;
+        return TRUE;
     }
 
     if (!node->single_va_closure_is_valid) {
         node_update_single_va_closure(node);
     }
+
+    SignalNode node_copy = *node;
 
     if (node->single_va_closure != NULL) {
         Handler *l;
@@ -2122,29 +2135,25 @@ void x_signal_emit_valist(xpointer instance, xuint signal_id, XQuark detail, va_
             }
         }
 
-        if (fastpath && closure == NULL && node->return_type == X_TYPE_NONE) {
-            SIGNAL_UNLOCK();
-            return;
+        if (fastpath && closure == NULL && node_copy.return_type == X_TYPE_NONE) {
+            return TRUE;
         }
 
-        if (closure != NULL && (node->flags & (X_SIGNAL_NO_RECURSE)) != 0) {
+        if (closure != NULL && (node_copy.flags & (X_SIGNAL_NO_RECURSE)) != 0) {
             fastpath = FALSE;
         }
 
         if (fastpath) {
             Emission emission;
-            SignalAccumulator *accumulator;
             XValue emission_return = X_VALUE_INIT;
             XValue *return_accu, accu = X_VALUE_INIT;
             XType instance_type = X_TYPE_FROM_INSTANCE(instance);
-            XType rtype = node->return_type & ~X_SIGNAL_TYPE_STATIC_SCOPE;
-            xboolean static_scope = node->return_type & X_SIGNAL_TYPE_STATIC_SCOPE;
+            XType rtype = node_copy.return_type & ~X_SIGNAL_TYPE_STATIC_SCOPE;
+            xboolean static_scope = node_copy.return_type & X_SIGNAL_TYPE_STATIC_SCOPE;
 
-            signal_id = node->signal_id;
-            accumulator = node->accumulator;
             if (rtype == X_TYPE_NONE) {
                 return_accu = NULL;
-            } else if (accumulator) {
+            } else if (node_copy.accumulator) {
                 return_accu = &accu;
             } else {
                 return_accu = &emission_return;
@@ -2162,27 +2171,31 @@ void x_signal_emit_valist(xpointer instance, xuint signal_id, XQuark detail, va_
                 handler_ref(fastpath_handler);
             }
 
-            SIGNAL_UNLOCK();
-
-            TRACE(XOBJECT_SIGNAL_EMIT(signal_id, detail, instance, instance_type));
-
-            if (rtype != X_TYPE_NONE) {
-                x_value_init(&emission_return, rtype);
-            }
-
-            if (accumulator) {
-                x_value_init(&accu, rtype);
-            }
-
             if (closure != NULL) {
+                TRACE(XOBJECT_SIGNAL_EMIT(signal_id, detail, instance, instance_type));
+
+                SIGNAL_UNLOCK();
+
+                if (rtype != X_TYPE_NONE) {
+                    x_value_init(&emission_return, rtype);
+                }
+
+                if (node_copy.accumulator) {
+                    x_value_init(&accu, rtype);
+                }
+
 #ifndef __COVERITY__
                 x_object_ref(instance);
 #endif
-                _x_closure_invoke_va(closure, return_accu, instance, var_args, node->n_params, node->param_types);
-                accumulate(&emission.ihint, &emission_return, &accu, accumulator);
-            }
+                _x_closure_invoke_va(closure, return_accu, instance, var_args, node_copy.n_params, node_copy.param_types);
+                accumulate(&emission.ihint, &emission_return, &accu, node_copy.accumulator);
 
-            SIGNAL_LOCK();
+                if (node_copy.accumulator) {
+                    x_value_unset(&accu);
+                }
+
+                SIGNAL_LOCK();
+            }
 
             emission.chain_type = X_TYPE_NONE;
             emission_pop(&emission);
@@ -2193,15 +2206,15 @@ void x_signal_emit_valist(xpointer instance, xuint signal_id, XQuark detail, va_
 
             SIGNAL_UNLOCK();
 
-            if (accumulator) {
-                x_value_unset(&accu);
-            }
-
             if (rtype != X_TYPE_NONE) {
                 xchar *error = NULL;
-                for (i = 0; i < node->n_params; i++) {
-                    XType ptype = node->param_types[i] & ~X_SIGNAL_TYPE_STATIC_SCOPE;
+                for (i = 0; i < node_copy.n_params; i++) {
+                    XType ptype = node_copy.param_types[i] & ~X_SIGNAL_TYPE_STATIC_SCOPE;
                     X_VALUE_COLLECT_SKIP(ptype, var_args);
+                }
+
+                if (closure == NULL) {
+                    x_value_init(&emission_return, rtype);
                 }
 
                 X_VALUE_LCOPY(&emission_return, var_args, static_scope ? X_VALUE_NOCOPY_CONTENTS : 0, &error);
@@ -2220,20 +2233,18 @@ void x_signal_emit_valist(xpointer instance, xuint signal_id, XQuark detail, va_
                 x_object_unref(instance);
             }
 #endif
-            return;
+            return FALSE;
         }
     }
     SIGNAL_UNLOCK();
 
-    n_params = node->n_params;
-    signal_return_type = node->return_type;
-    instance_and_params = x_newa0(XValue, n_params + 1);
+    instance_and_params = x_newa0(XValue, node_copy.n_params + 1);
     param_values = instance_and_params + 1;
 
-    for (i = 0; i < node->n_params; i++) {
+    for (i = 0; i < node_copy.n_params; i++) {
         xchar *error;
-        XType ptype = node->param_types[i] & ~X_SIGNAL_TYPE_STATIC_SCOPE;
-        xboolean static_scope = node->param_types[i] & X_SIGNAL_TYPE_STATIC_SCOPE;
+        XType ptype = node_copy.param_types[i] & ~X_SIGNAL_TYPE_STATIC_SCOPE;
+        xboolean static_scope = node_copy.param_types[i] & X_SIGNAL_TYPE_STATIC_SCOPE;
 
         X_VALUE_COLLECT_INIT(param_values + i, ptype, var_args, static_scope ? X_VALUE_NOCOPY_CONTENTS : 0, &error);
         if (error) {
@@ -2244,23 +2255,26 @@ void x_signal_emit_valist(xpointer instance, xuint signal_id, XQuark detail, va_
                 x_value_unset(param_values + i);
             }
 
-            return;
+            return FALSE;
         }
     }
 
-    instance_and_params->x_type = 0;
     x_value_init_from_instance(instance_and_params, instance);
-    if (signal_return_type == X_TYPE_NONE) {
-        signal_emit_unlocked_R(node, detail, instance, NULL, instance_and_params);
+    if (node_copy.return_type == X_TYPE_NONE) {
+        SIGNAL_LOCK();
+        signal_emit_unlocked_R(&node_copy, detail, instance, NULL, instance_and_params);
+        SIGNAL_UNLOCK();
     } else {
         xchar *error = NULL;
         XValue return_value = X_VALUE_INIT;
-        XType rtype = signal_return_type & ~X_SIGNAL_TYPE_STATIC_SCOPE;
-        xboolean static_scope = signal_return_type & X_SIGNAL_TYPE_STATIC_SCOPE;
+        XType rtype = node_copy.return_type & ~X_SIGNAL_TYPE_STATIC_SCOPE;
+        xboolean static_scope = node_copy.return_type & X_SIGNAL_TYPE_STATIC_SCOPE;
 
         x_value_init(&return_value, rtype);
 
-        signal_emit_unlocked_R(node, detail, instance, &return_value, instance_and_params);
+        SIGNAL_LOCK();
+        signal_emit_unlocked_R(&node_copy, detail, instance, &return_value, instance_and_params);
+        SIGNAL_UNLOCK();
 
         X_VALUE_LCOPY(&return_value, var_args, static_scope ? X_VALUE_NOCOPY_CONTENTS : 0, &error);
         if (!error) {
@@ -2271,10 +2285,12 @@ void x_signal_emit_valist(xpointer instance, xuint signal_id, XQuark detail, va_
         }
     }
 
-    for (i = 0; i < n_params; i++) {
+    for (i = 0; i < node_copy.n_params; i++) {
         x_value_unset(param_values + i);
     }
     x_value_unset(instance_and_params);
+
+    return FALSE;
 }
 
 void x_signal_emit(xpointer instance, xuint signal_id, XQuark detail, ...)
@@ -2299,21 +2315,38 @@ void x_signal_emit_by_name(xpointer instance, const xchar *detailed_signal, ...)
 
     SIGNAL_LOCK();
     signal_id = signal_parse_name(detailed_signal, itype, &detail, TRUE);
-    SIGNAL_UNLOCK();
 
     if (signal_id) {
         va_list var_args;
 
         va_start(var_args, detailed_signal);
-        x_signal_emit_valist(instance, signal_id, detail, var_args);
+        if (signal_emit_valist_unlocked(instance, signal_id, detail, var_args)) {
+            SIGNAL_UNLOCK();
+        }
         va_end(var_args);
     } else {
+        SIGNAL_UNLOCK();
         x_critical("%s: signal name '%s' is invalid for instance '%p' of type '%s'", X_STRLOC, detailed_signal, instance, x_type_name(itype));
     }
 }
 
+X_ALWAYS_INLINE static inline XValue *maybe_init_accumulator_unlocked(SignalNode *node, XValue *emission_return, XValue *accumulator_value)
+{
+    if (node->accumulator) {
+        if (accumulator_value->x_type) {
+            return accumulator_value;
+        }
+
+        x_value_init(accumulator_value, node->return_type & ~X_SIGNAL_TYPE_STATIC_SCOPE);
+        return accumulator_value;
+    }
+
+    return emission_return;
+}
+
 static xboolean signal_emit_unlocked_R(SignalNode *node, XQuark detail, xpointer instance, XValue *emission_return, const XValue *instance_and_params)
 {
+    xuint n_params;
     xuint signal_id;
     Emission emission;
     HandlerList *hlist;
@@ -2326,27 +2359,18 @@ static xboolean signal_emit_unlocked_R(SignalNode *node, XQuark detail, xpointer
 
     TRACE(XOBJECT_SIGNAL_EMIT(node->signal_id, detail, instance, X_TYPE_FROM_INSTANCE(instance)));
 
-    SIGNAL_LOCK();
     signal_id = node->signal_id;
+    n_params = node->n_params + 1;
 
     if (node->flags & X_SIGNAL_NO_RECURSE) {
         Emission *emission_node = emission_find(signal_id, detail, instance);
         if (emission_node) {
             emission_node->state = EMISSION_RESTART;
-            SIGNAL_UNLOCK();
             return return_value_altered;
         }
     }
 
     accumulator = node->accumulator;
-    if (accumulator) {
-        SIGNAL_UNLOCK();
-        x_value_init(&accu, node->return_type & ~X_SIGNAL_TYPE_STATIC_SCOPE);
-        return_accu = &accu;
-        SIGNAL_LOCK();
-    } else {
-        return_accu = emission_return;
-    }
 
     emission.instance = instance;
     emission.ihint.signal_id = node->signal_id;
@@ -2375,7 +2399,8 @@ EMIT_RESTART:
 
         emission.chain_type = X_TYPE_FROM_INSTANCE(instance);
         SIGNAL_UNLOCK();
-        x_closure_invoke(class_closure, return_accu, node->n_params + 1, instance_and_params, &emission.ihint);
+        return_accu = maybe_init_accumulator_unlocked(node, emission_return, &accu);
+        x_closure_invoke(class_closure, return_accu, n_params, instance_and_params, &emission.ihint);
         if (!accumulate(&emission.ihint, emission_return, &accu, accumulator) && emission.state == EMISSION_RUN) {
             emission.state = EMISSION_STOP;
         }
@@ -2392,8 +2417,11 @@ EMIT_RESTART:
     }
 
     if (node->emission_hooks) {
+        xuint i;
         XHook *hook;
-        xboolean need_destroy, was_in_call, may_recurse = TRUE;
+        size_t n_emission_hooks = 0;
+        XHook *static_emission_hooks[3];
+        const xboolean may_recurse = TRUE;
 
         emission.state = EMISSION_HOOK;
         hook = x_hook_first_valid(node->emission_hooks, may_recurse);
@@ -2401,24 +2429,77 @@ EMIT_RESTART:
             SignalHook *signal_hook = SIGNAL_HOOK(hook);
 
             if (!signal_hook->detail || signal_hook->detail == detail) {
-                XSignalEmissionHook hook_func = (XSignalEmissionHook) hook->func;
-
-                was_in_call = X_HOOK_IN_CALL(hook);
-                hook->flags |= X_HOOK_FLAG_IN_CALL;
-                SIGNAL_UNLOCK();
-
-                need_destroy = !hook_func(&emission.ihint, node->n_params + 1, instance_and_params, hook->data);
-                SIGNAL_LOCK();
-                if (!was_in_call) {
-                    hook->flags &= ~X_HOOK_FLAG_IN_CALL;
+                if (n_emission_hooks < X_N_ELEMENTS(static_emission_hooks)) {
+                    static_emission_hooks[n_emission_hooks] = x_hook_ref(node->emission_hooks, hook);
                 }
 
-                if (need_destroy) {
-                    x_hook_destroy_link(node->emission_hooks, hook);
-                }
+                n_emission_hooks += 1;
             }
 
             hook = x_hook_next_valid(node->emission_hooks, hook, may_recurse);
+        }
+
+        if X_UNLIKELY(n_emission_hooks > 0) {
+            xuint8 *hook_returns = NULL;
+            XHook **emission_hooks = NULL;
+            xuint8 static_hook_returns[X_N_ELEMENTS(static_emission_hooks)];
+
+            if X_LIKELY(n_emission_hooks <= X_N_ELEMENTS(static_emission_hooks)) {
+                emission_hooks = static_emission_hooks;
+                hook_returns = static_hook_returns;
+            } else {
+                emission_hooks = x_newa(XHook *, n_emission_hooks);
+                hook_returns = x_newa(xuint8, n_emission_hooks);
+
+                i = 0;
+                for (hook = x_hook_first_valid(node->emission_hooks, may_recurse); hook != NULL; hook = x_hook_next_valid(node->emission_hooks, hook, may_recurse)) {
+                    SignalHook *signal_hook = SIGNAL_HOOK(hook);
+
+                    if (!signal_hook->detail || signal_hook->detail == detail) {
+                        if (i < X_N_ELEMENTS(static_emission_hooks)) {
+                            emission_hooks[i] = x_steal_pointer(&static_emission_hooks[i]);
+                            x_assert(emission_hooks[i] == hook);
+                        } else {
+                            emission_hooks[i] = x_hook_ref(node->emission_hooks, hook);
+                        }
+
+                        i += 1;
+                    }
+                }
+
+                x_assert(i == n_emission_hooks);
+            }
+
+            SIGNAL_UNLOCK();
+
+            for (i = 0; i < n_emission_hooks; ++i) {
+                xuint old_flags;
+                xboolean need_destroy;
+                XSignalEmissionHook hook_func;
+
+                hook = emission_hooks[i];
+                hook_func = (XSignalEmissionHook)hook->func;
+
+                old_flags = x_atomic_int_or(&hook->flags, X_HOOK_FLAG_IN_CALL);
+                need_destroy = !hook_func(&emission.ihint, n_params, instance_and_params, hook->data);
+
+                if (!(old_flags & X_HOOK_FLAG_IN_CALL)) {
+                    x_atomic_int_compare_and_exchange(&hook->flags, old_flags | X_HOOK_FLAG_IN_CALL, old_flags);
+                }
+
+                hook_returns[i] = !!need_destroy;
+            }
+
+            SIGNAL_LOCK();
+
+            for (i = 0; i < n_emission_hooks; i++) {
+                hook = emission_hooks[i];
+                x_hook_unref(node->emission_hooks, hook);
+
+                if (hook_returns[i]) {
+                    x_hook_destroy_link(node->emission_hooks, hook);
+                }
+            }
         }
 
         if (emission.state == EMISSION_RESTART) {
@@ -2441,7 +2522,8 @@ EMIT_RESTART:
                 break;
             } else if (!handler->block_count && (!handler->detail || handler->detail == detail) && handler->sequential_number < max_sequential_handler_number) {
                 SIGNAL_UNLOCK();
-                x_closure_invoke(handler->closure, return_accu, node->n_params + 1, instance_and_params, &emission.ihint);
+                return_accu = maybe_init_accumulator_unlocked(node, emission_return, &accu);
+                x_closure_invoke(handler->closure, return_accu, n_params, instance_and_params, &emission.ihint);
                 if (!accumulate (&emission.ihint, emission_return, &accu, accumulator) && emission.state == EMISSION_RUN) {
                     emission.state = EMISSION_STOP;
                 }
@@ -2477,7 +2559,8 @@ EMIT_RESTART:
 
         emission.chain_type = X_TYPE_FROM_INSTANCE(instance);
         SIGNAL_UNLOCK();
-        x_closure_invoke(class_closure, return_accu, node->n_params + 1, instance_and_params, &emission.ihint);
+        return_accu = maybe_init_accumulator_unlocked(node, emission_return, &accu);
+        x_closure_invoke(class_closure, return_accu, n_params, instance_and_params, &emission.ihint);
         if (!accumulate(&emission.ihint, emission_return, &accu, accumulator) && emission.state == EMISSION_RUN) {
             emission.state = EMISSION_STOP;
         }
@@ -2503,7 +2586,8 @@ EMIT_RESTART:
         
             if (handler->after && !handler->block_count && (!handler->detail || handler->detail == detail) && handler->sequential_number < max_sequential_handler_number) {
                 SIGNAL_UNLOCK();
-                x_closure_invoke(handler->closure, return_accu, node->n_params + 1, instance_and_params, &emission.ihint);
+                return_accu = maybe_init_accumulator_unlocked(node, emission_return, &accu);
+                x_closure_invoke(handler->closure, return_accu, n_params, instance_and_params, &emission.ihint);
                 if (!accumulate(&emission.ihint, emission_return, &accu, accumulator) && emission.state == EMISSION_RUN) {
                     emission.state = EMISSION_STOP;
                 }
@@ -2545,7 +2629,7 @@ EMIT_CLEANUP:
             need_unset = TRUE;
         }
 
-        x_closure_invoke(class_closure, node->return_type != X_TYPE_NONE ? &accu : NULL, node->n_params + 1, instance_and_params, &emission.ihint);
+        x_closure_invoke(class_closure, node->return_type != X_TYPE_NONE ? &accu : NULL, n_params, instance_and_params, &emission.ihint);
         if (!accumulate(&emission.ihint, emission_return, &accu, accumulator) && emission.state == EMISSION_RUN) {
             emission.state = EMISSION_STOP;
         }
@@ -2567,7 +2651,6 @@ EMIT_CLEANUP:
     }
 
     emission_pop(&emission);
-    SIGNAL_UNLOCK();
     if (accumulator) {
         x_value_unset(&accu);
     }

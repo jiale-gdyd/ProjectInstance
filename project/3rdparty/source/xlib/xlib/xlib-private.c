@@ -22,6 +22,8 @@ XLibPrivateVTable *xlib__private__(void)
         xlib_init,
 
         x_find_program_for_path,
+
+        x_uri_get_default_scheme_port,
     };
 
     return &table;

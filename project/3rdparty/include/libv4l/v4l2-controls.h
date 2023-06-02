@@ -1800,7 +1800,8 @@ struct v4l2_ctrl_hevc_decode_params {
     __u8                       poc_st_curr_before[V4L2_HEVC_DPB_ENTRIES_NUM_MAX];
     __u8                       poc_st_curr_after[V4L2_HEVC_DPB_ENTRIES_NUM_MAX];
     __u8                       poc_lt_curr[V4L2_HEVC_DPB_ENTRIES_NUM_MAX];
-    __u8                       reserved[4];
+    __u8                       num_delta_pocs_of_ref_rps_idx;
+    __u8                       reserved[3];
     struct v4l2_hevc_dpb_entry dpb[V4L2_HEVC_DPB_ENTRIES_NUM_MAX];
     __u64                      flags;
 };

@@ -91,7 +91,7 @@ xpointer x_realloc(xpointer mem, xsize n_bytes)
     return NULL;
 }
 
-void x_free(xpointer mem)
+void (x_free)(xpointer mem)
 {
     free(mem);
     TRACE(XLIB_MEM_FREE((void *)mem));

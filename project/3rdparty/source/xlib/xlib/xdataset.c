@@ -17,13 +17,14 @@
 #define X_DATALIST_FLAGS_MASK_INTERNAL          0x7
 #define X_DATALIST_GET_POINTER(datalist)        ((XData *)((xsize)x_atomic_pointer_get(datalist) & ~(xsize)X_DATALIST_FLAGS_MASK_INTERNAL))
 
-#define X_DATALIST_SET_POINTER(datalist, pointer)                                                   \
-    X_STMT_START {                                                                                  \
-        xpointer _oldv, _newv;                                                                      \
-        do {                                                                                        \
-            _oldv = x_atomic_pointer_get(datalist);                                                 \
-            _newv = (xpointer)(((xsize)_oldv & X_DATALIST_FLAGS_MASK_INTERNAL) | (xsize)pointer);   \
-        } while (!x_atomic_pointer_compare_and_exchange((void **)datalist, _oldv, _newv));          \
+#define X_DATALIST_SET_POINTER(datalist, pointer)                                                       \
+    X_STMT_START {                                                                                      \
+        xpointer _oldv = x_atomic_pointer_get(datalist);                                                \
+        xpointer _newv;                                                                                 \
+        do {                                                                                            \
+            _oldv = x_atomic_pointer_get(datalist);                                                     \
+            _newv = (xpointer)(((xsize)_oldv & X_DATALIST_FLAGS_MASK_INTERNAL) | (xsize)pointer);       \
+        } while (!x_atomic_pointer_compare_and_exchange_full((void **)datalist, _oldv, _newv, &_oldv)); \
     } X_STMT_END
 
 typedef struct {

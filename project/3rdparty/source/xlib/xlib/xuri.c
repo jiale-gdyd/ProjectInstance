@@ -5,6 +5,7 @@
 #include <xlib/xlib.h>
 #include <xlib/xlib/xlibintl.h>
 #include <xlib/xlib/xuriprivate.h>
+#include <xlib/xlib/xlib-private.h>
 
 struct _XUri {
     xchar     *scheme;
@@ -460,7 +461,7 @@ static int normalize_port(const char *scheme, int port)
     return port;
 }
 
-static int default_scheme_port(const char *scheme)
+int x_uri_get_default_scheme_port(const char *scheme)
 {
     if (strcmp(scheme, "http") == 0 || strcmp(scheme, "ws") == 0) {
         return 80;
@@ -472,6 +473,10 @@ static int default_scheme_port(const char *scheme)
 
     if (strcmp(scheme, "ftp") == 0) {
         return 21;
+    }
+
+    if (strstr(scheme, "socks") == scheme) {
+        return 1080;
     }
 
     return -1;
@@ -639,7 +644,7 @@ static xboolean x_uri_split_internal(const xchar *uri_string, XUriFlags flags, x
         }
 
         if (port && *port == -1) {
-            *port = default_scheme_port(scheme_str);
+            *port = x_uri_get_default_scheme_port(scheme_str);
         }
     }
 
@@ -1345,7 +1350,7 @@ xint x_uri_get_port(XUri *uri)
     x_return_val_if_fail(uri != NULL, -1);
 
     if (uri->port == -1 && uri->flags & X_URI_FLAGS_SCHEME_NORMALIZE) {
-        return default_scheme_port(uri->scheme);
+        return x_uri_get_default_scheme_port(uri->scheme);
     }
 
     return uri->port;

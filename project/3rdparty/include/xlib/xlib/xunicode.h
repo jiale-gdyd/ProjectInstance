@@ -435,6 +435,9 @@ xchar *x_utf8_substring(const xchar *str, xlong start_pos, xlong end_pos) X_GNUC
 XLIB_AVAILABLE_IN_ALL
 xchar *x_utf8_strncpy(xchar *dest, const xchar *src, xsize n);
 
+XLIB_AVAILABLE_IN_2_78
+xchar *x_utf8_truncate_middle(const xchar *string, xsize truncate_length);
+
 XLIB_AVAILABLE_IN_ALL
 xchar *x_utf8_strchr(const xchar *p, xssize len, xunichar c);
 
