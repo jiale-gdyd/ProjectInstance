@@ -65,6 +65,8 @@ typedef struct HalH264eVepu580Ctx_t {
     H264ePps                *pps;
     H264eDpb                *dpb;
     H264eFrmInfo            *frms;
+
+    /* async encode TSVC info */
     H264eReorderInfo        *reorder;
     H264eMarkingInfo        *marking;
 

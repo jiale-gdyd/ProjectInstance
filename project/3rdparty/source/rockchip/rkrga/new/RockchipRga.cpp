@@ -11,14 +11,42 @@
 #include <signal.h>
 #include <stdint.h>
 #include <sys/types.h>
+#include <sys/ioctl.h>
 
 #include <libdrm/drm.h>
-#include <libdrm/xf86drm.h>
-#include <libdrm/drm_mode.h>
 #include <rockchip/rkrgax/im2d.h>
 #include <rockchip/rkrgax/rgadbg.h>
 #include <rockchip/rkrgax/NormalRga.h>
 #include <rockchip/rkrgax/RockchipRga.h>
+
+static int local_drmIoctl(int fd, unsigned long request, void *arg)
+{
+    int ret;
+
+    do {
+        ret = ioctl(fd, request, arg);
+    } while ((ret == -1) && ((errno == EINTR) || (errno == EAGAIN)));
+
+    return ret;
+}
+
+static int local_drmPrimeHandleToFD(int fd, uint32_t handle, uint32_t flags, int *prime_fd)
+{
+    int ret;
+    struct drm_prime_handle args;
+
+    memset(&args, 0, sizeof(args));
+    args.fd = -1;
+    args.handle = handle;
+    args.flags = flags;
+    ret = local_drmIoctl(fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &args);
+    if (ret) {
+        return ret;
+    }
+
+    *prime_fd = args.fd;
+    return 0;
+}
 
 RGA_SINGLETON_STATIC_INSTANCE(RockchipRga)
 
@@ -75,7 +103,7 @@ int RockchipRga::RkRgaAllocBuffer(int drm_fd, bo_t *bo_info, int width, int heig
     arg.height = height;
     arg.flags = flags;
 
-    ret = drmIoctl(drm_fd, DRM_IOCTL_MODE_CREATE_DUMB, &arg);
+    ret = local_drmIoctl(drm_fd, DRM_IOCTL_MODE_CREATE_DUMB, &arg);
     if (ret) {
         rga_error("failed to create dumb buffer, errstr:[%s]", strerror(errno));
         return ret;
@@ -99,7 +127,7 @@ int RockchipRga::RkRgaFreeBuffer(int drm_fd, bo_t *bo_info)
 
     memset(&arg, 0, sizeof(arg));
     arg.handle = bo_info->handle;
-    ret = drmIoctl(drm_fd, DRM_IOCTL_MODE_DESTROY_DUMB, &arg);
+    ret = local_drmIoctl(drm_fd, DRM_IOCTL_MODE_DESTROY_DUMB, &arg);
     if (ret) {
         rga_error("failed to destroy dumb buffer, errstr:[%s]", strerror(errno));
         return -errno;
@@ -155,7 +183,7 @@ int RockchipRga::RkRgaGetMmap(bo_t *bo_info)
 
     memset(&arg, 0, sizeof(arg));
     arg.handle = bo_info->handle;
-    ret = drmIoctl(bo_info->fd, DRM_IOCTL_MODE_MAP_DUMB, &arg);
+    ret = local_drmIoctl(bo_info->fd, DRM_IOCTL_MODE_MAP_DUMB, &arg);
     if (ret) {
         return ret;
     }
@@ -193,7 +221,7 @@ int RockchipRga::RkRgaFree(bo_t *bo_info)
 int RockchipRga::RkRgaGetBufferFd(bo_t *bo_info, int *fd)
 {
     int ret = 0;
-    ret = drmPrimeHandleToFD(bo_info->fd, bo_info->handle, DRM_CLOEXEC | DRM_RDWR, fd);
+    ret = local_drmPrimeHandleToFD(bo_info->fd, bo_info->handle, DRM_CLOEXEC | DRM_RDWR, fd);
     return ret;
 }
 

@@ -509,6 +509,20 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table)
                 default:
                     goto TRY_TO_COMPATIBLE;
             }
+        } else if ((rgaCtx->mHwVersions.version[i].major == 3) && (rgaCtx->mHwVersions.version[i].minor == 6)) {
+            switch (rgaCtx->mHwVersions.version[i].revision) {
+                case 0x92812:
+                    rga_version = IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX;
+                    memcpy(&merge_table, &hw_info_table[rga_version], sizeof(merge_table));
+
+                    merge_table.input_format |= IM_RGA_SUPPORT_FORMAT_YUYV_422 | IM_RGA_SUPPORT_FORMAT_YUV_400 | IM_RGA_SUPPORT_FORMAT_RGBA2BPP;
+                    merge_table.output_format |= IM_RGA_SUPPORT_FORMAT_YUV_400 | IM_RGA_SUPPORT_FORMAT_Y4;
+                    merge_table.feature |= IM_RGA_SUPPORT_FEATURE_QUANTIZE | IM_RGA_SUPPORT_FEATURE_SRC1_R2Y_CSC | IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC | IM_RGA_SUPPORT_FEATURE_MOSAIC | IM_RGA_SUPPORT_FEATURE_OSD | IM_RGA_SUPPORT_FEATURE_PRE_INTR;
+                    break;
+
+                default:
+                    goto TRY_TO_COMPATIBLE;
+            }
         } else if ((rgaCtx->mHwVersions.version[i].major == 3) && (rgaCtx->mHwVersions.version[i].minor == 7)) {
             switch (rgaCtx->mHwVersions.version[i].revision) {
                 case 0x93215:
@@ -861,10 +875,52 @@ IM_STATUS rga_check_format(const char *name, rga_buffer_t info, im_rect rect, in
     return IM_STATUS_NOERROR;
 }
 
-IM_STATUS rga_check_align(const char *name, rga_buffer_t info, int byte_stride)
+IM_STATUS rga_check_align(const char *name, rga_buffer_t info, int byte_stride, bool is_read)
 {
     int bpp = 0;
     int bit_stride, pixel_stride, align, gcd;
+
+    // 数据模式对齐
+    switch (info.rd_mode) {
+        case IM_FBC_MODE:
+            if (info.width % 16) {
+                rga_error("%s FBC mode does not support width[%d] is non-16 aligned", name, info.width);
+                return IM_STATUS_NOT_SUPPORTED;
+            }
+
+            if (info.height % 16) {
+                rga_error("%s FBC mode does not support height[%d] is non-16 aligned", name, info.height);
+                return IM_STATUS_NOT_SUPPORTED;
+            }
+            break;
+
+        case IM_TILE_MODE:
+            if (info.width % 8) {
+                rga_error("%s TILE8*8 mode does not support width[%d] is non-8 aligned", name, info.width);
+                return IM_STATUS_NOT_SUPPORTED;
+            }
+
+            if (info.height % 8) {
+                rga_error("%s TILE8*8 mode does not support height[%d] is non-8 aligned", name, info.height);
+                return IM_STATUS_NOT_SUPPORTED;
+            }
+
+            if (is_read) {
+                if (info.wstride % 16) {
+                    rga_error("%s TILE8*8 mode does not support input width_stride[%d] is non-16 aligned", name, info.wstride);
+                    return IM_STATUS_NOT_SUPPORTED;
+                }
+
+                if (info.hstride % 16) {
+                    rga_error("%s TILE8*8 mode does not support input height_stride[%d] is non-16 aligned", name, info.hstride);
+                    return IM_STATUS_NOT_SUPPORTED;
+                }
+            }
+            break;
+
+        default:
+            break;
+    }
 
     pixel_stride = get_perPixel_stride_from_format(info.format);
 
@@ -1048,7 +1104,7 @@ IM_STATUS rga_check(const rga_buffer_t src, const rga_buffer_t dst, const rga_bu
             return ret;
         }
 
-        ret = rga_check_align("src", src, rga_info.byte_stride);
+        ret = rga_check_align("src", src, rga_info.byte_stride, true);
         if (ret != IM_STATUS_NOERROR) {
             return ret;
         }
@@ -1070,7 +1126,7 @@ IM_STATUS rga_check(const rga_buffer_t src, const rga_buffer_t dst, const rga_bu
             return ret;
         }
 
-        ret = rga_check_align("pat", pat, rga_info.byte_stride);
+        ret = rga_check_align("pat", pat, rga_info.byte_stride, true);
         if (ret != IM_STATUS_NOERROR) {
             return ret;
         }
@@ -1086,7 +1142,7 @@ IM_STATUS rga_check(const rga_buffer_t src, const rga_buffer_t dst, const rga_bu
         return ret;
     }
 
-    ret = rga_check_align("dst", dst, rga_info.byte_stride);
+    ret = rga_check_align("dst", dst, rga_info.byte_stride, false);
     if (ret != IM_STATUS_NOERROR) {
         return ret;
     }

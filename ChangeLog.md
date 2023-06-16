@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2023-06-13
+  * live555更新版本到2023-06-10
+
 ## 2023-05-29
   * libv4l: sync with latest media staging tree
 

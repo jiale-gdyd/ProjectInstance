@@ -548,7 +548,7 @@ int NormalRgaMmuInfo(struct rga_req *msg, unsigned char mmu_en, unsigned char sr
 int NormalRgaMmuFlag(struct rga_req *msg, int src_mmu_en, int dst_mmu_en)
 {
     if (src_mmu_en || dst_mmu_en) {
-        msg->mmu_info.mmu_flag |= (0x1 << 31);
+        msg->mmu_info.mmu_flag |= (0x1u << 31);
     }
 
     if (src_mmu_en) {
@@ -830,7 +830,7 @@ static inline void NormalRgaCompatModeConvertRga2Rect(rga2_rect_t *clip, RECT *o
     clip->xmax = orig_clip->xmax;
     clip->ymax = orig_clip->ymax;
     clip->xmin = orig_clip->xmin;
-    clip->ymax = orig_clip->ymax;
+    clip->ymin = orig_clip->ymin;
 }
 
 static inline void NormalRgaCompatModeConvertRga2ColorFill(rga2_color_fill_t *color, COLOR_FILL *orig_color)

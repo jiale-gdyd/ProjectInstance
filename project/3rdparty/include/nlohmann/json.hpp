@@ -5151,10 +5151,10 @@ template<typename IteratorType> class iteration_proxy_value
     // older GCCs are a bit fussy and require explicit noexcept specifiers on defaulted functions
     iteration_proxy_value(iteration_proxy_value&&)
     noexcept(std::is_nothrow_move_constructible<IteratorType>::value
-             && std::is_nothrow_move_constructible<string_type>::value) = default;
+             && std::is_nothrow_move_constructible<string_type>::value) = default; // NOLINT(hicpp-noexcept-move,performance-noexcept-move-constructor)
     iteration_proxy_value& operator=(iteration_proxy_value&&)
     noexcept(std::is_nothrow_move_assignable<IteratorType>::value
-             && std::is_nothrow_move_assignable<string_type>::value) = default;
+             && std::is_nothrow_move_assignable<string_type>::value) = default; // NOLINT(hicpp-noexcept-move,performance-noexcept-move-constructor)
     ~iteration_proxy_value() = default;
 
     /// dereference operator (needed for range-based for)
@@ -19036,7 +19036,7 @@ template <class Key, class T, class IgnoredLess = std::less<Key>,
 
     template<class KeyType, detail::enable_if_t<
                  detail::is_usable_as_key_type<key_compare, key_type, KeyType>::value, int> = 0>
-    T & at(KeyType && key)
+    T & at(KeyType && key) // NOLINT(cppcoreguidelines-missing-std-forward)
     {
         for (auto it = this->begin(); it != this->end(); ++it)
         {
@@ -19064,7 +19064,7 @@ template <class Key, class T, class IgnoredLess = std::less<Key>,
 
     template<class KeyType, detail::enable_if_t<
                  detail::is_usable_as_key_type<key_compare, key_type, KeyType>::value, int> = 0>
-    const T & at(KeyType && key) const
+    const T & at(KeyType && key) const // NOLINT(cppcoreguidelines-missing-std-forward)
     {
         for (auto it = this->begin(); it != this->end(); ++it)
         {
@@ -19098,7 +19098,7 @@ template <class Key, class T, class IgnoredLess = std::less<Key>,
 
     template<class KeyType, detail::enable_if_t<
                  detail::is_usable_as_key_type<key_compare, key_type, KeyType>::value, int> = 0>
-    size_type erase(KeyType && key)
+    size_type erase(KeyType && key) // NOLINT(cppcoreguidelines-missing-std-forward)
     {
         for (auto it = this->begin(); it != this->end(); ++it)
         {
@@ -19189,7 +19189,7 @@ template <class Key, class T, class IgnoredLess = std::less<Key>,
 
     template<class KeyType, detail::enable_if_t<
                  detail::is_usable_as_key_type<key_compare, key_type, KeyType>::value, int> = 0>
-    size_type count(KeyType && key) const
+    size_type count(KeyType && key) const // NOLINT(cppcoreguidelines-missing-std-forward)
     {
         for (auto it = this->begin(); it != this->end(); ++it)
         {
@@ -19215,7 +19215,7 @@ template <class Key, class T, class IgnoredLess = std::less<Key>,
 
     template<class KeyType, detail::enable_if_t<
                  detail::is_usable_as_key_type<key_compare, key_type, KeyType>::value, int> = 0>
-    iterator find(KeyType && key)
+    iterator find(KeyType && key) // NOLINT(cppcoreguidelines-missing-std-forward)
     {
         for (auto it = this->begin(); it != this->end(); ++it)
         {
@@ -24485,21 +24485,29 @@ ValueType getValue(nlohmann::Json j, std::string filed)
     return j[filed.c_str()].get_to(value);
 }
 
-// 将一个 JSON 字符串反序列化为一个 T 类型的实例
-template <typename T>
-T fromJson(const std::string& json) {
-    auto jsonObject = nlohmann::json::parse(json);
-    return jsonObject;
+// 序列化通用模板函数
+template<typename T>
+void serializeToJson(const T &obj, nlohmann::Json &j) {
+    obj.to_json(j);
 }
 
-// 将一个 T 类型的实例序列化为一个 JSON 字符串
-template <typename T>
-std::string toJson(const T& object) {
-    auto jsonObject = nlohmann::json(object);
-    return jsonObject.dump();
-}
+template<typename T>
+void serializeToJson(const T &obj, nlohmann::json &j) {
+    obj.to_json(j);
 }
 
+// 反序列化通用模板函数
+template<typename T>
+void deserializeFromJson(const nlohmann::Json &j, T &obj) {
+    obj.from_json(j);
+}
+
+// 反序列化通用模板函数
+template<typename T>
+void deserializeFromJson(const nlohmann::json &j, T &obj) {
+    obj.from_json(j);
+}
+}
 
 // restore clang diagnostic settings
 #if defined(__clang__)
