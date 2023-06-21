@@ -177,6 +177,7 @@ void BasicTaskScheduler::SingleStep(unsigned maxDelayTime) {
 
   // Also handle any newly-triggered event (Note that we do this *after* calling a socket handler,
   // in case the triggered event handler modifies The set of readable sockets.)
+#ifdef NO_STD_LIB
   if (fTriggersAwaitingHandling != 0) {
     if (fTriggersAwaitingHandling == fLastUsedTriggerMask) {
       // Common-case optimization for a single event trigger:
@@ -185,6 +186,7 @@ void BasicTaskScheduler::SingleStep(unsigned maxDelayTime) {
 	(*fTriggeredEventHandlers[fLastUsedTriggerNum])(fTriggeredEventClientDatas[fLastUsedTriggerNum]);
       }
     } else {
+#endif
       // Look for an event trigger that needs handling (making sure that we make forward progress through all possible triggers):
       unsigned i = fLastUsedTriggerNum;
       EventTriggerId mask = fLastUsedTriggerMask;
@@ -194,8 +196,13 @@ void BasicTaskScheduler::SingleStep(unsigned maxDelayTime) {
 	mask >>= 1;
 	if (mask == 0) mask = 0x80000000;
 
+#ifndef NO_STD_LIB
+	if (fTriggersAwaitingHandling[i].test()) {
+	  fTriggersAwaitingHandling[i].clear();
+#else
 	if ((fTriggersAwaitingHandling&mask) != 0) {
 	  fTriggersAwaitingHandling &=~ mask;
+#endif
 	  if (fTriggeredEventHandlers[i] != NULL) {
 	    (*fTriggeredEventHandlers[i])(fTriggeredEventClientDatas[i]);
 	  }
@@ -205,8 +212,10 @@ void BasicTaskScheduler::SingleStep(unsigned maxDelayTime) {
 	  break;
 	}
       } while (i != fLastUsedTriggerNum);
+#ifdef NO_STD_LIB
     }
   }
+#endif
 
   // Also handle any delayed event that may have come due.
   fDelayQueue.handleAlarm();

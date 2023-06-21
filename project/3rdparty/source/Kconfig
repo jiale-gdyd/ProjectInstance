@@ -1,3 +1,4 @@
+source "project/3rdparty/source/acl/Kconfig"
 source "project/3rdparty/source/rtsp/Kconfig"
 source "project/3rdparty/source/xlib/Kconfig"
 source "project/3rdparty/source/media/Kconfig"

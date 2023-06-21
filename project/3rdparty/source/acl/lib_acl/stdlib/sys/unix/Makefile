@@ -1,0 +1,13 @@
+obj-y += acl_chroot_uid.o
+obj-y += acl_core_limit.o
+obj-y += acl_mychown.o
+obj-y += acl_open_lock.o
+obj-y += acl_safe_open.o
+obj-y += acl_set_eugid.o
+obj-y += acl_set_udig.o
+obj-y += acl_timed_wait.o
+obj-y += acl_trace.o
+obj-y += acl_transfer_fd.o
+obj-y += acl_username.o
+obj-y += acl_watchdog.o
+obj-y += posix_signals.o

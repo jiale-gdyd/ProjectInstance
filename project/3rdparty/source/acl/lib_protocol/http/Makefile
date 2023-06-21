@@ -1,0 +1,13 @@
+obj-y += http_chat_async.o
+obj-y += http_chat_sync.o
+obj-y += http_hdr_build.o
+obj-y += http_hdr_req.o
+obj-y += http_hdr_res.o
+obj-y += http_hdr.o
+obj-y += http_init.o
+obj-y += http_req.o
+obj-y += http_res.o
+obj-y += http_rfc1123.o
+obj-y += http_status.o
+obj-y += http_tmpl.o
+obj-y += http_util.o

@@ -1,3 +1,4 @@
+obj-$(CONFIG_ACL) += acl/
 obj-$(CONFIG_RTSP) += rtsp/
 obj-$(CONFIG_XLIB) += xlib/
 obj-$(CONFIG_LIBLOG) += liblog/

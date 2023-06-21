@@ -1,0 +1,15 @@
+obj-y += acl_close_on_exec.o
+obj-y += acl_closefrom.o
+obj-y += acl_doze.o
+obj-y += acl_duplex_pipe.o
+obj-y += acl_fdtype.o
+obj-y += acl_non_blocking.o
+obj-y += acl_open_limit.o
+obj-y += acl_peekfd.o
+obj-y += acl_pipe.o
+obj-y += acl_read_wait.o
+obj-y += acl_readable.o
+obj-y += acl_timed_read.o
+obj-y += acl_timed_write.o
+obj-y += acl_write_buf.o
+obj-y += acl_write_wait.o

@@ -362,7 +362,7 @@ char const* dateHeader() {
   }
 #else
   if (gmtime_r(&tt, &time_tm) == nullptr) {
-      time_tm = tm{};
+      time_tm = tm();
   }
 #endif
   strftime(buf, sizeof buf, "Date: %a, %b %d %Y %H:%M:%S GMT\r\n", &time_tm);

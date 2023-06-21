@@ -1,0 +1,12 @@
+obj-y += acl_allocator.o
+obj-y += acl_dbuf_pool.o
+obj-y += acl_default_malloc.o
+obj-y += acl_malloc_glue.o
+obj-y += acl_mem_hook.o
+obj-y += acl_mem_slice.o
+obj-y += acl_mempool.o
+obj-y += acl_slice.o
+obj-y += mem_pool.o
+obj-y += squid_allocator_tools.o
+obj-y += squid_allocator.o
+obj-y += vstring_pool.o

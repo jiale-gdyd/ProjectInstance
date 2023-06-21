@@ -1,0 +1,13 @@
+obj-y += header_opts.o
+obj-y += header_token.o
+obj-y += is_header.o
+obj-y += mime_state_parse.o
+obj-y += mime_state.o
+obj-y += quote_821_local.o
+obj-y += quote_822_local.o
+obj-y += rec_type.o
+obj-y += tok822_find.o
+obj-y += tok822_node.o
+obj-y += tok822_parse.o
+obj-y += tok822_tree.o
+obj-y += trimblanks.o

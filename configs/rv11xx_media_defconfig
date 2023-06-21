@@ -47,6 +47,11 @@ CONFIG_RTSP_SERVER_CLIENT=y
 # CONFIG_LIBLOG_COLOR is not set
 
 #
+# ACL
+#
+CONFIG_ACL=y
+
+#
 # hardware platform
 #
 CONFIG_ROCKCHIP=y

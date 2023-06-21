@@ -1,0 +1,25 @@
+obj-y += aliyun/
+obj-y += beanstalk/
+obj-y += connpool/
+obj-y += db/
+obj-y += disque/
+obj-y += event/
+obj-y += hsocket/
+obj-y += http/
+obj-y += ipc/
+obj-y += master/
+obj-y += memcache/
+obj-y += mime/
+obj-y += mqtt/
+obj-y += net/
+obj-y += queue/
+obj-y += redis/
+obj-y += serialize/
+obj-y += session/
+obj-y += smtp/
+obj-y += stdlib/
+obj-y += stream/
+
+obj-y += acl_stdafx.o
+obj-y += acl_cpp_test.o
+obj-y += acl_cpp_init.o

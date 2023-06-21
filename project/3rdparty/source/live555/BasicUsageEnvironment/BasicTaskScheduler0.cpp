@@ -45,10 +45,15 @@ private:
 
 BasicTaskScheduler0::BasicTaskScheduler0()
   : fTokenCounter(0), fLastHandledSocketNum(-1),
-    fTriggersAwaitingHandling(0), fLastUsedTriggerMask(1),
-    fLastUsedTriggerNum(MAX_NUM_EVENT_TRIGGERS-1) {
+#ifdef NO_STD_LIB
+    fTriggersAwaitingHandling(0),
+#endif
+    fLastUsedTriggerMask(1), fLastUsedTriggerNum(MAX_NUM_EVENT_TRIGGERS-1) {
   fHandlers = new HandlerSet;
   for (unsigned i = 0; i < MAX_NUM_EVENT_TRIGGERS; ++i) {
+#ifndef NO_STD_LIB
+    fTriggersAwaitingHandling[i].clear();
+#endif
     fTriggeredEventHandlers[i] = NULL;
     fTriggeredEventClientDatas[i] = NULL;
   }
@@ -85,7 +90,7 @@ void BasicTaskScheduler0::doEventLoop(char volatile* watchVariable) {
 
 EventTriggerId BasicTaskScheduler0::createEventTrigger(TaskFunc* eventHandlerProc) {
   unsigned i = fLastUsedTriggerNum;
-  EventTriggerId mask = fLastUsedTriggerMask;
+  u_int32_t mask = fLastUsedTriggerMask;
 
   do {
     i = (i+1)%MAX_NUM_EVENT_TRIGGERS;
@@ -109,9 +114,14 @@ EventTriggerId BasicTaskScheduler0::createEventTrigger(TaskFunc* eventHandlerPro
 }
 
 void BasicTaskScheduler0::deleteEventTrigger(EventTriggerId eventTriggerId) {
+#ifdef NO_STD_LIB
   fTriggersAwaitingHandling &=~ eventTriggerId;
+#endif
 
   if (eventTriggerId == fLastUsedTriggerMask) { // common-case optimization:
+#ifndef NO_STD_LIB
+    fTriggersAwaitingHandling[fLastUsedTriggerNum].clear();
+#endif
     fTriggeredEventHandlers[fLastUsedTriggerNum] = NULL;
     fTriggeredEventClientDatas[fLastUsedTriggerNum] = NULL;
   } else {
@@ -120,6 +130,9 @@ void BasicTaskScheduler0::deleteEventTrigger(EventTriggerId eventTriggerId) {
     EventTriggerId mask = 0x80000000;
     for (unsigned i = 0; i < MAX_NUM_EVENT_TRIGGERS; ++i) {
       if ((eventTriggerId&mask) != 0) {
+#ifndef NO_STD_LIB
+	fTriggersAwaitingHandling[fLastUsedTriggerNum].clear();
+#endif
 	fTriggeredEventHandlers[i] = NULL;
 	fTriggeredEventClientDatas[i] = NULL;
       }
@@ -134,14 +147,19 @@ void BasicTaskScheduler0::triggerEvent(EventTriggerId eventTriggerId, void* clie
   for (unsigned i = 0; i < MAX_NUM_EVENT_TRIGGERS; ++i) {
     if ((eventTriggerId&mask) != 0) {
       fTriggeredEventClientDatas[i] = clientData;
+#ifndef NO_STD_LIB
+      (void)fTriggersAwaitingHandling[i].test_and_set();
+#endif
     }
     mask >>= 1;
   }
 
+#ifdef NO_STD_LIB
   // Then, note this event as being ready to be handled.
   // (Note that because this function (unlike others in the library) can be called from an external thread, we do this last, to
   //  reduce the risk of a race condition.)
   fTriggersAwaitingHandling |= eventTriggerId;
+#endif
 }
 
 
