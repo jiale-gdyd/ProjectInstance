@@ -29,7 +29,7 @@
 #if defined(ACL_UNIX)
 #include <pthread.h>
 #include <unistd.h>
-#include <zlib.h>
+#include "zlib/zlib.h"
 #endif
 
 // 加入下面一行可以加快在 VC 下的编译速度

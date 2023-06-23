@@ -1,4 +1,4 @@
-obj-y += aliyun/
+obj-n += aliyun/
 obj-y += beanstalk/
 obj-y += connpool/
 obj-y += db/

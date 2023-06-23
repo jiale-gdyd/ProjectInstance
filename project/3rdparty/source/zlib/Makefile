@@ -1,0 +1,15 @@
+obj-y += adler32.o
+obj-y += crc32.o
+obj-y += deflate.o
+obj-y += infback.o
+obj-y += inffast.o
+obj-y += inflate.o
+obj-y += inftrees.o
+obj-y += trees.o
+obj-y += zutil.o
+obj-y += compress.o
+obj-y += uncompr.o
+obj-y += gzclose.o
+obj-y += gzlib.o
+obj-y += gzread.o
+obj-y += gzwrite.o

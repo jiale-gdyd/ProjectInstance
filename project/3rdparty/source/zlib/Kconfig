@@ -1,0 +1,10 @@
+
+menu "zlib utils"
+
+config ZLIB
+    bool "zlib utils"
+    default n
+    help
+      A massively spiffy yet delicately unobtrusive compression library.
+
+endmenu

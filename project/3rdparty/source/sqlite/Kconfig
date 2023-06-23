@@ -1,0 +1,13 @@
+#
+# sqlite3 Kconfig
+#
+
+menu "sqlite3"
+
+config SQLITE3
+    bool "sqlite3"
+    default n
+    help
+      Enable sqlite3.
+
+endmenu
