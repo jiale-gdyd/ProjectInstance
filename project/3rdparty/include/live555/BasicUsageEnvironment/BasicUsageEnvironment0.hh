@@ -114,12 +114,13 @@ protected:
 #ifndef NO_STD_LIB
   std::atomic_flag fTriggersAwaitingHandling[MAX_NUM_EVENT_TRIGGERS];
 #else
-  EventTriggerId volatile fTriggersAwaitingHandling; // implemented as a 32-bit bitmap
+  Boolean volatile fTriggersAwaitingHandling[MAX_NUM_EVENT_TRIGGERS];
 #endif
   u_int32_t fLastUsedTriggerMask; // implemented as a 32-bit bitmap
   TaskFunc* fTriggeredEventHandlers[MAX_NUM_EVENT_TRIGGERS];
   void* fTriggeredEventClientDatas[MAX_NUM_EVENT_TRIGGERS];
   unsigned fLastUsedTriggerNum; // in the range [0,MAX_NUM_EVENT_TRIGGERS)
+  Boolean fEventTriggersAreBeingUsed;
 };
 
 #endif

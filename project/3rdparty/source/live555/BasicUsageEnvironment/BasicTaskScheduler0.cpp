@@ -45,14 +45,14 @@ private:
 
 BasicTaskScheduler0::BasicTaskScheduler0()
   : fTokenCounter(0), fLastHandledSocketNum(-1),
-#ifdef NO_STD_LIB
-    fTriggersAwaitingHandling(0),
-#endif
-    fLastUsedTriggerMask(1), fLastUsedTriggerNum(MAX_NUM_EVENT_TRIGGERS-1) {
+    fLastUsedTriggerMask(1), fLastUsedTriggerNum(MAX_NUM_EVENT_TRIGGERS-1),
+    fEventTriggersAreBeingUsed(False) {
   fHandlers = new HandlerSet;
   for (unsigned i = 0; i < MAX_NUM_EVENT_TRIGGERS; ++i) {
 #ifndef NO_STD_LIB
     fTriggersAwaitingHandling[i].clear();
+#else
+    fTriggersAwaitingHandling[i] = False;
 #endif
     fTriggeredEventHandlers[i] = NULL;
     fTriggeredEventClientDatas[i] = NULL;
@@ -104,6 +104,7 @@ EventTriggerId BasicTaskScheduler0::createEventTrigger(TaskFunc* eventHandlerPro
 
       fLastUsedTriggerMask = mask;
       fLastUsedTriggerNum = i;
+      fEventTriggersAreBeingUsed = True;
 
       return mask;
     }
@@ -114,31 +115,27 @@ EventTriggerId BasicTaskScheduler0::createEventTrigger(TaskFunc* eventHandlerPro
 }
 
 void BasicTaskScheduler0::deleteEventTrigger(EventTriggerId eventTriggerId) {
-#ifdef NO_STD_LIB
-  fTriggersAwaitingHandling &=~ eventTriggerId;
-#endif
+  // "eventTriggerId" should have just one bit set.
+  // However, we do the reasonable thing if the user happened to 'or' together two or more "EventTriggerId"s:
+  EventTriggerId mask = 0x80000000;
+  Boolean eventTriggersAreBeingUsed = False;
 
-  if (eventTriggerId == fLastUsedTriggerMask) { // common-case optimization:
+  for (unsigned i = 0; i < MAX_NUM_EVENT_TRIGGERS; ++i) {
+    if ((eventTriggerId&mask) != 0) {
 #ifndef NO_STD_LIB
-    fTriggersAwaitingHandling[fLastUsedTriggerNum].clear();
+      fTriggersAwaitingHandling[fLastUsedTriggerNum].clear();
+#else
+      fTriggersAwaitingHandling[fLastUsedTriggerNum] = False;
 #endif
-    fTriggeredEventHandlers[fLastUsedTriggerNum] = NULL;
-    fTriggeredEventClientDatas[fLastUsedTriggerNum] = NULL;
-  } else {
-    // "eventTriggerId" should have just one bit set.
-    // However, we do the reasonable thing if the user happened to 'or' together two or more "EventTriggerId"s:
-    EventTriggerId mask = 0x80000000;
-    for (unsigned i = 0; i < MAX_NUM_EVENT_TRIGGERS; ++i) {
-      if ((eventTriggerId&mask) != 0) {
-#ifndef NO_STD_LIB
-	fTriggersAwaitingHandling[fLastUsedTriggerNum].clear();
-#endif
-	fTriggeredEventHandlers[i] = NULL;
-	fTriggeredEventClientDatas[i] = NULL;
-      }
-      mask >>= 1;
+      fTriggeredEventHandlers[i] = NULL;
+      fTriggeredEventClientDatas[i] = NULL;
+    } else if (fTriggeredEventHandlers[i] != NULL) {
+      eventTriggersAreBeingUsed = True;
     }
+    mask >>= 1;
   }
+
+  fEventTriggersAreBeingUsed = eventTriggersAreBeingUsed;
 }
 
 void BasicTaskScheduler0::triggerEvent(EventTriggerId eventTriggerId, void* clientData) {
@@ -149,17 +146,12 @@ void BasicTaskScheduler0::triggerEvent(EventTriggerId eventTriggerId, void* clie
       fTriggeredEventClientDatas[i] = clientData;
 #ifndef NO_STD_LIB
       (void)fTriggersAwaitingHandling[i].test_and_set();
+#else
+      fTriggersAwaitingHandling[i] = True;
 #endif
     }
     mask >>= 1;
   }
-
-#ifdef NO_STD_LIB
-  // Then, note this event as being ready to be handled.
-  // (Note that because this function (unlike others in the library) can be called from an external thread, we do this last, to
-  //  reduce the risk of a race condition.)
-  fTriggersAwaitingHandling |= eventTriggerId;
-#endif
 }
 
 

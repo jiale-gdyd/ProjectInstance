@@ -1,6 +1,10 @@
 #ifndef ACL_LIBACL_STDLIB_ACL_DEFINE_UNIX_H
 #define ACL_LIBACL_STDLIB_ACL_DEFINE_UNIX_H
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include "acl_define_linux.h"
 
 #ifdef ACL_UNIX

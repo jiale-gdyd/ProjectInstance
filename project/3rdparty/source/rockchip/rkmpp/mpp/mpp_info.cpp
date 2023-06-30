@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2023-06-08 [mpp_service]: remove get disable_rcb_info env runtime";
+static const char *mpp_last_commit_message = "2023-06-29 Revert [m2v_parser]: fix pts calculate error";
 
 void show_mpp_version(void)
 {
