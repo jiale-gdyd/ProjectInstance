@@ -691,6 +691,16 @@ json_node& json::create_node(const char* tag, json_node& node)
     return *n;
 }
 
+void json::remove(json_node* node)
+{
+    if (node) {
+        ACL_JSON_NODE* n = node->get_json_node();
+        if (n) {
+            acl_json_node_delete(n);
+        }
+    }
+}
+
 json_node& json::duplicate_node(const json_node* node)
 {
     ACL_JSON_NODE* tmp = acl_json_node_duplicate(json_,

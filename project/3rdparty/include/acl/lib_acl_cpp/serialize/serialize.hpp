@@ -36,7 +36,6 @@ void serialize(T& o, string& buf)
     json j;
     json_node& n = gson(j, o);
     (void) n.to_string(&buf);
-    buf += "\r\n";
 }
 
 } // namespace acl
