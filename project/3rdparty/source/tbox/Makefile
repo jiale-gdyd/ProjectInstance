@@ -1,0 +1,15 @@
+obj-y += alarm/
+obj-y += base/
+obj-y += coroutine/
+obj-y += crypto/
+obj-y += event/
+obj-y += eventx/
+obj-y += flow/
+obj-y += http/
+obj-y += log/
+obj-y += main/
+obj-y += mqtt/
+obj-y += network/
+obj-y += run/
+obj-y += terminal/
+obj-y += util/

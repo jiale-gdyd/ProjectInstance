@@ -1,0 +1,19 @@
+#
+# MQTT mosquitto Kconfig
+#
+
+menu "An open source MQTT - Eclipse Mosquitto"
+
+config MOSQUITTO
+    bool "Enable the MQTT tool mosquitto"
+    default n
+    help
+      Enable the open source MQTT tool mosquitto
+
+config MOSQUIITO_TLS
+    bool "Mosquitto enable openssl"
+    default n
+    help
+      mosquitto tool enables openssl
+
+endmenu

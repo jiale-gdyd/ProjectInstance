@@ -463,7 +463,7 @@ static void __fhandle_close2(ACL_FHANDLE *fs)
     __fhandle_free(fs);
 }
 
-void acl_fhandle_end()
+void acl_fhandle_end(void)
 {
     const char *myname = "acl_fhandle_end";
 

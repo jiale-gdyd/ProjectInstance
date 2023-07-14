@@ -43,8 +43,8 @@ static char *get_tls_buf(void)
     return (buf);
 }
 
-#ifdef	ACL_LINUX
-const char *acl_process_path()
+#ifdef ACL_LINUX
+const char *acl_process_path(void)
 {
     const char *myname = "acl_process_path";
     char *buf_ptr = get_tls_buf();
@@ -59,7 +59,7 @@ const char *acl_process_path()
     return (buf_ptr);
 }
 
-const char *acl_getcwd()
+const char *acl_getcwd(void)
 {
     const char *myname = "acl_getcwd";
     char *buf_ptr = get_tls_buf();
@@ -72,8 +72,8 @@ const char *acl_getcwd()
     }
     return (ptr);
 }
-#elif	defined(ACL_FREEBSD)
-const char *acl_process_path()
+#elif defined(ACL_FREEBSD)
+const char *acl_process_path(void)
 {
     const char *myname = "acl_process_path";
     char *buf_ptr = get_tls_buf();
@@ -88,7 +88,7 @@ const char *acl_process_path()
     return (buf_ptr);
 }
 
-const char *acl_getcwd()
+const char *acl_getcwd(void)
 {
     const char *myname = "acl_getcwd";
     char *buf_ptr = get_tls_buf();
@@ -101,8 +101,8 @@ const char *acl_getcwd()
     }
     return (ptr);
 }
-#elif	defined(ACL_MACOSX)
-const char *acl_process_path()
+#elif defined(ACL_MACOSX)
+const char *acl_process_path(void)
 {
     const char *myname = "acl_process_path";
     char *buf_ptr = get_tls_buf();
@@ -117,7 +117,7 @@ const char *acl_process_path()
     return (buf_ptr);
 }
 
-const char *acl_getcwd()
+const char *acl_getcwd(void)
 {
     const char *myname = "acl_getcwd";
     char *buf_ptr = get_tls_buf();
@@ -131,8 +131,8 @@ const char *acl_getcwd()
     return (ptr);
 }
 
-#elif	defined(ACL_SUNOS5)
-const char *acl_process_path()
+#elif defined(ACL_SUNOS5)
+const char *acl_process_path(void)
 {
     const char *myname = "acl_process_path";
     char *buf_ptr = get_tls_buf();
@@ -149,7 +149,7 @@ const char *acl_process_path()
 
 #if 0
 #include <stdlib.h>
-const char *acl_process_path()
+const char *acl_process_path(void)
 {
     const char *myname = "acl_process_path";
     const char *ptr;
@@ -164,7 +164,7 @@ const char *acl_process_path()
 }
 #endif
 
-const char *acl_getcwd()
+const char *acl_getcwd(void)
 {
     const char *myname = "acl_getcwd";
     char *buf_ptr = get_tls_buf();
@@ -177,10 +177,10 @@ const char *acl_getcwd()
     }
     return (ptr);
 }
-#elif	defined(ACL_WINDOWS)
+#elif defined(ACL_WINDOWS)
 #include <direct.h>
 
-const char *acl_process_path()
+const char *acl_process_path(void)
 {
     const char *myname = "acl_process_path";
     char *buf_ptr = get_tls_buf();
@@ -195,7 +195,7 @@ const char *acl_process_path()
     return (buf_ptr);
 }
 
-const char *acl_getcwd()
+const char *acl_getcwd(void)
 {
     const char *myname = "acl_getcwd";
     char *buf_ptr = get_tls_buf();

@@ -1,0 +1,9 @@
+obj-y += channel.o
+obj-y += fiber_cond.o
+obj-y += fiber_event.o
+obj-y += fiber_lock.o
+obj-y += fiber_mutex.o
+obj-y += fiber_sem.o
+obj-y += sync_timer.o
+obj-y += sync_type.o
+obj-y += sync_waiter.o

@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2023-06-29 Revert [m2v_parser]: fix pts calculate error";
+static const char *mpp_last_commit_message = "2023-07-10 [m2vd_parser] change frame period to 27MHZ";
 
 void show_mpp_version(void)
 {

@@ -281,7 +281,6 @@ void event_timer_trigger(ACL_EVENT *eventp)
     void *timer_arg;
     TIMER_NODE *iter;
     TIMER_INFO *info;
-    int n = 0;
 
     SET_TIME(eventp->present);
 
@@ -295,7 +294,6 @@ void event_timer_trigger(ACL_EVENT *eventp)
         while (info) {
             acl_ring_prepend(&eventp->timers_ready, &info->tmp);
             info = info->next;
-            n++;
         }
         iter = AVL_NEXT(&eventp->timers->avl, iter);
     }
