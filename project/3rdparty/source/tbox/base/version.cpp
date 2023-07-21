@@ -4,7 +4,7 @@ namespace tbox {
 
 #define TBOX_VERSION_MAJOR          1
 #define TBOX_VERSION_MINOR          5
-#define TBOX_VERSION_REVISION       5
+#define TBOX_VERSION_REVISION       12
 
 void GetTboxVersion(int &major, int &minor, int &rev)
 {

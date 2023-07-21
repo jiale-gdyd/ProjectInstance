@@ -883,13 +883,13 @@ IM_STATUS rga_check_align(const char *name, rga_buffer_t info, int byte_stride, 
     // 数据模式对齐
     switch (info.rd_mode) {
         case IM_FBC_MODE:
-            if (info.width % 16) {
-                rga_error("%s FBC mode does not support width[%d] is non-16 aligned", name, info.width);
+            if (info.wstride % 16) {
+                rga_error("%s FBC mode does not support width_stride[%d] is non-16 aligned", name, info.width);
                 return IM_STATUS_NOT_SUPPORTED;
             }
 
-            if (info.height % 16) {
-                rga_error("%s FBC mode does not support height[%d] is non-16 aligned", name, info.height);
+            if (info.hstride % 16) {
+                rga_error("%s FBC mode does not support height_stride[%d] is non-16 aligned", name, info.height);
                 return IM_STATUS_NOT_SUPPORTED;
             }
             break;

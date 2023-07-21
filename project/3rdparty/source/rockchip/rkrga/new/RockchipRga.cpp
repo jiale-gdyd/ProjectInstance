@@ -235,7 +235,7 @@ int RockchipRga::RkRgaBlit(rga_info *src, rga_info *dst, rga_info *src1)
         RkRgaLogOutUserPara(dst);
         RkRgaLogOutUserPara(src1);
 
-        rga_error("This output the user patamaters when rga call blit fail");
+        rga_error("This output the user parameters when rga call blit fail");
     }
 
     return ret;
@@ -269,7 +269,7 @@ int RockchipRga::RkRgaCollorPalette(rga_info *src, rga_info *dst, rga_info *lut)
         RkRgaLogOutUserPara(src);
         RkRgaLogOutUserPara(dst);
 
-        rga_error("This output the user patamaters when rga call CollorPalette fail");
+        rga_error("This output the user parameters when rga call CollorPalette fail");
     }
 
     return ret;

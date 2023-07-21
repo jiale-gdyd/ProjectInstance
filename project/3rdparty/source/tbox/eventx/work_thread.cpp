@@ -1,5 +1,6 @@
 #include <tbox/eventx/work_thread.h>
 
+#include <cinttypes>
 #include <set>
 #include <deque>
 #include <thread>

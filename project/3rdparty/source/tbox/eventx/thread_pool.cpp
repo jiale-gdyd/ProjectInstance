@@ -1,5 +1,6 @@
 #include <tbox/eventx/thread_pool.h>
 
+#include <cinttypes>
 #include <array>
 #include <map>
 #include <set>

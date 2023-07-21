@@ -2,14 +2,12 @@
 #define TBOX_EVENT_ENGINS_EPOLL_FD_EVENT_H
 
 #include "../../fd_event.h"
-
-#include <sys/epoll.h>
+#include "types.h"
 
 namespace tbox {
 namespace event {
 
 class  EpollLoop;
-struct EpollFdSharedData;
 
 class EpollFdEvent : public FdEvent {
   public:
@@ -32,7 +30,6 @@ class EpollFdEvent : public FdEvent {
   protected:
     void reloadEpoll();
     void onEvent(short events);
-    void unrefFdSharedData();
 
   private:
     EpollLoop *wp_loop_;
