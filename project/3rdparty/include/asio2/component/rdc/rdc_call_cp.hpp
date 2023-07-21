@@ -139,13 +139,13 @@ namespace asio2::detail
 				};
 
 				// All pending sending events will be cancelled after enter the callback below.
-				derive.post(
+				asio::post(derive.io_->context(), make_allocator(derive.wallocator(),
 				[&derive, p = derive.selfptr(), timeout,
 					invoker = std::move(invoker), data = std::forward<DataT>(data)]
 				() mutable
 				{
 					derive._rdc_send(std::move(p), std::move(data), std::move(timeout), std::move(invoker));
-				});
+				}));
 
 				// Whether we run on the io_context thread
 				if (!derive.io_->running_in_this_thread())
@@ -193,28 +193,30 @@ namespace asio2::detail
 					set_last_error(asio::error::not_connected);
 
 					// ensure the callback was called in the communication thread.
-					derive.post(
-					[&derive, invoker = std::forward<Invoker>(invoker),
+					asio::post(derive.io_->context(), make_allocator(derive.wallocator(),
+					[&derive, p = derive.selfptr(), invoker = std::forward<Invoker>(invoker),
 						data = derive._data_persistence(std::forward<DataT>(data))]
 					() mutable
 					{
+						detail::ignore_unused(p);
+
 						set_last_error(asio::error::not_connected);
 
 						derive._rdc_invoke_with_send(asio::error::not_connected,
 							invoker, derive._rdc_convert_to_send_data(data));
-					});
+					}));
 
 					return;
 				}
 
 				// All pending sending events will be cancelled after enter the callback below.
-				derive.post(
+				asio::post(derive.io_->context(), make_allocator(derive.wallocator(),
 				[&derive, p = derive.selfptr(), timeout,
 					invoker = std::forward<Invoker>(invoker), data = std::forward<DataT>(data)]
 				() mutable
 				{
 					derive._rdc_send(std::move(p), std::move(data), std::move(timeout), std::move(invoker));
-				});
+				}));
 			}
 		};
 

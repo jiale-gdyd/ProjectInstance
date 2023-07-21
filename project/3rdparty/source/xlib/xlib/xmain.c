@@ -1877,6 +1877,7 @@ void x_main_context_release(XMainContext *context)
 
         UNLOCK_CONTEXT(context);
         x_critical("x_main_context_release() called on a context (%p, owner %p, owner count %u) which is not acquired by the current thread", context, context_owner, context_owner_count);
+        return;
     }
 #endif
     x_main_context_release_unlocked(context);

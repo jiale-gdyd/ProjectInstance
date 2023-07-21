@@ -69,7 +69,7 @@ static XKeyFileKeyValuePair *x_key_file_lookup_key_value_pair(XKeyFile *key_file
 static void x_key_file_remove_group_node(XKeyFile *key_file, XList *group_node);
 static void x_key_file_remove_key_value_pair_node(XKeyFile *key_file, XKeyFileGroup *group, XList *pair_node);
 
-static void x_key_file_add_key_value_pair(XKeyFile *key_file, XKeyFileGroup *group, XKeyFileKeyValuePair *pair);
+static void x_key_file_add_key_value_pair(XKeyFile *key_file, XKeyFileGroup *group, XKeyFileKeyValuePair *pair, XList *sibling);
 static void x_key_file_add_key(XKeyFile *key_file, XKeyFileGroup *group, const xchar *key, const xchar *value);
 
 static void x_key_file_add_group(XKeyFile *key_file, const xchar *group_name, xboolean created);
@@ -616,7 +616,7 @@ static void x_key_file_parse_key_value_pair(XKeyFile *key_file, const xchar *lin
         pair->key = x_steal_pointer(&key);
         pair->value = x_strndup(value_start, value_len);
 
-        x_key_file_add_key_value_pair(key_file, key_file->current_group, pair);
+        x_key_file_add_key_value_pair(key_file, key_file->current_group, pair, key_file->current_group->key_value_pairs);
     }
 
     x_free(key);
@@ -1987,7 +1987,12 @@ static void x_key_file_add_group(XKeyFile *key_file, const xchar *group_name, xb
         key_file->start_group = group;
     } else if (!(key_file->flags & X_KEY_FILE_KEEP_COMMENTS) || created) {
         XKeyFileGroup *next_group = key_file->groups->next->data;
-        if (next_group->key_value_pairs == NULL || ((XKeyFileKeyValuePair *)next_group->key_value_pairs->data)->key != NULL) {
+        XKeyFileKeyValuePair *pair;
+        if (next_group->key_value_pairs != NULL) {
+            pair = next_group->key_value_pairs->data;
+        }
+
+        if (next_group->key_value_pairs == NULL || ((pair->key != NULL) && !x_strstr_len(pair->value, -1, "\n"))) {
             XKeyFileKeyValuePair *pair = x_new(XKeyFileKeyValuePair, 1);
             pair->key = NULL;
             pair->value = x_strdup("");
@@ -2100,21 +2105,27 @@ xboolean x_key_file_remove_group(XKeyFile *key_file, const xchar *group_name, XE
     return TRUE;
 }
 
-static void x_key_file_add_key_value_pair(XKeyFile *key_file, XKeyFileGroup *group, XKeyFileKeyValuePair *pair)
+static void x_key_file_add_key_value_pair(XKeyFile *key_file, XKeyFileGroup *group, XKeyFileKeyValuePair *pair, XList *sibling)
 {
     x_hash_table_replace(group->lookup_map, pair->key, pair);
-    group->key_value_pairs = x_list_prepend(group->key_value_pairs, pair);
+    group->key_value_pairs = x_list_insert_before(group->key_value_pairs, sibling, pair);
 }
 
 static void x_key_file_add_key(XKeyFile *key_file, XKeyFileGroup *group, const xchar *key, const xchar *value)
 {
+    XList *lp;
     XKeyFileKeyValuePair *pair;
 
     pair = x_new(XKeyFileKeyValuePair, 1);
     pair->key = x_strdup(key);
     pair->value = x_strdup(value);
 
-    x_key_file_add_key_value_pair(key_file, group, pair);
+    lp = group->key_value_pairs;
+    while ((lp != NULL) && (((XKeyFileKeyValuePair *)lp->data)->key == NULL)) {
+        lp = lp->next;
+    }
+
+    x_key_file_add_key_value_pair(key_file, group, pair, lp);
 }
 
 xboolean x_key_file_remove_key(XKeyFile *key_file, const xchar *group_name, const xchar *key, XError **error)

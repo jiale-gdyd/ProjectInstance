@@ -386,13 +386,13 @@ namespace asio2::detail
 		 * Callback signature : void()
 		 */
 		template<class Callback>
-		inline derived_t& post_queued_event(Callback&& f)
+		inline derived_t& post_queued_event(Callback&& func)
 		{
 			using return_type = std::invoke_result_t<Callback>;
 
 			derived_t& derive = static_cast<derived_t&>(*this);
 
-			std::packaged_task<return_type()> task(std::forward<Callback>(f));
+			std::packaged_task<return_type()> task(std::forward<Callback>(func));
 
 			auto fn = [p = derive.selfptr(), t = std::move(task)](event_queue_guard<derived_t> g) mutable
 			{
@@ -401,15 +401,8 @@ namespace asio2::detail
 				t();
 			};
 
-			std::shared_ptr<asio::io_context> ioc_ptr = derive.io_->context_wptr().lock();
-			if (ioc_ptr == nullptr)
-			{
-				ASIO2_ASSERT(false);
-				return derive;
-			}
-
 			// Make sure we run on the io_context thread
-			// beacuse the callback "f" hold the derived_ptr already,
+			// beacuse the callback "fn" hold the derived_ptr already,
 			// so this callback for asio::dispatch don't need hold the derived_ptr again.
 			asio::post(derive.io_->context(), make_allocator(derive.wallocator(),
 			[this, fn = std::move(fn)]() mutable
@@ -432,14 +425,14 @@ namespace asio2::detail
 		 * Callback signature : void()
 		 */
 		template<class Callback, typename Allocator>
-		inline auto post_queued_event(Callback&& f, asio::use_future_t<Allocator>) ->
+		inline auto post_queued_event(Callback&& func, asio::use_future_t<Allocator>) ->
 			std::future<std::invoke_result_t<Callback>>
 		{
 			using return_type = std::invoke_result_t<Callback>;
 
 			derived_t& derive = static_cast<derived_t&>(*this);
 
-			std::packaged_task<return_type()> task(std::forward<Callback>(f));
+			std::packaged_task<return_type()> task(std::forward<Callback>(func));
 
 			std::future<return_type> future = task.get_future();
 
@@ -450,15 +443,8 @@ namespace asio2::detail
 				t();
 			};
 
-			std::shared_ptr<asio::io_context> ioc_ptr = derive.io_->context_wptr().lock();
-			if (ioc_ptr == nullptr)
-			{
-				ASIO2_ASSERT(false);
-				return future;
-			}
-
 			// Make sure we run on the io_context thread
-			// beacuse the callback "f" hold the derived_ptr already,
+			// beacuse the callback "fn" hold the derived_ptr already,
 			// so this callback for asio::dispatch don't need hold the derived_ptr again.
 			asio::post(derive.io_->context(), make_allocator(derive.wallocator(),
 			[this, fn = std::move(fn)]() mutable
@@ -484,7 +470,7 @@ namespace asio2::detail
 		 * note : the callback must can't be hold the event_queue_guard, otherwise maybe cause deadlock.
 		 */
 		template<class Callback>
-		inline derived_t& push_event(Callback&& f)
+		inline derived_t& push_event(Callback&& func)
 		{
 			derived_t& derive = static_cast<derived_t&>(*this);
 
@@ -503,7 +489,7 @@ namespace asio2::detail
 				ASIO2_ASSERT(this->events_.size() < std::size_t(32767));
 
 				bool empty = this->events_.empty();
-				this->events_.emplace(std::forward<Callback>(f));
+				this->events_.emplace(std::forward<Callback>(func));
 				if (empty)
 				{
 					(this->events_.front())(event_queue_guard<derived_t>{derive});
@@ -513,15 +499,15 @@ namespace asio2::detail
 			}
 		#endif
 
-			// beacuse the callback "f" hold the derived_ptr already,
+			// beacuse the callback "func" hold the derived_ptr already,
 			// so this callback for asio::dispatch don't need hold the derived_ptr again.
 			asio::post(derive.io_->context(), make_allocator(derive.wallocator(),
-			[this, f = std::forward<Callback>(f)]() mutable
+			[this, func = std::forward<Callback>(func)]() mutable
 			{
 				ASIO2_ASSERT(this->events_.size() < std::size_t(32767));
 
 				bool empty = this->events_.empty();
-				this->events_.emplace(std::move(f));
+				this->events_.emplace(std::move(func));
 				if (empty)
 				{
 					(this->events_.front())(event_queue_guard<derived_t>{static_cast<derived_t&>(*this)});
@@ -538,20 +524,20 @@ namespace asio2::detail
 		 * note : the callback must can't be hold the event_queue_guard, otherwise maybe cause deadlock.
 		 */
 		template<class Callback>
-		inline derived_t& post_event(Callback&& f)
+		inline derived_t& post_event(Callback&& func)
 		{
 			derived_t& derive = static_cast<derived_t&>(*this);
 
 			// Make sure we run on the io_context thread
-			// beacuse the callback "f" hold the derived_ptr already,
+			// beacuse the callback "func" hold the derived_ptr already,
 			// so this callback for asio::dispatch don't need hold the derived_ptr again.
 			asio::post(derive.io_->context(), make_allocator(derive.wallocator(),
-			[this, f = std::forward<Callback>(f)]() mutable
+			[this, func = std::forward<Callback>(func)]() mutable
 			{
 				ASIO2_ASSERT(this->events_.size() < std::size_t(32767));
 
 				bool empty = this->events_.empty();
-				this->events_.emplace(std::move(f));
+				this->events_.emplace(std::move(func));
 				if (empty)
 				{
 					(this->events_.front())(event_queue_guard<derived_t>{static_cast<derived_t&>(*this)});
@@ -570,13 +556,13 @@ namespace asio2::detail
 		 * note : the callback must can't be hold the event_queue_guard, otherwise maybe cause deadlock.
 		 */
 		template<class Callback>
-		inline derived_t& disp_event(Callback&& f, event_queue_guard<derived_t> guard)
+		inline derived_t& disp_event(Callback&& func, event_queue_guard<derived_t> guard)
 		{
 			derived_t& derive = static_cast<derived_t&>(*this);
 
 			if (guard.is_empty())
 			{
-				derive.push_event(std::forward<Callback>(f));
+				derive.push_event(std::forward<Callback>(func));
 			}
 			else
 			{
@@ -585,12 +571,12 @@ namespace asio2::detail
 
 				//ASIO2_ASSERT(derive.io_->running_in_this_thread());
 
-				// beacuse the callback "f" hold the derived_ptr already,
+				// beacuse the callback "func" hold the derived_ptr already,
 				// so this callback for asio::dispatch don't need hold the derived_ptr again.
 				asio::dispatch(derive.io_->context(), make_allocator(derive.wallocator(),
-				[f = std::forward<Callback>(f), guard = std::move(guard)]() mutable
+				[func = std::forward<Callback>(func), guard = std::move(guard)]() mutable
 				{
-					f(std::move(guard));
+					func(std::move(guard));
 				}));
 			}
 

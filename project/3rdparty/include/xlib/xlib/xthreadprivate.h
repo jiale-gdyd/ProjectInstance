@@ -47,10 +47,10 @@ struct _XRealThread {
         }                                                                                       \
   } X_STMT_END
 #elif defined(__NR_futex)
-#define g_futex_simple(uaddr, futex_op, ...)                                                    \
+#define x_futex_simple(uaddr, futex_op, ...)                                                    \
     X_STMT_START {                                                                              \
         int saved_errno = errno;                                                                \
-        int res = syscall(__NR_futex, uaddr, (gsize) futex_op, __VA_ARGS__);                    \
+        int res = syscall(__NR_futex, uaddr, (xsize)futex_op, __VA_ARGS__);                     \
         if ((res < 0) && (errno == EAGAIN)) {                                                   \
             errno = saved_errno;                                                                \
         }                                                                                       \

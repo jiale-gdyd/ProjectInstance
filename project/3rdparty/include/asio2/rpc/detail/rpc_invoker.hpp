@@ -432,17 +432,18 @@ namespace asio2::detail
 
 			auto* defer = r.defer_.get();
 
-			r.defer_->_bind([caller_ptr, caller, &sr, ec, head = caller->header_, defer]() mutable
+			detail::io_context_work_guard iocg(caller->io_->context().get_executor());
+
+			r.defer_->_bind(
+			[caller_ptr, caller, &sr, ec, head = caller->header_, defer, iocg = std::move(iocg)]() mutable
 			{
+				detail::ignore_unused(caller_ptr, iocg);
+
 				if (head.id() == static_cast<rpc_header::id_type>(0))
 					return;
 
 				// the "header_, async_send" should not appear in this "invoker" module, But I thought 
 				// for a long time and couldn't find of a good method to solve this problem.
-
-				std::shared_ptr<asio::io_context> ioc_ptr = caller->io_->context_wptr().lock();
-				if (ioc_ptr == nullptr)
-					return;
 
 				// the operator for "sr" must be in the io_context thread. 
 				asio::dispatch(caller->io_->context(), make_allocator(caller->wallocator(),
@@ -450,6 +451,8 @@ namespace asio2::detail
 					v = std::move(defer->v_)]
 				() mutable
 				{
+					ASIO2_ASSERT(caller->io_->running_in_this_thread());
+
 					if (!caller->is_started())
 						return;
 
@@ -480,7 +483,7 @@ namespace asio2::detail
 							std::ignore = v;
 						}
 
-						caller->async_send(sr.str());
+						caller->internal_async_send(std::move(caller_ptr), sr.str());
 
 				#if !defined(ASIO_NO_EXCEPTIONS) && !defined(BOOST_ASIO_NO_EXCEPTIONS)
 						return; // not exception, return
@@ -502,7 +505,7 @@ namespace asio2::detail
 					sr << head;
 					sr << ec;
 
-					caller->async_send(sr.str());
+					caller->internal_async_send(std::move(caller_ptr), sr.str());
 				#endif
 				}));
 			});

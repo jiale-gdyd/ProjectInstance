@@ -171,11 +171,9 @@ namespace asio2::detail
 				asio::post(derive.io_->context(), make_allocator(derive.callocator_,
 				[&derive, req = std::move(req), ex = std::move(ex), p = derive.selfptr()]() mutable
 				{
-					detail::ignore_unused(p);
-
 					derive.reqs_.emplace(req.id(), std::move(ex));
 
-					derive.async_send((derive.sr_.reset() << req).str(),
+					derive.internal_async_send(std::move(p), (derive.sr_.reset() << req).str(),
 					[&derive, id = req.id()]() mutable
 					{
 						if (get_last_error()) // send data failed with error
@@ -401,7 +399,6 @@ namespace asio2::detail
 				if (!derive.is_started())
 				{
 					set_last_error(rpc::make_error_code(rpc::error::not_connected));
-
 					return;
 				}
 
@@ -410,9 +407,7 @@ namespace asio2::detail
 				asio::post(derive.io_->context(), make_allocator(derive.callocator_,
 				[&derive, req = std::forward<Req>(req), p = derive.selfptr()]() mutable
 				{
-					detail::ignore_unused(p);
-
-					derive.async_send((derive.sr_.reset() << req).str());
+					derive.internal_async_send(std::move(p), (derive.sr_.reset() << req).str());
 				}));
 			}
 
@@ -493,9 +488,11 @@ namespace asio2::detail
 
 					timer->expires_after(timeout);
 					timer->async_wait(
-					[this_ptr = std::move(p), &derive, id = req.id()]
+					[p, &derive, id = req.id()]
 					(const error_code& ec) mutable
 					{
+						detail::ignore_unused(p);
+
 						if (ec == asio::error::operation_aborted)
 							return;
 
@@ -508,7 +505,7 @@ namespace asio2::detail
 					});
 
 					// 3. third, send request.
-					derive.async_send((derive.sr_.reset() << req).str(),
+					derive.internal_async_send(std::move(p), (derive.sr_.reset() << req).str(),
 					[&derive, id = req.id()]() mutable
 					{
 						if (get_last_error()) // send data failed with error

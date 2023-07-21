@@ -875,7 +875,7 @@ drm_public int drmModeCrtcGetGamma(int fd, uint32_t crtc_id, uint32_t size, uint
     return DRM_IOCTL(fd, DRM_IOCTL_MODE_GETGAMMA, &l);
 }
 
-drm_public int drmModeCrtcSetGamma(int fd, uint32_t crtc_id, uint32_t size, uint16_t *red, uint16_t *green, uint16_t *blue)
+drm_public int drmModeCrtcSetGamma(int fd, uint32_t crtc_id, uint32_t size, const uint16_t *red, const uint16_t *green, const uint16_t *blue)
 {
     struct drm_mode_crtc_lut l;
 

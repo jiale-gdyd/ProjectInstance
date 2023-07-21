@@ -46,26 +46,19 @@ namespace asio2::detail
 		 * from the current thread prior to returning from <tt>post()</tt>.
 		 */
 		template<typename Function>
-		inline derived_t & post(Function&& f)
+		inline derived_t & post(Function&& fn)
 		{
 			derived_t& derive = static_cast<derived_t&>(*this);
 
-			std::shared_ptr<asio::io_context> ioc_ptr = derive.io_->context_wptr().lock();
-			if (ioc_ptr == nullptr)
-			{
-				ASIO2_ASSERT(false);
-				return derive;
-			}
-
-			// if use call post, but the user callback "f" has't hold the session_ptr,
+			// if use call post, but the user callback "fn" has't hold the session_ptr,
 			// it maybe cause crash, so we need hold the session_ptr again at here.
 			// if the session_ptr is already destroyed, the selfptr() will cause crash.
 			asio::post(derive.io_->context(), make_allocator(derive.wallocator(),
-			[p = derive.selfptr(), f = std::forward<Function>(f)]() mutable
+			[p = derive.selfptr(), fn = std::forward<Function>(fn)]() mutable
 			{
 				detail::ignore_unused(p);
 
-				f();
+				fn();
 			}));
 
 			return derive;
@@ -78,7 +71,7 @@ namespace asio2::detail
 		 * from the current thread prior to returning from <tt>post()</tt>.
 		 */
 		template<typename Function, typename Rep, typename Period>
-		inline derived_t & post(Function&& f, std::chrono::duration<Rep, Period> delay)
+		inline derived_t & post(Function&& fn, std::chrono::duration<Rep, Period> delay)
 		{
 			derived_t& derive = static_cast<derived_t&>(*this);
 
@@ -94,15 +87,8 @@ namespace asio2::detail
 				delay = std::chrono::duration_cast<std::chrono::duration<Rep, Period>>(
 					(asio::steady_timer::duration::max)());
 
-			std::shared_ptr<asio::io_context> ioc_ptr = derive.io_->context_wptr().lock();
-			if (ioc_ptr == nullptr)
-			{
-				ASIO2_ASSERT(false);
-				return derive;
-			}
-
 			asio::post(derive.io_->context(), make_allocator(derive.wallocator(),
-			[this, &derive, p = derive.selfptr(), f = std::forward<Function>(f), delay]() mutable
+			[this, &derive, p = derive.selfptr(), fn = std::forward<Function>(fn), delay]() mutable
 			{
 				std::unique_ptr<asio::steady_timer> timer = std::make_unique<
 					asio::steady_timer>(derive.io_->context());
@@ -113,7 +99,7 @@ namespace asio2::detail
 
 				timer->expires_after(delay);
 				timer->async_wait(
-				[this, &derive, p = std::move(p), timer = std::move(timer), f = std::move(f)]
+				[this, &derive, p = std::move(p), timer = std::move(timer), fn = std::move(fn)]
 				(const error_code& ec) mutable
 				{
 					ASIO2_ASSERT((!ec) || ec == asio::error::operation_aborted);
@@ -122,11 +108,11 @@ namespace asio2::detail
 					detail::ignore_unused(p);
 					set_last_error(ec);
 				#if defined(ASIO2_ENABLE_TIMER_CALLBACK_WHEN_ERROR)
-					f();
+					fn();
 				#else
 					if (!ec)
 					{
-						f();
+						fn();
 					}
 				#endif
 					this->timed_tasks_.erase(timer.get());
@@ -145,23 +131,16 @@ namespace asio2::detail
 		 * thread, it will cause dead lock;
 		 */
 		template<typename Function, typename Allocator>
-		inline auto post(Function&& f, asio::use_future_t<Allocator>) ->
+		inline auto post(Function&& fn, asio::use_future_t<Allocator>) ->
 			std::future<std::invoke_result_t<Function>>
 		{
 			using return_type = std::invoke_result_t<Function>;
 
 			derived_t& derive = static_cast<derived_t&>(*this);
 
-			std::packaged_task<return_type()> task(std::forward<Function>(f));
+			std::packaged_task<return_type()> task(std::forward<Function>(fn));
 
 			std::future<return_type> future = task.get_future();
-
-			std::shared_ptr<asio::io_context> ioc_ptr = derive.io_->context_wptr().lock();
-			if (ioc_ptr == nullptr)
-			{
-				ASIO2_ASSERT(false);
-				return future;
-			}
 
 			asio::post(derive.io_->context(), make_allocator(derive.wallocator(),
 			[p = derive.selfptr(), t = std::move(task)]() mutable
@@ -183,7 +162,7 @@ namespace asio2::detail
 		 * thread, it will cause dead lock;
 		 */
 		template<typename Function, typename Rep, typename Period, typename Allocator>
-		inline auto post(Function&& f, std::chrono::duration<Rep, Period> delay, asio::use_future_t<Allocator>)
+		inline auto post(Function&& fn, std::chrono::duration<Rep, Period> delay, asio::use_future_t<Allocator>)
 			-> std::future<std::invoke_result_t<Function>>
 		{
 			using return_type = std::invoke_result_t<Function>;
@@ -195,16 +174,9 @@ namespace asio2::detail
 				delay = std::chrono::duration_cast<std::chrono::duration<Rep, Period>>(
 					(asio::steady_timer::duration::max)());
 
-			std::packaged_task<return_type()> task(std::forward<Function>(f));
+			std::packaged_task<return_type()> task(std::forward<Function>(fn));
 
 			std::future<return_type> future = task.get_future();
-
-			std::shared_ptr<asio::io_context> ioc_ptr = derive.io_->context_wptr().lock();
-			if (ioc_ptr == nullptr)
-			{
-				ASIO2_ASSERT(false);
-				return future;
-			}
 
 			asio::post(derive.io_->context(), make_allocator(derive.wallocator(),
 			[this, &derive, p = derive.selfptr(), t = std::move(task), delay]() mutable
@@ -249,23 +221,16 @@ namespace asio2::detail
 		 * the task will be asynchronously post to io_context to execute.
 		 */
 		template<typename Function>
-		inline derived_t & dispatch(Function&& f)
+		inline derived_t & dispatch(Function&& fn)
 		{
 			derived_t& derive = static_cast<derived_t&>(*this);
 
-			std::shared_ptr<asio::io_context> ioc_ptr = derive.io_->context_wptr().lock();
-			if (ioc_ptr == nullptr)
-			{
-				ASIO2_ASSERT(false);
-				return derive;
-			}
-
 			asio::dispatch(derive.io_->context(), make_allocator(derive.wallocator(),
-			[p = derive.selfptr(), f = std::forward<Function>(f)]() mutable
+			[p = derive.selfptr(), fn = std::forward<Function>(fn)]() mutable
 			{
 				detail::ignore_unused(p);
 
-				f();
+				fn();
 			}));
 
 			return derive;
@@ -281,23 +246,16 @@ namespace asio2::detail
 		 * thread, it will cause dead lock;
 		 */
 		template<typename Function, typename Allocator>
-		inline auto dispatch(Function&& f, asio::use_future_t<Allocator>) ->
+		inline auto dispatch(Function&& fn, asio::use_future_t<Allocator>) ->
 			std::future<std::invoke_result_t<Function>>
 		{
 			using return_type = std::invoke_result_t<Function>;
 
 			derived_t& derive = static_cast<derived_t&>(*this);
 
-			std::packaged_task<return_type()> task(std::forward<Function>(f));
+			std::packaged_task<return_type()> task(std::forward<Function>(fn));
 
 			std::future<return_type> future = task.get_future();
-
-			std::shared_ptr<asio::io_context> ioc_ptr = derive.io_->context_wptr().lock();
-			if (ioc_ptr == nullptr)
-			{
-				ASIO2_ASSERT(false);
-				return future;
-			}
 
 			// Make sure we run on the io_context thread
 			asio::dispatch(derive.io_->context(), make_allocator(derive.wallocator(),
@@ -317,13 +275,6 @@ namespace asio2::detail
 		inline derived_t& stop_all_timed_events()
 		{
 			derived_t& derive = static_cast<derived_t&>(*this);
-
-			std::shared_ptr<asio::io_context> ioc_ptr = derive.io_->context_wptr().lock();
-			if (ioc_ptr == nullptr)
-			{
-				ASIO2_ASSERT(false);
-				return derive;
-			}
 
 			asio::post(derive.io_->context(), make_allocator(derive.wallocator(),
 			[this, p = derive.selfptr()]() mutable
@@ -358,13 +309,6 @@ namespace asio2::detail
 		inline derived_t& _dispatch_stop_all_timed_events()
 		{
 			derived_t& derive = static_cast<derived_t&>(*this);
-
-			std::shared_ptr<asio::io_context> ioc_ptr = derive.io_->context_wptr().lock();
-			if (ioc_ptr == nullptr)
-			{
-				ASIO2_ASSERT(false);
-				return derive;
-			}
 
 			asio::dispatch(derive.io_->context(), make_allocator(derive.wallocator(),
 			[this, p = derive.selfptr()]() mutable

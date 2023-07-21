@@ -188,7 +188,7 @@ void BasicTaskScheduler::SingleStep(unsigned maxDelayTime) {
       if (mask == 0) mask = 0x80000000;
 
 #ifndef NO_STD_LIB
-      if (fTriggersAwaitingHandling[i].test()) {
+      if (fTriggersAwaitingHandling[i].test_and_set()) {
 	fTriggersAwaitingHandling[i].clear();
 #else
       if (fTriggersAwaitingHandling[i]) {

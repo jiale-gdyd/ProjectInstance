@@ -193,8 +193,6 @@ namespace asio2::detail
 		{
 			derived_t& derive = static_cast<derived_t&>(*this);
 
-			detail::integer_add_sub_guard asg(derive.io_->pending());
-
 			// why use copyable_wrapper? beacuse std::promise is moveable-only, but
 			// std::function need copy-constructible.
 
@@ -208,6 +206,8 @@ namespace asio2::detail
 
 			std::promise<std::pair<error_code, std::size_t>> promise;
 			std::future<std::pair<error_code, std::size_t>> future = promise.get_future();
+
+			detail::integer_add_sub_guard asg(derive.io_->pending());
 
 			derive.push_event(
 			[&derive, p = derive.selfptr(), id = derive.life_id(), promise = std::move(promise),
@@ -272,8 +272,6 @@ namespace asio2::detail
 		{
 			derived_t& derive = static_cast<derived_t&>(*this);
 
-			detail::integer_add_sub_guard asg(derive.io_->pending());
-
 			std::promise<std::pair<error_code, std::size_t>> promise;
 			std::future<std::pair<error_code, std::size_t>> future = promise.get_future();
 
@@ -283,6 +281,8 @@ namespace asio2::detail
 				promise.set_value(std::pair<error_code, std::size_t>(asio::error::invalid_argument, 0));
 				return future;
 			}
+
+			detail::integer_add_sub_guard asg(derive.io_->pending());
 
 			derive.push_event(
 			[&derive, p = derive.selfptr(), id = derive.life_id(), promise = std::move(promise),
@@ -344,13 +344,15 @@ namespace asio2::detail
 			{
 				if (!derive.is_started())
 				{
-					derive._send_cp_invoke_callback(asio::error::not_connected, std::forward<Callback>(fn));
+					set_last_error(asio::error::not_connected);
+					callback_helper::call(fn, 0);
 					return;
 				}
 
 				if (id != derive.life_id())
 				{
-					derive._send_cp_invoke_callback(asio::error::operation_aborted, std::forward<Callback>(fn));
+					set_last_error(asio::error::operation_aborted);
+					callback_helper::call(fn, 0);
 					return;
 				}
 
@@ -395,30 +397,32 @@ namespace asio2::detail
 
 			detail::integer_add_sub_guard asg(derive.io_->pending());
 
-			if (!s)
-			{
-				derive._send_cp_invoke_callback(asio::error::invalid_argument, std::forward<Callback>(fn));
-
-				return;
-			}
-
 			// We must ensure that there is only one operation to send data
 			// at the same time,otherwise may be cause crash.
 
 			derive.push_event(
 			[&derive, p = derive.selfptr(), id = derive.life_id(), fn = std::forward<Callback>(fn),
-				data = derive._data_persistence(s, count)]
+				s, data = derive._data_persistence(s, count)]
 			(event_queue_guard<derived_t> g) mutable
 			{
+				if (!s)
+				{
+					set_last_error(asio::error::invalid_argument);
+					callback_helper::call(fn, 0);
+					return;
+				}
+
 				if (!derive.is_started())
 				{
-					derive._send_cp_invoke_callback(asio::error::not_connected, std::forward<Callback>(fn));
+					set_last_error(asio::error::not_connected);
+					callback_helper::call(fn, 0);
 					return;
 				}
 
 				if (id != derive.life_id())
 				{
-					derive._send_cp_invoke_callback(asio::error::operation_aborted, std::forward<Callback>(fn));
+					set_last_error(asio::error::operation_aborted);
+					callback_helper::call(fn, 0);
 					return;
 				}
 
@@ -526,19 +530,102 @@ namespace asio2::detail
 		}
 
 	protected:
-		template<class Callback>
-		inline void _send_cp_invoke_callback(error_code ec, Callback&& fn)
+		/**
+		 * @brief Asynchronous send data, support multiple data formats,
+		 *             see asio::buffer(...) in /asio/buffer.hpp
+		 * You can call this function on the communication thread and anywhere,it's multi thread safed.
+		 * use like this : std::string m; async_send(std::move(m)); can reducing memory allocation.
+		 * PodType * : async_send("abc");
+		 * PodType (&data)[N] : double m[10]; async_send(m);
+		 * std::array<PodType, N> : std::array<int,10> m; async_send(m);
+		 * std::vector<PodType, Allocator> : std::vector<float> m; async_send(m);
+		 * std::basic_string<Elem, Traits, Allocator> : std::string m; async_send(m);
+		 */
+		template<class DataT>
+		inline void internal_async_send(std::shared_ptr<derived_t> this_ptr, DataT&& data) noexcept
 		{
 			derived_t& derive = static_cast<derived_t&>(*this);
 
-			set_last_error(ec);
+			ASIO2_ASSERT(derive.io_->running_in_this_thread());
 
-			// we should ensure that the callback must be called in the io_context thread.
-			derive.post([ec, fn = std::forward<Callback>(fn)]() mutable
+			derive.push_event(
+			[&derive, p = std::move(this_ptr), id = derive.life_id(),
+				data = derive._data_persistence(std::forward<DataT>(data))]
+			(event_queue_guard<derived_t> g) mutable
 			{
-				set_last_error(ec);
+				if (!derive.is_started())
+				{
+					set_last_error(asio::error::not_connected);
+					return;
+				}
 
-				callback_helper::call(fn, 0);
+				if (id != derive.life_id())
+				{
+					set_last_error(asio::error::operation_aborted);
+					return;
+				}
+
+				clear_last_error();
+
+				derive._do_send(data, [g = std::move(g), p = std::move(p)](const error_code&, std::size_t) mutable
+				{
+					{
+						[[maybe_unused]] auto t{ std::move(g) };
+					}
+				});
+			});
+		}
+
+		/**
+		 * @brief Asynchronous send data, support multiple data formats,
+		 *             see asio::buffer(...) in /asio/buffer.hpp
+		 * You can call this function on the communication thread and anywhere,it's multi thread safed.
+		 * use like this : std::string m; async_send(std::move(m)); can reducing memory allocation.
+		 * PodType * : async_send("abc");
+		 * PodType (&data)[N] : double m[10]; async_send(m);
+		 * std::array<PodType, N> : std::array<int,10> m; async_send(m);
+		 * std::vector<PodType, Allocator> : std::vector<float> m; async_send(m);
+		 * std::basic_string<Elem, Traits, Allocator> : std::string m; async_send(m);
+		 * Callback signature : void() or void(std::size_t bytes_sent)
+		 */
+		template<class DataT, class Callback>
+		inline typename std::enable_if_t<is_callable_v<Callback>, void> internal_async_send(
+			std::shared_ptr<derived_t> this_ptr, DataT&& data, Callback&& fn)
+		{
+			derived_t& derive = static_cast<derived_t&>(*this);
+
+			ASIO2_ASSERT(derive.io_->running_in_this_thread());
+
+			derive.push_event(
+			[&derive, p = std::move(this_ptr), id = derive.life_id(), fn = std::forward<Callback>(fn),
+				data = derive._data_persistence(std::forward<DataT>(data))]
+			(event_queue_guard<derived_t> g) mutable
+			{
+				if (!derive.is_started())
+				{
+					set_last_error(asio::error::not_connected);
+					callback_helper::call(fn, 0);
+					return;
+				}
+
+				if (id != derive.life_id())
+				{
+					set_last_error(asio::error::operation_aborted);
+					callback_helper::call(fn, 0);
+					return;
+				}
+
+				clear_last_error();
+
+				derive._do_send(data, [&fn, g = std::move(g), p = std::move(p)]
+				(const error_code&, std::size_t bytes_sent) mutable
+				{
+					ASIO2_ASSERT(!g.is_empty());
+					callback_helper::call(fn, bytes_sent);
+					{
+						[[maybe_unused]] auto t{ std::move(g) };
+					}
+				});
 			});
 		}
 	};

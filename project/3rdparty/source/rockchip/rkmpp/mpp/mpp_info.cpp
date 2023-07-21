@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2023-07-10 [m2vd_parser] change frame period to 27MHZ";
+static const char *mpp_last_commit_message = "2023-07-17 [hal_vp8e]: Fix crash on unsupport input format";
 
 void show_mpp_version(void)
 {

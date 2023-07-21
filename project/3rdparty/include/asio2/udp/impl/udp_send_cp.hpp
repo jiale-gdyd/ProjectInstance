@@ -311,12 +311,11 @@ namespace asio2::detail
 			// We must ensure that there is only one operation to send data
 			// at the same time,otherwise may be cause crash.
 
-			if (!s)
-			{
-				derive._udp_send_cp_invoke_callback(asio::error::invalid_argument, std::forward<Callback>(fn));
-
-				return;
-			}
+			//// don't need do this
+			//if (!s)
+			//{
+			//	// ... 
+			//}
 
 			derive._do_resolve(std::forward<String>(host), std::forward<StrOrInt>(port),
 				derive._data_persistence(s, count),
@@ -604,13 +603,15 @@ namespace asio2::detail
 			{
 				if (!derive.is_started())
 				{
-					derive._udp_send_cp_invoke_callback(asio::error::not_connected, std::forward<Callback>(fn));
+					set_last_error(asio::error::not_connected);
+					callback_helper::call(fn, 0);
 					return;
 				}
 
 				if (id != derive.life_id())
 				{
-					derive._udp_send_cp_invoke_callback(asio::error::operation_aborted, std::forward<Callback>(fn));
+					set_last_error(asio::error::operation_aborted);
+					callback_helper::call(fn, 0);
 					return;
 				}
 
@@ -661,27 +662,29 @@ namespace asio2::detail
 			// We must ensure that there is only one operation to send data
 			// at the same time,otherwise may be cause crash.
 
-			if (!s)
-			{
-				derive._udp_send_cp_invoke_callback(asio::error::invalid_argument, std::forward<Callback>(fn));
-
-				return;
-			}
-
 			derive.push_event(
 			[&derive, p = derive.selfptr(), id = derive.life_id(), endpoint = std::forward<Endpoint>(endpoint),
-				data = derive._data_persistence(s, count), fn = std::forward<Callback>(fn)]
+				s, data = derive._data_persistence(s, count), fn = std::forward<Callback>(fn)]
 			(event_queue_guard<derived_t> g) mutable
 			{
+				if (!s)
+				{
+					set_last_error(asio::error::invalid_argument);
+					callback_helper::call(fn, 0);
+					return;
+				}
+
 				if (!derive.is_started())
 				{
-					derive._udp_send_cp_invoke_callback(asio::error::not_connected, std::forward<Callback>(fn));
+					set_last_error(asio::error::not_connected);
+					callback_helper::call(fn, 0);
 					return;
 				}
 
 				if (id != derive.life_id())
 				{
-					derive._udp_send_cp_invoke_callback(asio::error::operation_aborted, std::forward<Callback>(fn));
+					set_last_error(asio::error::operation_aborted);
+					callback_helper::call(fn, 0);
 					return;
 				}
 
@@ -894,8 +897,10 @@ namespace asio2::detail
 
 			// Before async_resolve execution is complete, we must hold the resolver object.
 			// so we captured the resolver_ptr into the lambda callback function.
-			resolver_type * resolver_pointer = resolver_ptr.get();
-			resolver_pointer->async_resolve(std::forward<String>(host), detail::to_string(std::forward<StrOrInt>(port)),
+
+			resolver_type * rp = resolver_ptr.get();
+
+			rp->async_resolve(std::forward<String>(host), detail::to_string(std::forward<StrOrInt>(port)),
 			[&derive, p = derive.selfptr(), resolver_ptr = std::move(resolver_ptr),
 				data = std::forward<Data>(data), callback = std::forward<Callback>(callback)]
 			(const error_code& ec, const endpoints_type& endpoints) mutable
@@ -905,62 +910,47 @@ namespace asio2::detail
 				if (ec)
 				{
 					callback(ec, 0);
+					return;
 				}
-				else
+
+				decltype(endpoints.size()) i = 1;
+
+				for (auto iter = endpoints.begin(); iter != endpoints.end(); ++iter, ++i)
 				{
-					decltype(endpoints.size()) i = 1;
-					for (auto iter = endpoints.begin(); iter != endpoints.end(); ++iter, ++i)
+					derive.push_event(
+					[&derive, id = derive.life_id(), endpoint = iter->endpoint(),
+						p = (endpoints.size() == i ? std::move(p) : p),
+						data = (endpoints.size() == i ? std::move(data) : data),
+						callback = (endpoints.size() == i ? std::move(callback) : callback)]
+					(event_queue_guard<derived_t> g) mutable
 					{
-						derive.push_event(
-						[&derive, p, id = derive.life_id(), endpoint = iter->endpoint(),
-							data = (endpoints.size() == i ? std::move(data) : data),
-							callback = (endpoints.size() == i ? std::move(callback) : callback)]
-						(event_queue_guard<derived_t> g) mutable
+						if (!derive.is_started())
 						{
-							if (!derive.is_started())
-							{
-								set_last_error(asio::error::not_connected);
+							set_last_error(asio::error::not_connected);
 
-								callback(asio::error::not_connected, 0);
+							callback(asio::error::not_connected, 0);
 
-								return;
-							}
+							return;
+						}
 
-							if (id != derive.life_id())
-							{
-								set_last_error(asio::error::operation_aborted);
+						if (id != derive.life_id())
+						{
+							set_last_error(asio::error::operation_aborted);
 
-								callback(asio::error::operation_aborted, 0);
+							callback(asio::error::operation_aborted, 0);
 
-								return;
-							}
+							return;
+						}
 
-							clear_last_error();
+						clear_last_error();
 
-							derive._do_send(endpoint, data, [g = std::move(g), f = std::move(callback)]
-							(const error_code& ec, std::size_t bytes_sent) mutable
-							{
-								f(ec, bytes_sent);
-							});
+						derive._do_send(endpoint, data, [g = std::move(g), f = std::move(callback)]
+						(const error_code& ec, std::size_t bytes_sent) mutable
+						{
+							f(ec, bytes_sent);
 						});
-					}
+					});
 				}
-			});
-		}
-
-		template<class Callback>
-		inline void _udp_send_cp_invoke_callback(error_code ec, Callback&& fn)
-		{
-			derived_t& derive = static_cast<derived_t&>(*this);
-
-			set_last_error(ec);
-
-			// we should ensure that the callback must be called in the io_context thread.
-			derive.post([ec, fn = std::forward<Callback>(fn)]() mutable
-			{
-				set_last_error(ec);
-
-				callback_helper::call(fn, 0);
 			});
 		}
 	};

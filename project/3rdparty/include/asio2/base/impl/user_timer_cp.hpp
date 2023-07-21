@@ -299,13 +299,6 @@ namespace asio2::detail
 
 			std::function<void()> t = std::bind(std::forward<Fun>(fun), std::forward<Args>(args)...);
 
-			std::shared_ptr<asio::io_context> ioc_ptr = derive.io_->context_wptr().lock();
-			if (ioc_ptr == nullptr)
-			{
-				ASIO2_ASSERT(false);
-				return;
-			}
-
 			// Whether or not we run on the io_context thread, We all start the timer by post an asynchronous 
 			// event, in order to avoid unexpected problems caused by the user start or stop the 
 			// timer again in the timer callback function.
@@ -349,13 +342,6 @@ namespace asio2::detail
 		{
 			derived_t& derive = static_cast<derived_t&>(*this);
 
-			std::shared_ptr<asio::io_context> ioc_ptr = derive.io_->context_wptr().lock();
-			if (ioc_ptr == nullptr)
-			{
-				ASIO2_ASSERT(false);
-				return;
-			}
-
 			// must use post, otherwise when call stop_timer immediately after start_timer
 			// will cause the stop_timer has no effect.
 			// can't use dispatch, otherwise if call stop_timer in timer callback, it will 
@@ -389,13 +375,6 @@ namespace asio2::detail
 		{
 			derived_t& derive = static_cast<derived_t&>(*this);
 
-			std::shared_ptr<asio::io_context> ioc_ptr = derive.io_->context_wptr().lock();
-			if (ioc_ptr == nullptr)
-			{
-				ASIO2_ASSERT(false);
-				return;
-			}
-
 			// must use post, otherwise when call stop_all_timers immediately after start_timer
 			// will cause the stop_all_timers has no effect.
 			asio::post(derive.io_->context(), make_allocator(derive.wallocator(),
@@ -427,26 +406,19 @@ namespace asio2::detail
 				return (this->user_timers_.find(timer_id) != this->user_timers_.end());
 			}
 
-			std::promise<bool> p;
-			std::future<bool> f = p.get_future();
-
-			std::shared_ptr<asio::io_context> ioc_ptr = derive.io_->context_wptr().lock();
-			if (ioc_ptr == nullptr)
-			{
-				ASIO2_ASSERT(false);
-				return f.get();
-			}
+			std::promise<bool> prm;
+			std::future<bool> fut = prm.get_future();
 
 			asio::post(derive.io_->context(), make_allocator(derive.wallocator(),
-			[this, this_ptr = derive.selfptr(), timer_id = std::forward<TimerId>(timer_id), &p]
+			[this, this_ptr = derive.selfptr(), timer_id = std::forward<TimerId>(timer_id), &prm]
 			() mutable
 			{
 				detail::ignore_unused(this_ptr);
 
-				p.set_value(this->user_timers_.find(timer_id) != this->user_timers_.end());
+				prm.set_value(this->user_timers_.find(timer_id) != this->user_timers_.end());
 			}));
 
-			return f.get();
+			return fut.get();
 		}
 
 		/**
@@ -470,18 +442,11 @@ namespace asio2::detail
 				}
 			}
 
-			std::promise<typename asio::steady_timer::duration> p;
-			std::future<typename asio::steady_timer::duration> f = p.get_future();
-
-			std::shared_ptr<asio::io_context> ioc_ptr = derive.io_->context_wptr().lock();
-			if (ioc_ptr == nullptr)
-			{
-				ASIO2_ASSERT(false);
-				return f.get();
-			}
+			std::promise<typename asio::steady_timer::duration> prm;
+			std::future<typename asio::steady_timer::duration> fut = prm.get_future();
 
 			asio::post(derive.io_->context(), make_allocator(derive.wallocator(),
-			[this, this_ptr = derive.selfptr(), timer_id = std::forward<TimerId>(timer_id), &p]
+			[this, this_ptr = derive.selfptr(), timer_id = std::forward<TimerId>(timer_id), &prm]
 			() mutable
 			{
 				detail::ignore_unused(this_ptr);
@@ -489,15 +454,15 @@ namespace asio2::detail
 				auto iter = this->user_timers_.find(timer_id);
 				if (iter != this->user_timers_.end())
 				{
-					p.set_value(iter->second->interval);
+					prm.set_value(iter->second->interval);
 				}
 				else
 				{
-					p.set_value(typename asio::steady_timer::duration{});
+					prm.set_value(typename asio::steady_timer::duration{});
 				}
 			}));
 
-			return f.get();
+			return fut.get();
 		}
 
 		/**
@@ -520,13 +485,6 @@ namespace asio2::detail
 				{
 					iter->second->interval = interval;
 				}
-				return;
-			}
-
-			std::shared_ptr<asio::io_context> ioc_ptr = derive.io_->context_wptr().lock();
-			if (ioc_ptr == nullptr)
-			{
-				ASIO2_ASSERT(false);
 				return;
 			}
 
@@ -587,13 +545,6 @@ namespace asio2::detail
 		inline void _dispatch_stop_all_timers()
 		{
 			derived_t& derive = static_cast<derived_t&>(*this);
-
-			std::shared_ptr<asio::io_context> ioc_ptr = derive.io_->context_wptr().lock();
-			if (ioc_ptr == nullptr)
-			{
-				ASIO2_ASSERT(false);
-				return;
-			}
 
 			// must use post, otherwise when call stop_all_timers immediately after start_timer
 			// will cause the stop_all_timers has no effect.
