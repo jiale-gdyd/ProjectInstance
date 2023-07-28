@@ -9,6 +9,7 @@
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/prctl.h>
 #include <sys/select.h>
 #include <sys/resource.h>
 
@@ -468,6 +469,18 @@ static void x_test_log(XTestLogType lbit, const xchar *string1, const xchar *str
     }
 }
 
+void x_test_disable_crash_reporting(void)
+{
+#ifdef HAVE_SYS_RESOURCE_H
+    struct rlimit limit = { 0, 0 };
+    (void)setrlimit(RLIMIT_CORE, &limit);
+#endif
+
+#if defined(PR_SET_DUMPABLE)
+    (void)prctl(PR_SET_DUMPABLE, 0, 0, 0, 0);
+#endif
+}
+
 static void parse_args(xint *argc_p, xchar ***argv_p)
 {
     xuint i, e;
@@ -515,12 +528,7 @@ static void parse_args(xint *argc_p, xchar ***argv_p)
             argv[i] = NULL;
         } else if (strcmp ("--XTestSubprocess", argv[i]) == 0) {
             test_in_subprocess = TRUE;
-#ifdef HAVE_SYS_RESOURCE_H
-            {
-                struct rlimit limit = { 0, 0 };
-                (void)setrlimit(RLIMIT_CORE, &limit);
-            }
-#endif
+            x_test_disable_crash_reporting();
             argv[i] = NULL;
             test_tap_log = FALSE;
         } else if (strcmp("-p", argv[i]) == 0 || strncmp("-p=", argv[i], 3) == 0) {
@@ -2128,12 +2136,7 @@ xboolean x_test_trap_fork(xuint64 usec_timeout, XTestTrapFlags test_trap_flags)
             close(stderr_pipe[1]);
         }
 
-#ifdef HAVE_SYS_RESOURCE_H
-        {
-            struct rlimit limit = { 0, 0 };
-            (void)setrlimit(RLIMIT_CORE, &limit);
-        }
-#endif
+        x_test_disable_crash_reporting();
         return TRUE;
     } else {
         test_run_forks++;

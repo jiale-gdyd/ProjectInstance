@@ -377,6 +377,9 @@ xboolean x_test_failed(void);
 XLIB_AVAILABLE_IN_2_38
 void x_test_set_nonfatal_assertions(void);
 
+XLIB_AVAILABLE_IN_2_78
+void x_test_disable_crash_reporting(void);
+
 #define x_test_add(testpath, Fixture, tdata, fsetup, ftest, fteardown)  \
     X_STMT_START {                                                      \
         void (*add_vtable) (const char *,                               \
@@ -384,7 +387,7 @@ void x_test_set_nonfatal_assertions(void);
                 xconstpointer,                                          \
                 void (*)(Fixture *, xconstpointer),                     \
                 void (*)(Fixture *, xconstpointer),                     \
-                void (*)(Fixture *, xconstpointer)) =  (void (*) (const xchar *, xsize, xconstpointer, void (*) (Fixture *, xconstpointer), void (*)(Fixture *, xconstpointer), void (*)(Fixture *, xconstpointer))) x_test_add_vtable; \
+                void (*)(Fixture *, xconstpointer)) =  (void (*)(const xchar *, xsize, xconstpointer, void (*)(Fixture *, xconstpointer), void (*)(Fixture *, xconstpointer), void (*)(Fixture *, xconstpointer))) x_test_add_vtable; \
         add_vtable                                                      \
         (testpath, sizeof (Fixture), tdata, fsetup, ftest, fteardown);  \
     } X_STMT_END
