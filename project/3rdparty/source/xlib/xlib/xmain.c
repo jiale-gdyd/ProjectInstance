@@ -1870,23 +1870,14 @@ void x_main_context_release(XMainContext *context)
     }
 
     LOCK_CONTEXT(context);
-#if 0
-    if (X_UNLIKELY(context->owner != X_THREAD_SELF || context->owner_count == 0))  {
-        XThread *context_owner = context->owner;
-        xuint context_owner_count = context->owner_count;
-
-        UNLOCK_CONTEXT(context);
-        x_critical("x_main_context_release() called on a context (%p, owner %p, owner count %u) which is not acquired by the current thread", context, context_owner, context_owner_count);
-        return;
-    }
-#endif
     x_main_context_release_unlocked(context);
-
     UNLOCK_CONTEXT(context);
 }
 
 static void x_main_context_release_unlocked(XMainContext *context)
 {
+    x_return_if_fail(context->owner_count > 0);
+
     context->owner_count--;
     if (context->owner_count == 0) {
         TRACE(XLIB_MAIN_CONTEXT_RELEASE(context));

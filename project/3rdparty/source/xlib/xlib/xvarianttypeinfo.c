@@ -4,6 +4,7 @@
 #include <xlib/xlib/xslice.h>
 #include <xlib/xlib/xthread.h>
 #include <xlib/xlib/xrefcount.h>
+#include <xlib/xlib/xlib_trace.h>
 #include <xlib/xlib/xtestutils.h>
 #include <xlib/xlib/xvarianttypeinfo.h>
 
@@ -365,6 +366,8 @@ XVariantTypeInfo *x_variant_type_info_get(const XVariantType *type)
             container->type_string = type_string;
             x_atomic_ref_count_init(&container->ref_count);
 
+            TRACE(XLIB_VARIANT_TYPE_INFO_NEW(info, container->type_string));
+
             x_hash_table_insert(x_variant_type_info_table, type_string, info);
             type_string = NULL;
         } else {
@@ -387,6 +390,8 @@ XVariantTypeInfo *x_variant_type_info_get(const XVariantType *type)
 
         info = x_variant_type_info_basic_table + index;
         x_variant_type_info_check(info, 0);
+
+        TRACE(XLIB_VARIANT_TYPE_INFO_NEW(info, x_variant_type_info_basic_chars[index]));
 
         return (XVariantTypeInfo *)info;
     }
@@ -413,6 +418,8 @@ void x_variant_type_info_unref(XVariantTypeInfo *info)
 
         x_rec_mutex_lock(&x_variant_type_info_lock);
         if (x_atomic_ref_count_dec(&container->ref_count)) {
+            TRACE(XLIB_VARIANT_TYPE_INFO_FREE(info));
+
             x_hash_table_remove(x_variant_type_info_table, container->type_string);
             if (x_hash_table_size(x_variant_type_info_table) == 0) {
                 x_hash_table_unref(x_variant_type_info_table);

@@ -224,31 +224,91 @@ static void x_private_impl_free(pthread_key_t *key)
     free(key);
 }
 
-static inline pthread_key_t *x_private_get_impl(XPrivate *key)
+static xpointer x_private_impl_new_direct(XDestroyNotify notify)
 {
-    pthread_key_t *impl = (pthread_key_t *)x_atomic_pointer_get(&key->p);
+    xint status;
+    pthread_key_t key;
+    xpointer impl = (void *)(xsize)-1;
 
-    if X_UNLIKELY(impl == NULL) {
-        impl = x_private_impl_new(key->notify);
-        if (!x_atomic_pointer_compare_and_exchange(&key->p, NULL, impl)) {
-            x_private_impl_free(impl);
-            impl = (pthread_key_t *)key->p;
+    status = pthread_key_create(&key, notify);
+    if X_UNLIKELY(status != 0) {
+        x_thread_abort(status, "pthread_key_create");
+    }
+
+    memcpy(&impl, &key, sizeof(pthread_key_t));
+
+    if (sizeof(pthread_key_t) == sizeof(xpointer)) {
+        if X_UNLIKELY(impl == NULL) {
+            status = pthread_key_create(&key, notify);
+            if X_UNLIKELY(status != 0) {
+                x_thread_abort(status, "pthread_key_create");
+            }
+
+            memcpy(&impl, &key, sizeof(pthread_key_t));
+
+            if X_UNLIKELY(impl == NULL) {
+                x_thread_abort(status, "pthread_key_create (gave NULL result twice)");
+            }
         }
     }
 
     return impl;
 }
 
+static void x_private_impl_free_direct(xpointer impl)
+{
+    xint status;
+    pthread_key_t tmp;
+
+    memcpy(&tmp, &impl, sizeof(pthread_key_t));
+
+    status = pthread_key_delete(tmp);
+    if X_UNLIKELY(status != 0) {
+        x_thread_abort(status, "pthread_key_delete");
+    }
+}
+
+static inline pthread_key_t x_private_get_impl(XPrivate *key)
+{
+    if (sizeof(pthread_key_t) > sizeof(xpointer)) {
+        pthread_key_t *impl = x_atomic_pointer_get(&key->p);
+
+        if X_UNLIKELY(impl == NULL) {
+            impl = x_private_impl_new(key->notify);
+            if (!x_atomic_pointer_compare_and_exchange(&key->p, NULL, impl)) {
+                x_private_impl_free(impl);
+                impl = key->p;
+            }
+        }
+
+        return *impl;
+    } else {
+        pthread_key_t tmp;
+        xpointer impl = x_atomic_pointer_get(&key->p);
+
+        if X_UNLIKELY(impl == NULL) {
+            impl = x_private_impl_new_direct(key->notify);
+            if (!x_atomic_pointer_compare_and_exchange(&key->p, NULL, impl)) {
+                x_private_impl_free_direct(impl);
+                impl = key->p;
+            }
+        }
+
+        memcpy(&tmp, &impl, sizeof(pthread_key_t));
+        return tmp;
+    }
+}
+
 xpointer x_private_get(XPrivate *key)
 {
-    return pthread_getspecific(*x_private_get_impl(key));
+    return pthread_getspecific(x_private_get_impl(key));
 }
 
 void x_private_set(XPrivate *key, xpointer value)
 {
     xint status;
 
-    if X_UNLIKELY((status = pthread_setspecific(*x_private_get_impl(key), value)) != 0) {
+    if X_UNLIKELY((status = pthread_setspecific(x_private_get_impl(key), value)) != 0) {
         x_thread_abort(status, "pthread_setspecific");
     }
 }
@@ -257,11 +317,11 @@ void x_private_replace(XPrivate *key, xpointer value)
 {
     xint status;
     xpointer old;
-    pthread_key_t *impl = x_private_get_impl(key);
+    pthread_key_t impl = x_private_get_impl(key);
 
-    old = pthread_getspecific(*impl);
+    old = pthread_getspecific(impl);
 
-    if X_UNLIKELY((status = pthread_setspecific(*impl, value)) != 0) {
+    if X_UNLIKELY((status = pthread_setspecific(impl, value)) != 0) {
         x_thread_abort(status, "pthread_setspecific");
     }
 

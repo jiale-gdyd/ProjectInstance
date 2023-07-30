@@ -1,5 +1,9 @@
 # 变更日志
 
+## 2023-07-30
+  * cpp-tbox: Update log.h
+  * libdrm  : xf86drm: add drmSyncobjEventfd
+
 ## 2023-07-21
   * linux-rga-multi: update to 1.9.3_[0]
   * cpp-tbox       : tidy: 添加文件头

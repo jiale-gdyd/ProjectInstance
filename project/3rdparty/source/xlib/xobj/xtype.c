@@ -2687,7 +2687,7 @@ void x_type_query(XType type, XTypeQuery *query)
 
     query->type = 0;
     node = lookup_type_node_I(type);
-    if (node && node->is_classed && !node->plugin) {
+    if (node && node->is_classed) {
         X_READ_LOCK(&type_rw_lock);
         if (node->data) {
             query->type = NODE_TYPE(node);

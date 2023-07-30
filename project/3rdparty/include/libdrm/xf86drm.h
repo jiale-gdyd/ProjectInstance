@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 #ifndef DRM_MAX_MINOR
-#define DRM_MAX_MINOR                                       16
+#define DRM_MAX_MINOR                                       64
 #endif
 
 #define DRM_IOCTL_NR(n)                                     _IOC_NR(n)
@@ -722,6 +722,7 @@ extern int drmSyncobjTimelineWait(int fd, uint32_t *handles, uint64_t *points, u
 extern int drmSyncobjQuery(int fd, uint32_t *handles, uint64_t *points, uint32_t handle_count);
 extern int drmSyncobjQuery2(int fd, uint32_t *handles, uint64_t *points, uint32_t handle_count, uint32_t flags);
 extern int drmSyncobjTransfer(int fd, uint32_t dst_handle, uint64_t dst_point, uint32_t src_handle, uint64_t src_point, uint32_t flags);
+extern int drmSyncobjEventfd(int fd, uint32_t handle, uint64_t point, int ev_fd, uint32_t flags);
 
 extern char *drmGetFormatModifierVendor(uint64_t modifier);
 extern char *drmGetFormatModifierName(uint64_t modifier);

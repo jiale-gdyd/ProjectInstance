@@ -774,9 +774,6 @@ static const char *drmGetDeviceName(int type)
         case DRM_NODE_PRIMARY:
             return DRM_DEV_NAME;
 
-        case DRM_NODE_CONTROL:
-            return DRM_CONTROL_DEV_NAME;
-
         case DRM_NODE_RENDER:
             return DRM_RENDER_DEV_NAME;
     }
@@ -950,9 +947,6 @@ static int drmGetMinorBase(int type)
         case DRM_NODE_PRIMARY:
             return 0;
 
-        case DRM_NODE_CONTROL:
-            return 64;
-
         case DRM_NODE_RENDER:
             return 128;
 
@@ -971,7 +965,6 @@ static int drmGetMinorType(int major, int minor)
 
     switch (type) {
         case DRM_NODE_PRIMARY:
-        case DRM_NODE_CONTROL:
         case DRM_NODE_RENDER:
             return type;
 
@@ -985,9 +978,6 @@ static const char *drmGetMinorName(int type)
     switch (type) {
         case DRM_NODE_PRIMARY:
             return DRM_PRIMARY_MINOR_NAME;
-
-        case DRM_NODE_CONTROL:
-            return DRM_CONTROL_MINOR_NAME;
 
         case DRM_NODE_RENDER:
             return DRM_RENDER_MINOR_NAME;
@@ -1158,7 +1148,7 @@ drm_public int drmOpenWithType(const char *name, const char *busid, int type)
 
 drm_public int drmOpenControl(int minor)
 {
-    return drmOpenMinor(minor, 0, DRM_NODE_CONTROL);
+    return -EINVAL;
 }
 
 drm_public int drmOpenRender(int minor)
@@ -3016,10 +3006,6 @@ drm_public int drmDevicesEqual(drmDevicePtr a, drmDevicePtr b)
 
 static int drmGetNodeType(const char *name)
 {
-    if (strncmp(name, DRM_CONTROL_MINOR_NAME, sizeof(DRM_CONTROL_MINOR_NAME) - 1) == 0) {
-        return DRM_NODE_CONTROL;
-    }
-
     if (strncmp(name, DRM_RENDER_MINOR_NAME, sizeof(DRM_RENDER_MINOR_NAME) - 1) == 0) {
         return DRM_NODE_RENDER;
     }
@@ -4074,6 +4060,19 @@ drm_public int drmSyncobjTransfer(int fd, uint32_t dst_handle, uint64_t dst_poin
 
     ret = drmIoctl(fd, DRM_IOCTL_SYNCOBJ_TRANSFER, &args);
     return ret;
+}
+
+drm_public int drmSyncobjEventfd(int fd, uint32_t handle, uint64_t point, int ev_fd, uint32_t flags)
+{
+    struct drm_syncobj_eventfd args;
+
+    memclear(args);
+    args.handle = handle;
+    args.point = point;
+    args.fd = ev_fd;
+    args.flags = flags;
+
+    return drmIoctl(fd, DRM_IOCTL_SYNCOBJ_EVENTFD, &args);
 }
 
 static char *drmGetFormatModifierFromSimpleTokens(uint64_t modifier)

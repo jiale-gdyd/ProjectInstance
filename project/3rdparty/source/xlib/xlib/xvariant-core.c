@@ -7,6 +7,7 @@
 #include <xlib/xlib/xbitlock.h>
 #include <xlib/xlib/xrefcount.h>
 #include <xlib/xlib/xtestutils.h>
+#include <xlib/xlib/xlib_trace.h>
 #include <xlib/xlib/xvariant-core.h>
 #include <xlib/xlib/xvariant-internal.h>
 #include <xlib/xlib/xvariant-serialiser.h>
@@ -159,6 +160,7 @@ static void x_variant_ensure_serialised(XVariant *value)
         XBytes *bytes;
         xpointer data;
 
+        TRACE(XLIB_VARIANT_START_SERIALISE(value, value->type_info));
         x_variant_ensure_size(value);
         data = x_malloc(value->size);
         x_variant_serialise(value, data);
@@ -171,6 +173,7 @@ static void x_variant_ensure_serialised(XVariant *value)
         value->contents.serialised.ordered_offsets_up_to = X_MAXSIZE;
         value->contents.serialised.checked_offsets_up_to = X_MAXSIZE;
         value->state |= STATE_SERIALISED;
+        TRACE(XLIB_VARIANT_END_SERIALISE(value, value->type_info));
     }
 }
 
@@ -238,6 +241,8 @@ XVariant *x_variant_new_from_bytes(const XVariantType *type, XBytes *bytes, xboo
     value->contents.serialised.checked_offsets_up_to = trusted ? X_MAXSIZE : 0;
     x_clear_pointer(&owned_bytes, x_bytes_unref);
 
+    TRACE(XLIB_VARIANT_FROM_BUFFER(value, value->type_info, value->ref_count, value->state));
+
     return value;
 }
 
@@ -248,6 +253,7 @@ XVariant *x_variant_new_from_children(const XVariantType *type, XVariant **child
     value = x_variant_alloc(type, FALSE, trusted);
     value->contents.tree.children = children;
     value->contents.tree.n_children = n_children;
+    TRACE(XLIB_VARIANT_FROM_CHILDREN(value, value->type_info, value->ref_count, value->state));
 
     return value;
 }
@@ -271,6 +277,8 @@ void x_variant_unref(XVariant *value)
 {
     x_return_if_fail(value != NULL);
 
+    TRACE(XLIB_VARIANT_UNREF(value, value->type_info, value->ref_count, value->state));
+
     if (x_atomic_ref_count_dec(&value->ref_count)) {
         if X_UNLIKELY(value->state & STATE_LOCKED) {
             x_critical("attempting to free a locked XVariant instance. This should never happen.");
@@ -293,6 +301,9 @@ void x_variant_unref(XVariant *value)
 XVariant *x_variant_ref(XVariant *value)
 {
     x_return_val_if_fail(value != NULL, NULL);
+
+    TRACE(XLIB_VARIANT_REF(value, value->type_info, value->ref_count, value->state));
+
     x_atomic_ref_count_inc(&value->ref_count);
 
     return value;
@@ -304,6 +315,9 @@ XVariant *x_variant_ref_sink(XVariant *value)
     x_return_val_if_fail(!x_atomic_ref_count_compare(&value->ref_count, 0), NULL);
 
     x_variant_lock(value);
+
+    TRACE(XLIB_VARIANT_REF_SINK(value, value->type_info, value->ref_count, value->state, value->state & STATE_FLOATING));
+
     if (~value->state & STATE_FLOATING) {
         x_variant_ref(value);
     } else {
@@ -318,6 +332,8 @@ XVariant *x_variant_take_ref(XVariant *value)
 {
     x_return_val_if_fail(value != NULL, NULL);
     x_return_val_if_fail(!x_atomic_ref_count_compare(&value->ref_count, 0), NULL);
+
+    TRACE(XLIB_VARIANT_TAKE_REF(value, value->type_info, value->ref_count, value->state, value->state & STATE_FLOATING));
 
     x_atomic_int_and(&value->state, ~STATE_FLOATING);
     return value;
@@ -435,6 +451,8 @@ XVariant *x_variant_get_child_value(XVariant *value, xsize index_)
         child->contents.serialised.data = s_child.data;
         child->contents.serialised.ordered_offsets_up_to = (value->state & STATE_TRUSTED) ? X_MAXSIZE : s_child.ordered_offsets_up_to;
         child->contents.serialised.checked_offsets_up_to = (value->state & STATE_TRUSTED) ? X_MAXSIZE : s_child.checked_offsets_up_to;
+
+        TRACE(XLIB_VARIANT_FROM_PARENT(child, child->type_info, child->ref_count, child->state, value));
 
         return child;
     }
