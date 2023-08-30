@@ -9,11 +9,14 @@ struct media_entity;
 int v4l2_subdev_open(struct media_entity *entity);
 void v4l2_subdev_close(struct media_entity *entity);
 
-int v4l2_subdev_get_format(struct media_entity *entity, struct v4l2_mbus_framefmt *format, unsigned int pad, enum v4l2_subdev_format_whence which);
-int v4l2_subdev_set_format(struct media_entity *entity, struct v4l2_mbus_framefmt *format, unsigned int pad, enum v4l2_subdev_format_whence which);
+int v4l2_subdev_get_format(struct media_entity *entity, struct v4l2_mbus_framefmt *format, unsigned int pad, unsigned int stream, enum v4l2_subdev_format_whence which);
+int v4l2_subdev_set_format(struct media_entity *entity, struct v4l2_mbus_framefmt *format, unsigned int pad, unsigned int stream, enum v4l2_subdev_format_whence which);
 
-int v4l2_subdev_get_selection(struct media_entity *entity, struct v4l2_rect *rect, unsigned int pad, unsigned int target, enum v4l2_subdev_format_whence which);
-int v4l2_subdev_set_selection(struct media_entity *entity, struct v4l2_rect *rect, unsigned int pad, unsigned int target, enum v4l2_subdev_format_whence which);
+int v4l2_subdev_get_selection(struct media_entity *entity, struct v4l2_rect *rect, unsigned int pad, unsigned int stream, unsigned int target, enum v4l2_subdev_format_whence which);
+int v4l2_subdev_set_selection(struct media_entity *entity, struct v4l2_rect *rect, unsigned int pad, unsigned int stream, unsigned int target, enum v4l2_subdev_format_whence which);
+
+int v4l2_subdev_get_routing(struct media_entity *entity, struct v4l2_subdev_route **routes, unsigned int *num_routes);
+int v4l2_subdev_set_routing(struct media_entity *entity, struct v4l2_subdev_route *route, unsigned int num_routes);
 
 int v4l2_subdev_query_dv_timings(struct media_entity *entity, struct v4l2_dv_timings *timings);
 int v4l2_subdev_get_dv_timings_caps(struct media_entity *entity, struct v4l2_dv_timings_cap *caps);
@@ -21,10 +24,11 @@ int v4l2_subdev_get_dv_timings_caps(struct media_entity *entity, struct v4l2_dv_
 int v4l2_subdev_get_dv_timings(struct media_entity *entity, struct v4l2_dv_timings *timings);
 int v4l2_subdev_set_dv_timings(struct media_entity *entity, struct v4l2_dv_timings *timings);
 
-int v4l2_subdev_set_frame_interval(struct media_entity *entity, struct v4l2_fract *interval, unsigned int pad);
-int v4l2_subdev_get_frame_interval(struct media_entity *entity, struct v4l2_fract *interval, unsigned int pad);
+int v4l2_subdev_set_frame_interval(struct media_entity *entity, struct v4l2_fract *interval, unsigned int pad, unsigned int stream);
+int v4l2_subdev_get_frame_interval(struct media_entity *entity, struct v4l2_fract *interval, unsigned int pad, unsigned int stream);
 
 int v4l2_subdev_parse_setup_formats(struct media_device *media, const char *p);
+int v4l2_subdev_parse_setup_routes(struct media_device *media, const char *p);
 
 const char *v4l2_subdev_pixelcode_to_string(enum v4l2_mbus_pixelcode code);
 enum v4l2_mbus_pixelcode v4l2_subdev_string_to_pixelcode(const char *string);

@@ -200,7 +200,7 @@ static RK_S32 rime_multi[4][3] = {
     {4, 32, 128},
     {4, 4, 4},
 };
-
+/*
 static RK_S32 ctu_madp_cnt_thd[6][8] = {
     {50, 100, 130, 50, 100, 550, 500, 550},
     {100, 150, 200, 80, 120, 500, 450, 550},
@@ -216,7 +216,7 @@ static RK_S32 madp_num_map[5][4] = {
     {0, 0, 1, 1},
     {1, 0, 0, 0},
     {1, 1, 1, 1},
-};
+};*/
 
 static HalH265eVepu580Tune *vepu580_h265e_tune_init(H265eV580HalContext *ctx)
 {

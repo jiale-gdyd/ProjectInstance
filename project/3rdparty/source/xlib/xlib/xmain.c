@@ -3179,13 +3179,19 @@ static xboolean x_child_watch_dispatch(XSource *source, XSourceFunc callback, xp
         if (child_watch_source->poll.fd >= 0) {
             siginfo_t child_info = { 0, };
 
-            if (waitid(P_PIDFD, child_watch_source->poll.fd, &child_info, WEXITED | WNOHANG) >= 0 && child_info.si_pid != 0) {
-                wait_status = siginfo_t_to_wait_status(&child_info);
+            if (waitid(P_PIDFD, child_watch_source->poll.fd, &child_info, WEXITED | WNOHANG) >= 0) {
+                if (child_info.si_pid != 0) {
+                    wait_status = siginfo_t_to_wait_status (&child_info);
+                    child_exited = TRUE;
+                } else {
+                    x_debug(X_STRLOC ": pidfd signaled but pid %" X_PID_FORMAT " didn't exit", child_watch_source->pid);
+                    return TRUE;
+                }
             } else {
-                x_warning(X_STRLOC ": pidfd signaled ready but failed");
+                int errsv = errno;
+                x_warning(X_STRLOC ": waitid(pid:%" X_PID_FORMAT ", pidfd=%d) failed: %s (%d). %s", child_watch_source->pid, child_watch_source->poll.fd, x_strerror(errsv), errsv, "See documentation of x_child_watch_source_new() for possible causes.");
+                child_exited = TRUE;
             }
-
-            child_exited = TRUE;
         }
 #endif
 
@@ -3197,16 +3203,19 @@ waitpid_again:
             x_atomic_int_set(&child_watch_source->child_maybe_exited, FALSE);
 
             pid = waitpid(child_watch_source->pid, &wstatus, WNOHANG);
+            if (X_UNLIKELY(pid < 0 && errno == EINTR)) {
+                goto waitpid_again;
+            }
+
             if (pid == 0) {
                 return TRUE;
             }
 
             if (pid > 0) {
                 wait_status = wstatus;
-            } else if (errno == ECHILD) {
-                x_warning("XChildWatchSource: Exit status of a child process was requested but ECHILD was received by waitpid(). See the documentation of x_child_watch_source_new() for possible causes.");
-            } else if (errno == EINTR) {
-                goto waitpid_again;
+            } else {
+                int errsv = errno;
+                x_warning(X_STRLOC ": waitpid(pid:%" X_PID_FORMAT ") failed: %s (%d). %s", child_watch_source->pid, x_strerror(errsv), errsv, "See documentation of x_child_watch_source_new() for possible causes.");
             }
         }
     }

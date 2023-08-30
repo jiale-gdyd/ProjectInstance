@@ -40,7 +40,7 @@ extern "C" {
 #define DRM_RENDER_DEV_NAME                                 "%s/" DRM_RENDER_MINOR_NAME "%d"
 
 #define DRM_NODE_NAME_MAX \
-    (sizeof(DRM_DIR_NAME) + 1 + MAX3(sizeof(DRM_PRIMARY_MINOR_NAME), sizeof(DRM_CONTROL_MINOR_NAME), sizeof(DRM_RENDER_MINOR_NAME)) + sizeof("144") + 1)
+    (sizeof(DRM_DIR_NAME) + 1 + MAX3(sizeof(DRM_PRIMARY_MINOR_NAME), sizeof(DRM_CONTROL_MINOR_NAME), sizeof(DRM_RENDER_MINOR_NAME)) + sizeof("1048575") + 1)
 
 #define DRM_ERR_NO_DEVICE                                   (-1001)
 #define DRM_ERR_NO_ACCESS                                   (-1002)

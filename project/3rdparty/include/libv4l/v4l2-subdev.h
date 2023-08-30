@@ -10,6 +10,60 @@
 
 #if 1
 #include <linux/v4l2-subdev.h>
+
+#ifndef V4L2_SUBDEV_CAP_STREAMS
+#define V4L2_SUBDEV_CAP_STREAMS                             0x00000002
+#endif
+
+#ifndef V4L2_SUBDEV_CLIENT_CAP_STREAMS
+#define V4L2_SUBDEV_CLIENT_CAP_STREAMS                      (1U << 0)
+#endif
+
+#ifndef VIDIOC_SUBDEV_S_CLIENT_CAP
+#define VIDIOC_SUBDEV_S_CLIENT_CAP                          _IOWR('V', 102, struct v4l2_subdev_client_capability)
+#endif
+
+#ifndef VIDIOC_SUBDEV_G_ROUTING
+#define VIDIOC_SUBDEV_G_ROUTING                             _IOWR('V', 38, struct v4l2_subdev_routing)
+#endif
+
+#ifndef VIDIOC_SUBDEV_S_ROUTING
+#define VIDIOC_SUBDEV_S_ROUTING                             _IOWR('V', 39, struct v4l2_subdev_routing)
+#endif
+
+#ifndef V4L2_SUBDEV_ROUTE_FL_ACTIVE
+#define V4L2_SUBDEV_ROUTE_FL_ACTIVE                         (1U << 0)
+#endif
+
+#ifndef VIDIOC_SUBDEV_QUERYCAP
+#define VIDIOC_SUBDEV_QUERYCAP                              _IOR('V',  0, struct v4l2_subdev_capability)
+#endif
+
+struct v4l2_subdev_routing {
+    __u32 which;
+    __u32 num_routes;
+    __u64 routes;
+    __u32 reserved[6];
+};
+
+struct v4l2_subdev_route {
+    __u32 sink_pad;
+    __u32 sink_stream;
+    __u32 source_pad;
+    __u32 source_stream;
+    __u32 flags;
+    __u32 reserved[5];
+};
+
+struct v4l2_subdev_client_capability {
+    __u64 capabilities;
+};
+
+struct v4l2_subdev_capability {
+    __u32 version;
+    __u32 capabilities;
+    __u32 reserved[14];
+};
 #else
 enum v4l2_subdev_format_whence {
     V4L2_SUBDEV_FORMAT_TRY    = 0,

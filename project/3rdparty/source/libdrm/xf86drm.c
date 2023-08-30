@@ -957,20 +957,23 @@ static int drmGetMinorBase(int type)
 
 static int drmGetMinorType(int major, int minor)
 {
-    int type = minor >> 6;
+    int i;
+    const char *dev_name;
+    char path[DRM_NODE_NAME_MAX];
 
-    if (minor < 0) {
-        return -1;
+    for (i = DRM_NODE_PRIMARY; i < DRM_NODE_MAX; i++) {
+        dev_name = drmGetDeviceName(i);
+        if (!dev_name) {
+           continue;
+        }
+
+        snprintf(path, sizeof(path), dev_name, DRM_DIR_NAME, minor);
+        if (!access(path, F_OK)) {
+           return i;
+        }
     }
 
-    switch (type) {
-        case DRM_NODE_PRIMARY:
-        case DRM_NODE_RENDER:
-            return type;
-
-        default:
-            return -1;
-    }
+    return -1;
 }
 
 static const char *drmGetMinorName(int type)

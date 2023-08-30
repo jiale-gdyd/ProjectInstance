@@ -1,6 +1,8 @@
 #ifndef LIBDRM_MEDIACTL_PRIVATE_H
 #define LIBDRM_MEDIACTL_PRIVATE_H
 
+#include <stdbool.h>
+
 #include "media.h"
 #include "mediactl.h"
 
@@ -11,6 +13,7 @@ struct media_entity {
     struct media_link        *links;
     unsigned int             max_links;
     unsigned int             num_links;
+    bool                     supports_streams;
     char                     devname[32];
     int                      fd;
 };

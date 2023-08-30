@@ -700,7 +700,7 @@ typedef xint (*XTmpFileCallback)(const xchar *, xint, xint);
 
 static xint get_tmp_file (xchar *tmpl, XTmpFileCallback f, int flags, int mode)
 {
-    xlong value;
+    xint64 value;
     char *XXXXXX;
     xint64 now_us;
     int count, fd;
@@ -721,7 +721,7 @@ static xint get_tmp_file (xchar *tmpl, XTmpFileCallback f, int flags, int mode)
     value = ((now_us % X_USEC_PER_SEC) ^ (now_us / X_USEC_PER_SEC)) + counter++;
 
     for (count = 0; count < 100; value += 7777, ++count) {
-        xlong v = value;
+        xint64 v = value;
 
         XXXXXX[0] = letters[v % NLETTERS];
         v /= NLETTERS;

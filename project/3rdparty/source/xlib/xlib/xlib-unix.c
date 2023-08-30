@@ -22,6 +22,8 @@ X_STATIC_ASSERT(sizeof(XPid) == sizeof(pid_t));
 // X_STATIC_ASSERT(X_ALIGNOF(XPid) == X_ALIGNOF(pid_t));
 X_STATIC_ASSERT(X_STRUCT_OFFSET(XPidAlign, b) == X_STRUCT_OFFSET(pid_tAlign, b));
 
+X_STATIC_ASSERT(O_NONBLOCK != FD_CLOEXEC);
+
 X_DEFINE_QUARK(x-unix-error-quark, x_unix_error)
 
 static xboolean x_unix_set_error_from_errno(XError **error, xint saved_errno)
@@ -33,9 +35,15 @@ static xboolean x_unix_set_error_from_errno(XError **error, xint saved_errno)
 
 xboolean x_unix_open_pipe(int *fds, int flags, XError **error)
 {
-    x_return_val_if_fail((flags & (FD_CLOEXEC | O_NONBLOCK)) == flags, FALSE);
+    x_return_val_if_fail((flags & (O_CLOEXEC | FD_CLOEXEC | O_NONBLOCK)) == flags, FALSE);
 
-    if (!x_unix_open_pipe_internal(fds, (flags & FD_CLOEXEC) != 0, (flags & O_NONBLOCK) != 0)) {
+#if O_CLOEXEC != FD_CLOEXEC && !defined(X_DISABLE_CHECKS)
+    if (flags & FD_CLOEXEC) {
+        x_debug("x_unix_open_pipe() called with FD_CLOEXEC; please migrate to using O_CLOEXEC instead");
+    }
+#endif
+
+    if (!x_unix_open_pipe_internal(fds, (flags & (O_CLOEXEC | FD_CLOEXEC)) != 0, (flags & O_NONBLOCK) != 0)) {
         return x_unix_set_error_from_errno(error, errno);
     }
 
@@ -53,17 +61,9 @@ xboolean x_unix_set_fd_nonblocking(xint fd, xboolean nonblock, XError **error)
     }
 
     if (nonblock) {
-#ifdef O_NONBLOCK
         fcntl_flags |= O_NONBLOCK;
-#else
-        fcntl_flags |= O_NDELAY;
-#endif
     } else {
-#ifdef O_NONBLOCK
         fcntl_flags &= ~O_NONBLOCK;
-#else
-        fcntl_flags &= ~O_NDELAY;
-#endif
     }
 
     if (fcntl(fd, F_SETFL, fcntl_flags) == -1) {

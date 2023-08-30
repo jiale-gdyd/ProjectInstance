@@ -7,6 +7,8 @@
 
 #define MAX_GTREE_HEIGHT        40
 
+X_STATIC_ASSERT((X_XUINT64_CONSTANT(1) << (MAX_GTREE_HEIGHT - 2)) >= X_MAXUINT);
+
 struct _XTree {
     XTreeNode        *root;
     XCompareDataFunc key_compare;
@@ -30,7 +32,7 @@ struct _XTreeNode {
 static XTreeNode *x_tree_node_new(xpointer key, xpointer value);
 
 static xboolean x_tree_remove_internal(XTree *tree, xconstpointer key, xboolean steal);
-static XTreeNode *x_tree_insert_internal(XTree *tree, xpointer key, xpointer value, xboolean replace);
+static XTreeNode *x_tree_insert_internal(XTree *tree, xpointer key, xpointer value, xboolean replace, xboolean null_ret_ok);
 
 static XTreeNode *x_tree_node_balance(XTreeNode *node);
 static XTreeNode *x_tree_find_node(XTree *tree, xconstpointer key);
@@ -209,37 +211,56 @@ void x_tree_destroy(XTree *tree)
     x_tree_unref(tree);
 }
 
-XTreeNode *x_tree_insert_node(XTree *tree, xpointer key, xpointer value)
+static XTreeNode *x_tree_insert_replace_node_internal(XTree *tree, xpointer key, xpointer value, xboolean replace, xboolean null_ret_ok)
 {
     XTreeNode *node;
 
     x_return_val_if_fail(tree != NULL, NULL);
 
-    node = x_tree_insert_internal(tree, key, value, FALSE);
+    node = x_tree_insert_internal(tree, key, value, replace, null_ret_ok);
+
+#ifdef X_TREE_DEBUG
+    x_tree_node_check(tree->root);
+#endif
+
     return node;
+}
+
+XTreeNode *x_tree_insert_node(XTree *tree, xpointer key, xpointer value)
+{
+    return x_tree_insert_replace_node_internal(tree, key, value, FALSE, TRUE);
 }
 
 void x_tree_insert(XTree *tree, xpointer key, xpointer value)
 {
-    x_tree_insert_node(tree, key, value);
+    x_tree_insert_replace_node_internal(tree, key, value, FALSE, FALSE);
 }
 
 XTreeNode *x_tree_replace_node(XTree *tree, xpointer key, xpointer value)
 {
-    XTreeNode *node;
-
-    x_return_val_if_fail(tree != NULL, NULL);
-
-    node = x_tree_insert_internal(tree, key, value, TRUE);
-    return node;
+    return x_tree_insert_replace_node_internal(tree, key, value, TRUE, TRUE);
 }
 
 void x_tree_replace(XTree *tree, xpointer key, xpointer value)
 {
-    x_tree_replace_node(tree, key, value);
+    x_tree_insert_replace_node_internal(tree, key, value, TRUE, FALSE);
 }
 
-static XTreeNode *x_tree_insert_internal(XTree *tree, xpointer key, xpointer value, xboolean replace)
+static xboolean x_tree_nnodes_inc_checked(XTree *tree, xboolean overflow_fatal)
+{
+    if (X_UNLIKELY(tree->nnodes == X_MAXUINT)) {
+        if (overflow_fatal) {
+            x_error("Incrementing GTree nnodes counter would overflow");
+        }
+
+        return FALSE;
+    }
+
+    tree->nnodes++;
+    return TRUE;
+}
+
+static XTreeNode *x_tree_insert_internal(XTree *tree, xpointer key, xpointer value, xboolean replace, xboolean null_ret_ok)
 {
     int idx;
     XTreeNode *node, *retnode;
@@ -249,6 +270,9 @@ static XTreeNode *x_tree_insert_internal(XTree *tree, xpointer key, xpointer val
 
     if (!tree->root) {
         tree->root = x_tree_node_new(key, value);
+#ifdef X_TREE_DEBUG
+        x_assert(tree->nnodes == 0);
+#endif
         tree->nnodes++;
         return tree->root;
     }
@@ -283,16 +307,18 @@ static XTreeNode *x_tree_insert_internal(XTree *tree, xpointer key, xpointer val
                 path[idx++] = node;
                 node = node->left;
             } else {
-                XTreeNode *child = x_tree_node_new(key, value);
+                XTreeNode *child;
 
+                if (!x_tree_nnodes_inc_checked(tree, !null_ret_ok)) {
+                    return NULL;
+                }
+
+                child = x_tree_node_new(key, value);
                 child->left = node->left;
                 child->right = node;
                 node->left = child;
                 node->left_child = TRUE;
                 node->balance -= 1;
-
-                tree->nnodes++;
-
                 retnode = child;
                 break;
             }
@@ -301,15 +327,19 @@ static XTreeNode *x_tree_insert_internal(XTree *tree, xpointer key, xpointer val
                 path[idx++] = node;
                 node = node->right;
             } else {
-                XTreeNode *child = x_tree_node_new(key, value);
+                XTreeNode *child;
+
+                if (!x_tree_nnodes_inc_checked(tree, !null_ret_ok)) {
+                    return NULL;
+                }
+
+                child = x_tree_node_new(key, value);
 
                 child->right = node->right;
                 child->left = node;
                 node->right = child;
                 node->right_child = TRUE;
                 node->balance += 1;
-
-                tree->nnodes++;
 
                 retnode = child;
                 break;

@@ -9,7 +9,7 @@
 
 #endif
 
-#ifdef	ACL_UNIX
+#ifdef    ACL_UNIX
 # include <fcntl.h>
 # include <poll.h>
 # include <unistd.h>
@@ -41,11 +41,9 @@ static EPOLL_CTX *main_epoll_ctx = NULL;
 
 static void main_epoll_end(void)
 {
-    const char *myname = "main_epoll_end";
-
     if (main_epoll_ctx != NULL) {
         acl_msg_info("%s(%d), %s: close epoll_fd: %d, tid: %lu, %lu",
-            __FILE__, __LINE__, myname, main_epoll_ctx->epfd,
+            __FILE__, __LINE__, __FUNCTION__, main_epoll_ctx->epfd,
             (unsigned long) main_epoll_ctx->tid,
             (unsigned long) acl_pthread_self());
 
@@ -61,11 +59,10 @@ static acl_pthread_once_t epoll_once = ACL_PTHREAD_ONCE_INIT;
 
 static void thread_epoll_end(void *ctx)
 {
-    const char *myname = "thread_epoll_end";
     EPOLL_CTX *epoll_ctx = (EPOLL_CTX*) ctx;
 
     acl_msg_info("%s(%d), %s: close epoll_fd: %d, tid: %lu, %lu",
-        __FILE__, __LINE__, myname, epoll_ctx->epfd,
+        __FILE__, __LINE__, __FUNCTION__, epoll_ctx->epfd,
         (unsigned long) epoll_ctx->tid,
         (unsigned long) acl_pthread_self());
 
@@ -82,7 +79,6 @@ static void thread_epoll_once(void)
 
 static EPOLL_CTX *thread_epoll_init(void)
 {
-    const char *myname = "thread_epoll_init";
     EPOLL_CTX *epoll_ctx = (EPOLL_CTX*) acl_mymalloc(sizeof(EPOLL_CTX));
 
     if (acl_pthread_setspecific(epoll_key, epoll_ctx) != 0)
@@ -92,7 +88,7 @@ static EPOLL_CTX *thread_epoll_init(void)
     epoll_ctx->epfd = epoll_create(1);
     if (epoll_ctx == NULL) {
         acl_msg_error("%s(%d): epoll_create error: %s",
-            myname, __LINE__, acl_last_serror());
+            __FUNCTION__, __LINE__, acl_last_serror());
         return NULL;
     }
 
@@ -102,12 +98,12 @@ static EPOLL_CTX *thread_epoll_init(void)
         atexit(main_epoll_end);
 #endif
         acl_msg_info("%s(%d): %s, create epoll_fd: %d, tid: %lu, %lu",
-            __FILE__, __LINE__, myname, epoll_ctx->epfd,
+            __FILE__, __LINE__, __FUNCTION__, epoll_ctx->epfd,
             (unsigned long) epoll_ctx->tid,
             (unsigned long) acl_pthread_self());
     } else {
         acl_msg_info("%s(%d): %s, create epoll_fd: %d, tid: %lu, %lu",
-            __FILE__, __LINE__, myname, epoll_ctx->epfd,
+            __FILE__, __LINE__, __FUNCTION__, epoll_ctx->epfd,
             (unsigned long) epoll_ctx->tid,
             (unsigned long) acl_pthread_self());
     }
@@ -117,13 +113,11 @@ static EPOLL_CTX *thread_epoll_init(void)
 
 static int thread_epoll_reopen(EPOLL_CTX *epoll_ctx)
 {
-    const char *myname = "thread_epoll_reopen";
-
     close(epoll_ctx->epfd);
     epoll_ctx->epfd = epoll_create(1);
     if (epoll_ctx->epfd == -1) {
         acl_msg_error("%s(%d): epoll_create error: %s",
-            myname, __LINE__, acl_last_serror());
+            __FUNCTION__, __LINE__, acl_last_serror());
         return -1;
     }
     return 0;
@@ -131,7 +125,6 @@ static int thread_epoll_reopen(EPOLL_CTX *epoll_ctx)
 
 int acl_read_epoll_wait(ACL_SOCKET fd, int delay)
 {
-    const char *myname = "acl_read_epoll_wait";
     int   ret, retried = 0;
     EPOLL_CTX *epoll_ctx;
     struct epoll_event ee, events[1];
@@ -145,7 +138,7 @@ int acl_read_epoll_wait(ACL_SOCKET fd, int delay)
         epoll_ctx = thread_epoll_init();
         if (epoll_ctx == NULL) {
             acl_msg_error("%s(%d): thread_epoll_init error",
-                myname, __LINE__);
+                __FUNCTION__, __LINE__);
             return -1;
         }
     }
@@ -177,7 +170,7 @@ int acl_read_epoll_wait(ACL_SOCKET fd, int delay)
         }
 
         acl_msg_error("%s(%d): epoll_ctl error: %s, fd: %d, "
-            "epfd: %d, tid: %lu, %lu", myname, __LINE__,
+            "epfd: %d, tid: %lu, %lu", __FUNCTION__, __LINE__,
             acl_last_serror(), fd, epoll_ctx->epfd,
             (unsigned long) epoll_ctx->tid,
             (unsigned long) acl_pthread_self());
@@ -199,7 +192,7 @@ int acl_read_epoll_wait(ACL_SOCKET fd, int delay)
                 continue;
             } else if (ret == EBADF || ret == EINTR) {
                 acl_msg_error("%s(%d): fd: %d, epfd: %d,"
-                    " error: %s", myname, __LINE__, fd,
+                    " error: %s", __FUNCTION__, __LINE__, fd,
                     epoll_ctx->epfd, acl_last_serror());
 
                 if (retried) {
@@ -216,7 +209,7 @@ int acl_read_epoll_wait(ACL_SOCKET fd, int delay)
             }
 
             acl_msg_error("%s(%d): epoll_wait error: %s, fd: %d,"
-                " epfd: %d, tid: %lu, %lu", myname, __LINE__,
+                " epfd: %d, tid: %lu, %lu", __FUNCTION__, __LINE__,
                 acl_last_serror(), fd, epoll_ctx->epfd,
                 (unsigned long) epoll_ctx->tid,
                 (unsigned long) acl_pthread_self());
@@ -226,7 +219,7 @@ int acl_read_epoll_wait(ACL_SOCKET fd, int delay)
             /*
             acl_msg_warn("%s(%d), %s: poll timeout: %s, fd: %d, "
                 "delay: %d, spent: %ld", __FILE__, __LINE__,
-                myname, acl_last_serror(), fd, delay,
+                __FUNCTION__, acl_last_serror(), fd, delay,
                 (long) (time(NULL) - begin));
             */
             if (delay == 0) {
@@ -243,7 +236,7 @@ int acl_read_epoll_wait(ACL_SOCKET fd, int delay)
         } else {
             acl_msg_warn("%s(%d), %s: poll error: %s, fd: %d, "
                 "delay: %d, spent: %ld", __FILE__, __LINE__,
-                myname, acl_last_serror(), fd, delay,
+                __FUNCTION__, acl_last_serror(), fd, delay,
                 (long) (time(NULL) - begin));
             ret = -1;
         }
@@ -255,7 +248,7 @@ int acl_read_epoll_wait(ACL_SOCKET fd, int delay)
     ee.data.fd = fd;
     if (epoll_ctl(epoll_ctx->epfd, EPOLL_CTL_DEL, fd, &ee) == -1) {
         acl_msg_error("%s(%d): epoll_ctl error: %s, fd: %d, epfd: %d,"
-            " tid: %lu, %lu", myname, __LINE__, acl_last_serror(),
+            " tid: %lu, %lu", __FUNCTION__, __LINE__, acl_last_serror(),
             fd, epoll_ctx->epfd, (unsigned long) epoll_ctx->tid,
             (unsigned long) acl_pthread_self());
         return -1;
@@ -297,7 +290,6 @@ void acl_set_poll(acl_poll_fn fn)
 
 int acl_read_poll_wait(ACL_SOCKET fd, int delay)
 {
-    const char *myname = "acl_read_poll_wait";
     struct pollfd fds;
     time_t begin;
     int left = delay;
@@ -317,11 +309,11 @@ int acl_read_poll_wait(ACL_SOCKET fd, int delay)
         time(&begin);
 
 #ifdef __APPLE__
-        /* 当本线程正在通过 poll 方法等待时，如果别的线程异步调用了 close 过程，
-        * poll 应该立即返回错误才对，但在 MacOS/iOS 上的 poll 有个问题，会
-        * 一直等待超时才返回，所以此处以 100 ms 为单位将时间进行切片，以尽可能
-        * 早地感知到 close 行为。
-        */
+        /* �����߳�����ͨ�� poll �����ȴ�ʱ���������߳��첽������ close ���̣�
+         * poll Ӧ���������ش���Ŷԣ����� MacOS/iOS �ϵ� poll �и����⣬��
+         * һֱ�ȴ���ʱ�ŷ��أ����Դ˴��� 100 ms Ϊ��λ��ʱ�������Ƭ���Ծ�����
+         * ��ظ�֪�� close ��Ϊ��
+         */
         if (left > __poll_delay_slice) {
             delay = __poll_delay_slice;
         } else {
@@ -343,7 +335,7 @@ int acl_read_poll_wait(ACL_SOCKET fd, int delay)
             }
             /*
             acl_msg_error("%s(%d), %s: poll error(%s), fd: %d",
-                __FILE__, __LINE__, myname,
+                __FILE__, __LINE__, __FUNCTION__,
                 acl_last_serror(), (int) fd);
             */
             return -1;
@@ -351,7 +343,7 @@ int acl_read_poll_wait(ACL_SOCKET fd, int delay)
             /*
             acl_msg_warn("%s(%d), %s: poll timeout: %s, fd: %d, "
                 "delay: %d, spent: %ld", __FILE__, __LINE__,
-                myname, acl_last_serror(), fd, delay,
+                __FUNCTION__, acl_last_serror(), fd, delay,
                 (long) (time(NULL) - begin));
             */
             if (left > 0) {
@@ -371,7 +363,7 @@ int acl_read_poll_wait(ACL_SOCKET fd, int delay)
             if (fds.revents & (POLLHUP | POLLERR | POLLNVAL)) {
                 acl_msg_warn("%s(%d), %s: poll error: %s, "
                     "fd: %d, delay: %d, spent: %ld",
-                    __FILE__, __LINE__, myname,
+                    __FILE__, __LINE__, __FUNCTION__ ,
                     acl_last_serror(), fd, delay,
                     (long) (time(NULL) - begin));
                 return 0;
@@ -379,7 +371,7 @@ int acl_read_poll_wait(ACL_SOCKET fd, int delay)
 
             acl_msg_warn("%s(%d), %s: poll error: %s, fd: %d, "
                 "delay: %d, spent: %ld", __FILE__, __LINE__,
-                myname, acl_last_serror(), fd, delay,
+                __FUNCTION__, acl_last_serror(), fd, delay,
                 (long) (time(NULL) - begin));
             return -1;
         }
@@ -394,7 +386,6 @@ static HANDLE __handle = NULL;
 
 int acl_read_iocp_wait(ACL_SOCKET fd, int timeout)
 {
-    const char *myname = "acl_read_iocp_wait";
     OVERLAPPED *overlapped, *lpOverlapped;
     DWORD recvBytes;
     BOOL isSuccess;
@@ -427,9 +418,9 @@ int acl_read_iocp_wait(ACL_SOCKET fd, int timeout)
     }
 
     if (ReadFile((HANDLE) fd, NULL, 0, &recvBytes, overlapped) == FALSE
-        && acl_last_error() != ERROR_IO_PENDING) {
+          && acl_last_error() != ERROR_IO_PENDING) {
         acl_msg_warn("%s(%d): ReadFile error(%s)",
-            myname, __LINE__, acl_last_serror());
+            __FUNCTION__, __LINE__, acl_last_serror());
         return -1;
     }
 
@@ -469,7 +460,6 @@ void acl_set_select(acl_select_fn fn)
 
 int acl_read_select_wait(ACL_SOCKET fd, int delay)
 {
-    const char *myname = "acl_read_select_wait";
     fd_set  rfds, xfds;
     struct timeval tv;
     struct timeval *tp;
@@ -477,21 +467,21 @@ int acl_read_select_wait(ACL_SOCKET fd, int delay)
     time_t begin;
 
     /*
-    * Sanity checks.
-    */
+     * Sanity checks.
+     */
 #ifndef ACL_WINDOWS
     if (FD_SETSIZE <= (unsigned) fd)
         acl_msg_fatal("%s(%d), %s: descriptor %d does not fit "
-            "FD_SETSIZE %d", __FILE__, __LINE__, myname,
+            "FD_SETSIZE %d", __FILE__, __LINE__, __FUNCTION__,
             (int) fd, FD_SETSIZE);
 #endif
 
     /*
-    * Guard the write() with select() so we do not depend on alarm()
-    * and on signal() handlers. Restart the select when interrupted
-    * by some signal. Some select() implementations may reduce the
-    * time to wait when interrupted, which is exactly what we want.
-    */
+     * Guard the write() with select() so we do not depend on alarm()
+     * and on signal() handlers. Restart the select when interrupted
+     * by some signal. Some select() implementations may reduce the
+     * time to wait when interrupted, which is exactly what we want.
+     */
     FD_ZERO(&rfds);
     FD_SET(fd, &rfds);
     FD_ZERO(&xfds);
@@ -517,7 +507,7 @@ int acl_read_select_wait(ACL_SOCKET fd, int delay)
 #endif
         case -1:
             errnum = acl_last_error();
-#ifdef	ACL_WINDOWS
+#ifdef    ACL_WINDOWS
             if (errnum == WSAEINPROGRESS
                 || errnum == WSAEWOULDBLOCK
                 || errnum == ACL_EINTR) {
@@ -530,14 +520,14 @@ int acl_read_select_wait(ACL_SOCKET fd, int delay)
             }
 #endif
             acl_msg_error("%s(%d), %s: select error(%s), fd: %d",
-                __FILE__, __LINE__, myname,
+                __FILE__, __LINE__, __FUNCTION__,
                 acl_last_serror(), (int) fd);
             return -1;
         case 0:
             /*
             acl_msg_warn("%s(%d), %s: poll timeout: %s, fd: %d, "
                 "timeout: %d, spent: %ld", __FILE__, __LINE__,
-                myname, acl_last_serror(), fd, timeout,
+                __FUNCTION__, acl_last_serror(), fd, timeout,
                 (long) (time(NULL) - begin));
             */
             if (delay == 0) {

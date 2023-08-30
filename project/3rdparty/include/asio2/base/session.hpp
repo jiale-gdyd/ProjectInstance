@@ -231,6 +231,7 @@ namespace asio2::detail
 		{
 			derived_t& derive = this->derived();
 
+			derive.socket_.reset();
 			derive.io_.reset();
 		}
 
@@ -277,6 +278,10 @@ namespace asio2::detail
 		}
 
 	protected:
+		inline session_mgr_t<derived_t> & sessions() noexcept { return this->sessions_; }
+		inline listener_t               & listener() noexcept { return this->listener_; }
+		inline std::atomic<state_t>     & state   () noexcept { return this->state_;    }
+
 		inline constexpr bool             life_id () noexcept { return true; }
 		inline constexpr void       reset_life_id () noexcept { }
 

@@ -69,6 +69,7 @@ struct media_entity *media_parse_entity(struct media_device *media, const char *
 
 struct media_pad *media_parse_pad(struct media_device *media, const char *p, char **endp);
 struct media_link *media_parse_link(struct media_device *media, const char *p, char **endp);
+struct media_pad *media_parse_pad_stream(struct media_device *media, const char *p, unsigned int *stream, char **endp);
 
 int media_parse_setup_link(struct media_device *media, const char *p, char **endp);
 int media_parse_setup_links(struct media_device *media, const char *p);

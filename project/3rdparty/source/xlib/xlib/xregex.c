@@ -130,6 +130,7 @@ struct _XMatchInfo {
     xssize              string_len;
     pcre2_match_context *match_context;
     pcre2_match_data    *match_data;
+    pcre2_jit_stack     *jit_stack;
 };
 
 typedef enum {
@@ -442,9 +443,6 @@ static const xchar *translate_match_error(xint errcode)
             break;
 
         case PCRE2_ERROR_MATCHLIMIT:
-        case PCRE2_ERROR_JIT_STACKLIMIT:
-            return _("backtracking limit reached");
-
         case PCRE2_ERROR_CALLOUT:
             break;
 
@@ -877,20 +875,20 @@ static xboolean recalc_match_offsets(XMatchInfo *match_info, XError **error)
     return TRUE;
 }
 
-static JITStatus enable_jit_with_match_options(XRegex *regex, uint32_t match_options)
+static JITStatus enable_jit_with_match_options(XMatchInfo *match_info, uint32_t match_options)
 {
     xint retval;
     uint32_t old_jit_options, new_jit_options;
 
-    if (!(regex->orig_compile_opts & X_REGEX_OPTIMIZE)) {
+    if (!(match_info->regex->orig_compile_opts & X_REGEX_OPTIMIZE)) {
         return JIT_STATUS_DISABLED;
     }
 
-    if (regex->jit_status == JIT_STATUS_DISABLED) {
+    if (match_info->regex->jit_status == JIT_STATUS_DISABLED) {
         return JIT_STATUS_DISABLED;
     }
 
-    old_jit_options = regex->jit_options;
+    old_jit_options = match_info->regex->jit_options;
     new_jit_options = old_jit_options | PCRE2_JIT_COMPLETE;
     if (match_options & PCRE2_PARTIAL_HARD) {
         new_jit_options |= PCRE2_JIT_PARTIAL_HARD;
@@ -901,13 +899,15 @@ static JITStatus enable_jit_with_match_options(XRegex *regex, uint32_t match_opt
     }
 
     if (new_jit_options == old_jit_options) {
-        return regex->jit_status;
+        return match_info->regex->jit_status;
     }
 
-    retval = pcre2_jit_compile(regex->pcre_re, new_jit_options);
+    retval = pcre2_jit_compile(match_info->regex->pcre_re, new_jit_options);
     switch (retval) {
         case 0:
-            regex->jit_options = new_jit_options;
+            match_info->regex->jit_options = new_jit_options;
+            match_info->jit_stack = pcre2_jit_stack_create(1 << 15, 1 << 19, NULL);
+            pcre2_jit_stack_assign(match_info->match_context, NULL, match_info->jit_stack);
             return JIT_STATUS_ENABLED;
 
         case PCRE2_ERROR_NOMEMORY:
@@ -959,6 +959,10 @@ void x_match_info_unref(XMatchInfo *match_info)
             pcre2_match_context_free(match_info->match_context);
         }
 
+        if (match_info->jit_stack) {
+            pcre2_jit_stack_free(match_info->jit_stack);
+        }
+
         if (match_info->match_data) {
             pcre2_match_data_free(match_info->match_data);
         }
@@ -1001,10 +1005,17 @@ xboolean x_match_info_next(XMatchInfo *match_info, XError **error)
 
     opts = match_info->regex->match_opts | match_info->match_opts;
 
-    jit_status = enable_jit_with_match_options(match_info->regex, (XRegexMatchFlags)opts);
+    jit_status = enable_jit_with_match_options(match_info, (XRegexMatchFlags)opts);
     if (jit_status == JIT_STATUS_ENABLED) {
         match_info->matches = pcre2_jit_match(match_info->regex->pcre_re, (PCRE2_SPTR8) match_info->string, match_info->string_len, match_info->pos, opts, match_info->match_data, match_info->match_context);
-    } else {
+        if (match_info->matches == PCRE2_ERROR_JIT_STACKLIMIT) {
+            x_debug("PCRE2 JIT stack limit reached, falling back to non-optimized matching.");
+            opts |= PCRE2_NO_JIT;
+            jit_status = JIT_STATUS_DISABLED;
+        }
+    }
+
+    if (jit_status != JIT_STATUS_ENABLED) {
         match_info->matches = pcre2_match(match_info->regex->pcre_re, (PCRE2_SPTR8) match_info->string, match_info->string_len, match_info->pos, opts, match_info->match_data, match_info->match_context);
     }
 
@@ -1315,7 +1326,6 @@ X_GNUC_END_IGNORE_DEPRECATIONS
     regex->orig_compile_opts = compile_options;
     regex->match_opts = pcre_match_options;
     regex->orig_match_opts = match_options;
-    regex->jit_status = enable_jit_with_match_options(regex, regex->match_opts);
 
     return regex;
 }

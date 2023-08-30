@@ -1,8 +1,22 @@
 # 变更日志
 
+## 2023-08-26
+  * libdrm: build: bump version to 2.4.116
+  * acl   : mod test sample.
+
+## 2023-08-18
+  * acl   : Merge branch 'master' of gitee:zsxxsz/acl into gitee-master
+  * libdrm: nouveau: add interface to make buffer objects global
+  * libv4l: Add --get/--set-ctrl support for INTEGER and INTEGER64 arrays
+
+## 2023-08-14
+  * 更新rkmpp源码
+  * cpp-tbox: fix:修复TcpConnector::stop()的错误
+  * acl     : test db module in pkv.
+
 ## 2023-08-05
   * 更新rkmpp源码
-  * cpp-tbox eat(base):优化LogBacktrace(),添加日志等级参数
+  * cpp-tbox: eat(base):优化LogBacktrace(),添加日志等级参数
 
 ## 2023-07-30
   * cpp-tbox: Update log.h

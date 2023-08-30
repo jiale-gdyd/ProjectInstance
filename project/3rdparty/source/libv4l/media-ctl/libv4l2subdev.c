@@ -15,8 +15,16 @@
 #include <libv4l/mediactl-private.h>
 #include <libv4l/media-bus-format.h>
 
+#define NUM_ROUTES_MAX      256
+
 int v4l2_subdev_open(struct media_entity *entity)
 {
+    int ret;
+    bool subdev_streams;
+    bool client_streams;
+    struct v4l2_subdev_capability subdevcap = {};
+    struct v4l2_subdev_client_capability clientcap = {};
+
     if (entity->fd != -1) {
         return 0;
     }
@@ -28,6 +36,16 @@ int v4l2_subdev_open(struct media_entity *entity)
         return ret;
     }
 
+    ret = ioctl(entity->fd, VIDIOC_SUBDEV_QUERYCAP, &subdevcap);
+    subdev_streams = !ret && (subdevcap.capabilities & V4L2_SUBDEV_CAP_STREAMS);
+
+    clientcap.capabilities = V4L2_SUBDEV_CLIENT_CAP_STREAMS;
+
+    ret = ioctl(entity->fd, VIDIOC_SUBDEV_S_CLIENT_CAP, &clientcap);
+    client_streams = !ret && (clientcap.capabilities & V4L2_SUBDEV_CLIENT_CAP_STREAMS);
+
+    entity->supports_streams = subdev_streams && client_streams;
+
     return 0;
 }
 
@@ -37,7 +55,7 @@ void v4l2_subdev_close(struct media_entity *entity)
     entity->fd = -1;
 }
 
-int v4l2_subdev_get_format(struct media_entity *entity, struct v4l2_mbus_framefmt *format, unsigned int pad, enum v4l2_subdev_format_whence which)
+int v4l2_subdev_get_format(struct media_entity *entity, struct v4l2_mbus_framefmt *format, unsigned int pad, unsigned int stream, enum v4l2_subdev_format_whence which)
 {
     int ret;
     struct v4l2_subdev_format fmt;
@@ -47,8 +65,14 @@ int v4l2_subdev_get_format(struct media_entity *entity, struct v4l2_mbus_framefm
         return ret;
     }
 
+    if (!entity->supports_streams && stream) {
+        media_dbg(entity->media, "Streams API not supported\n");
+        return -ENOTSUP;
+    }
+
     memset(&fmt, 0x00, sizeof(fmt));
     fmt.pad = pad;
+    // fmt.stream = stream;
     fmt.which = which;
 
     ret = ioctl(entity->fd, VIDIOC_SUBDEV_G_FMT, &fmt);
@@ -60,7 +84,7 @@ int v4l2_subdev_get_format(struct media_entity *entity, struct v4l2_mbus_framefm
     return 0;
 }
 
-int v4l2_subdev_set_format(struct media_entity *entity, struct v4l2_mbus_framefmt *format, unsigned int pad, enum v4l2_subdev_format_whence which)
+int v4l2_subdev_set_format(struct media_entity *entity, struct v4l2_mbus_framefmt *format, unsigned int pad, unsigned int stream, enum v4l2_subdev_format_whence which)
 {
     int ret;
     struct v4l2_subdev_format fmt;
@@ -70,8 +94,14 @@ int v4l2_subdev_set_format(struct media_entity *entity, struct v4l2_mbus_framefm
         return ret;
     }
 
+    if (!entity->supports_streams && stream) {
+        media_dbg(entity->media, "Streams API not supported\n");
+        return -ENOTSUP;
+    }
+
     memset(&fmt, 0x00, sizeof(fmt));
     fmt.pad = pad;
+    // fmt.stream = stream;
     fmt.which = which;
     fmt.format = *format;
 
@@ -84,7 +114,7 @@ int v4l2_subdev_set_format(struct media_entity *entity, struct v4l2_mbus_framefm
     return 0;
 }
 
-int v4l2_subdev_get_selection(struct media_entity *entity, struct v4l2_rect *rect, unsigned int pad, unsigned int target, enum v4l2_subdev_format_whence which)
+int v4l2_subdev_get_selection(struct media_entity *entity, struct v4l2_rect *rect, unsigned int pad, unsigned int stream, unsigned int target, enum v4l2_subdev_format_whence which)
 {
     union {
         struct v4l2_subdev_selection sel;
@@ -97,8 +127,14 @@ int v4l2_subdev_get_selection(struct media_entity *entity, struct v4l2_rect *rec
         return ret;
     }
 
+    if (!entity->supports_streams && stream) {
+        media_dbg(entity->media, "Streams API not supported\n");
+        return -ENOTSUP;
+    }
+
     memset(&u.sel, 0, sizeof(u.sel));
     u.sel.pad = pad;
+    // u.crop.stream = stream;
     u.sel.target = target;
     u.sel.which = which;
 
@@ -125,11 +161,85 @@ int v4l2_subdev_get_selection(struct media_entity *entity, struct v4l2_rect *rec
     return 0;
 }
 
-int v4l2_subdev_set_selection(struct media_entity *entity, struct v4l2_rect *rect, unsigned int pad, unsigned int target, enum v4l2_subdev_format_whence which)
+int v4l2_subdev_get_routing(struct media_entity *entity, struct v4l2_subdev_route **routes, unsigned int *num_routes)
+{
+    int ret;
+    struct v4l2_subdev_route *r;
+    struct v4l2_subdev_routing routing = {
+        .which = V4L2_SUBDEV_FORMAT_ACTIVE,
+    };
+
+    ret = v4l2_subdev_open(entity);
+    if (ret < 0) {
+        return ret;
+    }
+
+    if (!entity->supports_streams) {
+        media_dbg(entity->media, "Streams API not supported\n");
+        return -ENOTSUP;
+    }
+
+    ret = ioctl(entity->fd, VIDIOC_SUBDEV_G_ROUTING, &routing);
+    if ((ret == -1) && (errno != ENOSPC)) {
+        return -errno;
+    }
+
+    if (!routing.num_routes) {
+        *routes = NULL;
+        *num_routes = 0;
+        return 0;
+    }
+
+    r = calloc(routing.num_routes, sizeof(*r));
+    if (!r) {
+        return -ENOMEM;
+    }
+
+    routing.routes = (uintptr_t)r;
+    ret = ioctl(entity->fd, VIDIOC_SUBDEV_G_ROUTING, &routing);
+    if (ret) {
+        free(r);
+        return ret;
+    }
+
+    *num_routes = routing.num_routes;
+    *routes = r;
+
+    return 0;
+}
+
+int v4l2_subdev_set_routing(struct media_entity *entity, struct v4l2_subdev_route *routes, unsigned int num_routes)
+{
+    int ret;
+    struct v4l2_subdev_routing routing = {
+        .which      = V4L2_SUBDEV_FORMAT_ACTIVE,
+        .routes     = (uintptr_t)routes,
+        .num_routes = num_routes,
+    };
+
+    ret = v4l2_subdev_open(entity);
+    if (ret < 0) {
+        return ret;
+    }
+
+    if (!entity->supports_streams) {
+        media_dbg(entity->media, "Streams API not supported\n");
+        return -ENOTSUP;
+    }
+
+    ret = ioctl(entity->fd, VIDIOC_SUBDEV_S_ROUTING, &routing);
+    if (ret == -1) {
+        return -errno;
+    }
+
+    return 0;
+}
+
+int v4l2_subdev_set_selection(struct media_entity *entity, struct v4l2_rect *rect, unsigned int pad, unsigned int stream, unsigned int target, enum v4l2_subdev_format_whence which)
 {
     union {
         struct v4l2_subdev_selection sel;
-        struct v4l2_subdev_crop crop;
+        struct v4l2_subdev_crop      crop;
     } u;
     int ret;
 
@@ -138,8 +248,14 @@ int v4l2_subdev_set_selection(struct media_entity *entity, struct v4l2_rect *rec
         return ret;
     }
 
+    if (!entity->supports_streams && stream) {
+        media_dbg(entity->media, "Streams API not supported\n");
+        return -ENOTSUP;
+    }
+
     memset(&u.sel, 0x00, sizeof(u.sel));
     u.sel.pad = pad;
+    // u.sel.stream = stream;
     u.sel.target = target;
     u.sel.which = which;
     u.sel.r = *rect;
@@ -242,7 +358,7 @@ int v4l2_subdev_set_dv_timings(struct media_entity *entity, struct v4l2_dv_timin
     return 0;
 }
 
-int v4l2_subdev_get_frame_interval(struct media_entity *entity, struct v4l2_fract *interval, unsigned int pad)
+int v4l2_subdev_get_frame_interval(struct media_entity *entity, struct v4l2_fract *interval, unsigned int pad, unsigned int stream)
 {
     int ret;
     struct v4l2_subdev_frame_interval ival;
@@ -252,8 +368,14 @@ int v4l2_subdev_get_frame_interval(struct media_entity *entity, struct v4l2_frac
         return ret;
     }
 
+    if (!entity->supports_streams && stream) {
+        media_dbg(entity->media, "Streams API not supported\n");
+        return -ENOTSUP;
+    }
+
     memset(&ival, 0x00, sizeof(ival));
     ival.pad = pad;
+    // ival.stream = stream;
 
     ret = ioctl(entity->fd, VIDIOC_SUBDEV_G_FRAME_INTERVAL, &ival);
     if (ret < 0) {
@@ -264,7 +386,7 @@ int v4l2_subdev_get_frame_interval(struct media_entity *entity, struct v4l2_frac
     return 0;
 }
 
-int v4l2_subdev_set_frame_interval(struct media_entity *entity, struct v4l2_fract *interval, unsigned int pad)
+int v4l2_subdev_set_frame_interval(struct media_entity *entity, struct v4l2_fract *interval, unsigned int pad, unsigned int stream)
 {
     int ret;
     struct v4l2_subdev_frame_interval ival;
@@ -274,8 +396,14 @@ int v4l2_subdev_set_frame_interval(struct media_entity *entity, struct v4l2_frac
         return ret;
     }
 
+    if (!entity->supports_streams && stream) {
+        media_dbg(entity->media, "Streams API not supported\n");
+        return -ENOTSUP;
+    }
+
     memset(&ival, 0x00, sizeof(ival));
     ival.pad = pad;
+    // ival.stream = stream;
     ival.interval = *interval;
 
     ret = ioctl(entity->fd, VIDIOC_SUBDEV_S_FRAME_INTERVAL, &ival);
@@ -285,6 +413,135 @@ int v4l2_subdev_set_frame_interval(struct media_entity *entity, struct v4l2_frac
     *interval = ival.interval;
 
     return 0;
+}
+
+static int v4l2_subdev_parse_setup_route(struct media_device *media, struct v4l2_subdev_route *r, const char *p, char **endp)
+{
+    char *end;
+
+    r->sink_pad = strtoul(p, &end, 10);
+    if (*end != '/') {
+        media_dbg(media, "Expected '/'\n");
+        return -EINVAL;
+    }
+
+    p = end + 1;
+    r->sink_stream = strtoul(p, &end, 10);
+
+    for (; isspace(*end); ++end);
+
+    if (end[0] != '-' || end[1] != '>') {
+        media_dbg(media, "Expected '->'\n");
+        return -EINVAL;
+    }
+    p = end + 2;
+
+    r->source_pad = strtoul(p, &end, 10);
+    if (*end != '/') {
+        media_dbg(media, "Expected '/'\n");
+        return -EINVAL;
+    }
+
+    p = end + 1;
+    r->source_stream = strtoul(p, &end, 10);
+
+    for (; isspace(*end); ++end);
+
+    if (*end != '[') {
+        media_dbg(media, "Expected '['\n");
+        return -EINVAL;
+    }
+
+    for (end++; isspace(*end); ++end);
+    p = end;
+
+    r->flags = strtoul(p, &end, 0);
+    if (r->flags & ~(V4L2_SUBDEV_ROUTE_FL_ACTIVE)) {
+        media_dbg(media, "Bad route flags %#x\n", r->flags);
+        return -EINVAL;
+    }
+
+    for (; isspace(*end); ++end);
+
+    if (*end != ']') {
+        media_dbg(media, "Expected ']'\n");
+        return -EINVAL;
+    }
+    end++;
+
+    for (; isspace(*end); ++end);
+    *endp = end;
+
+    return 0;
+}
+
+int v4l2_subdev_parse_setup_routes(struct media_device *media, const char *p)
+{
+    int ret;
+    char *end;
+    unsigned int i;
+    unsigned int num_routes;
+    struct media_entity *entity;
+    struct v4l2_subdev_route *routes;
+
+    entity = media_parse_entity(media, p, &end);
+    if (!entity) {
+        return -EINVAL;
+    }
+
+    p = end;
+    if (*p != '[') {
+        media_dbg(media, "Expected '['\n");
+        return -EINVAL;
+    }
+
+    p++;
+
+    routes = calloc(NUM_ROUTES_MAX, sizeof(routes[0]));
+    if (!routes) {
+        return -ENOMEM;
+    }
+    num_routes = 0;
+
+    while (*p != 0) {
+        struct v4l2_subdev_route *r = &routes[num_routes];
+
+        ret = v4l2_subdev_parse_setup_route(media, r, p, &end);
+        if (ret) {
+            goto out;
+        }
+
+        p = end;
+        num_routes++;
+
+        if (*p == ',') {
+            p++;
+            continue;
+        }
+
+        break;
+    }
+
+    if (*p != ']') {
+        media_dbg(media, "Expected ']'\n");
+        ret = -EINVAL;
+        goto out;
+    }
+
+    for (i = 0; i < num_routes; ++i) {
+        struct v4l2_subdev_route *r = &routes[i];
+        media_dbg(entity->media, "Setting up route %s : %u/%u -> %u/%u [0x%08x]\n", entity->info.name, r->sink_pad, r->sink_stream, r->source_pad, r->source_stream, r->flags);
+    }
+
+    ret = v4l2_subdev_set_routing(entity, routes, num_routes);
+    if (ret) {
+        media_dbg(entity->media, "VIDIOC_SUBDEV_S_ROUTING failed: %d\n", ret);
+        goto out;
+    }
+
+out:
+    free(routes);
+    return ret;
 }
 
 static int v4l2_subdev_parse_format(struct media_device *media, struct v4l2_mbus_framefmt *format, const char *p, char **endp)
@@ -408,7 +665,7 @@ static bool strhazit(const char *str, const char **p)
     return true;
 }
 
-static struct media_pad *v4l2_subdev_parse_pad_format(struct media_device *media, struct v4l2_mbus_framefmt *format, struct v4l2_rect *crop, struct v4l2_rect *compose, struct v4l2_fract *interval, const char *p, char **endp)
+static struct media_pad *v4l2_subdev_parse_pad_format(struct media_device *media, unsigned int *stream, struct v4l2_mbus_framefmt *format, struct v4l2_rect *crop, struct v4l2_rect *compose, struct v4l2_fract *interval, const char *p, char **endp)
 {
     int ret;
     char *end;
@@ -417,7 +674,7 @@ static struct media_pad *v4l2_subdev_parse_pad_format(struct media_device *media
 
     for (; isspace(*p); ++p);
 
-    pad = media_parse_pad(media, p, &end);
+    pad = media_parse_pad_stream(media, p, stream, &end);
     if (pad == NULL) {
         *endp = end;
         return NULL;
@@ -622,7 +879,7 @@ static struct media_pad *v4l2_subdev_parse_pad_format(struct media_device *media
     return pad;
 }
 
-static int set_format(struct media_pad *pad, struct v4l2_mbus_framefmt *format)
+static int set_format(struct media_pad *pad, unsigned int stream, struct v4l2_mbus_framefmt *format)
 {
     int ret;
 
@@ -630,9 +887,9 @@ static int set_format(struct media_pad *pad, struct v4l2_mbus_framefmt *format)
         return 0;
     }
 
-    media_dbg(pad->entity->media, "Setting up format %s %ux%u on pad %s/%u\n", v4l2_subdev_pixelcode_to_string(format->code), format->width, format->height, pad->entity->info.name, pad->index);
+    media_dbg(pad->entity->media, "Setting up format %s %ux%u on pad %s/%u/%u\n", v4l2_subdev_pixelcode_to_string(format->code), format->width, format->height, pad->entity->info.name, pad->index, stream);
 
-    ret = v4l2_subdev_set_format(pad->entity, format, pad->index, V4L2_SUBDEV_FORMAT_ACTIVE);
+    ret = v4l2_subdev_set_format(pad->entity, format, pad->index, stream, V4L2_SUBDEV_FORMAT_ACTIVE);
     if (ret < 0) {
         media_dbg(pad->entity->media, "Unable to set format: %s (%d)\n", strerror(-ret), ret);
         return ret;
@@ -642,7 +899,7 @@ static int set_format(struct media_pad *pad, struct v4l2_mbus_framefmt *format)
     return 0;
 }
 
-static int set_selection(struct media_pad *pad, unsigned int target, struct v4l2_rect *rect)
+static int set_selection(struct media_pad *pad, unsigned int stream, unsigned int target, struct v4l2_rect *rect)
 {
     int ret;
 
@@ -650,9 +907,9 @@ static int set_selection(struct media_pad *pad, unsigned int target, struct v4l2
         return 0;
     }
 
-    media_dbg(pad->entity->media, "Setting up selection target %u rectangle (%u,%u)/%ux%u on pad %s/%u\n", target, rect->left, rect->top, rect->width, rect->height, pad->entity->info.name, pad->index);
+    media_dbg(pad->entity->media, "Setting up selection target %u rectangle (%u,%u)/%ux%u on pad %s/%u/%u\n", target, rect->left, rect->top, rect->width, rect->height, pad->entity->info.name, pad->index, stream);
 
-    ret = v4l2_subdev_set_selection(pad->entity, rect, pad->index, target, V4L2_SUBDEV_FORMAT_ACTIVE);
+    ret = v4l2_subdev_set_selection(pad->entity, rect, pad->index, stream, target, V4L2_SUBDEV_FORMAT_ACTIVE);
     if (ret < 0) {
         media_dbg(pad->entity->media, "Unable to set selection rectangle: %s (%d)\n", strerror(-ret), ret);
         return ret;
@@ -662,7 +919,7 @@ static int set_selection(struct media_pad *pad, unsigned int target, struct v4l2
     return 0;
 }
 
-static int set_frame_interval(struct media_pad *pad, struct v4l2_fract *interval)
+static int set_frame_interval(struct media_pad *pad, unsigned int stream, struct v4l2_fract *interval)
 {
     int ret;
 
@@ -670,9 +927,9 @@ static int set_frame_interval(struct media_pad *pad, struct v4l2_fract *interval
         return 0;
     }
 
-    media_dbg(pad->entity->media, "Setting up frame interval %u/%u on pad %s/%u\n", interval->numerator, interval->denominator, pad->entity->info.name, pad->index);
+    media_dbg(pad->entity->media, "Setting up frame interval %u/%u on pad %s/%u/%u\n", interval->numerator, interval->denominator, pad->entity->info.name, pad->index, stream);
 
-    ret = v4l2_subdev_set_frame_interval(pad->entity, interval, pad->index);
+    ret = v4l2_subdev_set_frame_interval(pad->entity, interval, pad->index, stream);
     if (ret < 0) {
         media_dbg(pad->entity->media, "Unable to set frame interval: %s (%d)", strerror(-ret), ret);
         return ret;
@@ -687,13 +944,14 @@ static int v4l2_subdev_parse_setup_format(struct media_device *media, const char
     int ret;
     char *end;
     unsigned int i;
+    unsigned int stream;
     struct media_pad *pad;
     struct v4l2_rect crop = { -1, -1, -1, -1 };
     struct v4l2_rect compose = crop;
     struct v4l2_fract interval = { 0, 0 };
     struct v4l2_mbus_framefmt format = { 0, 0, 0 };
 
-    pad = v4l2_subdev_parse_pad_format(media, &format, &crop, &compose, &interval, p, &end);
+    pad = v4l2_subdev_parse_pad_format(media, &stream, &format, &crop, &compose, &interval, p, &end);
     if (pad == NULL) {
         media_print_streampos(media, p, end);
         media_dbg(media, "Unable to parse format\n");
@@ -701,30 +959,30 @@ static int v4l2_subdev_parse_setup_format(struct media_device *media, const char
     }
 
     if (pad->flags & MEDIA_PAD_FL_SINK) {
-        ret = set_format(pad, &format);
+        ret = set_format(pad, stream, &format);
         if (ret < 0) {
             return ret;
         }
     }
 
-    ret = set_selection(pad, V4L2_SEL_TGT_CROP, &crop);
+    ret = set_selection(pad, stream, V4L2_SEL_TGT_CROP, &crop);
     if (ret < 0) {
         return ret;
     }
 
-    ret = set_selection(pad, V4L2_SEL_TGT_COMPOSE, &compose);
+    ret = set_selection(pad, stream, V4L2_SEL_TGT_COMPOSE, &compose);
     if (ret < 0) {
         return ret;
     }
 
     if (pad->flags & MEDIA_PAD_FL_SOURCE) {
-        ret = set_format(pad, &format);
+        ret = set_format(pad, stream, &format);
         if (ret < 0) {
             return ret;
         }
     }
 
-    ret = set_frame_interval(pad, &interval);
+    ret = set_frame_interval(pad, stream, &interval);
     if (ret < 0) {
         return ret;
     }
@@ -740,9 +998,9 @@ static int v4l2_subdev_parse_setup_format(struct media_device *media, const char
 
             if ((link->source == pad) && (link->sink->entity->info.type == MEDIA_ENT_T_V4L2_SUBDEV)) {
                 remote_format = format;
-                set_format(link->sink, &remote_format);
+                set_format(link->sink, stream, &remote_format);
 
-                ret = set_frame_interval(link->sink, &interval);
+                ret = set_frame_interval(link->sink, stream, &interval);
                 if ((ret < 0) && (ret != -EINVAL) && (ret != -ENOTTY)) {
                     return ret;
                 }

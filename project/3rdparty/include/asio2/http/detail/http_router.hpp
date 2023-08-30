@@ -711,7 +711,6 @@ namespace asio2::detail
 						http::web_response::super msg{ std::move(rep.base()) };
 						if (msg.body().to_text())
 						{
-							http::try_prepare_payload(msg);
 							this->http_cache_.shrink_to_fit();
 							pcn = this->http_cache_.emplace(req.target(), std::move(msg));
 							return std::addressof(pcn->msg);
@@ -783,7 +782,6 @@ namespace asio2::detail
 						http::web_response::super msg{ std::move(rep.base()) };
 						if (msg.body().to_text())
 						{
-							http::try_prepare_payload(msg);
 							this->http_cache_.shrink_to_fit();
 							pcn = this->http_cache_.emplace(req.target(), std::move(msg));
 							return std::addressof(pcn->msg);
@@ -987,7 +985,25 @@ namespace asio2::detail
 			}
 			else
 			{
-				return this->_do_call_aop_after(aops, caller, req, rep);
+				if (rep.defer_guard_)
+				{
+					rep.defer_guard_->aop_after_cb_ = std::make_unique<std::function<void()>>(
+					[this, &aops, caller, &req, &rep]() mutable
+					{
+						caller_t* p = caller.get();
+
+						asio::dispatch(p->io_->context(), make_allocator(p->wallocator(),
+						[this, &aops, caller = std::move(caller), &req, &rep]() mutable
+						{
+							this->_do_call_aop_after(aops, caller, req, rep);
+						}));
+					});
+					return true;
+				}
+				else
+				{
+					return this->_do_call_aop_after(aops, caller, req, rep);
+				}
 			}
 		}
 

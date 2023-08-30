@@ -9,12 +9,12 @@
 typedef struct HTTP_CHAT_CTX {
     HTTP_HDR  *hdr;
     ACL_VSTREAM *stream;
-    unsigned int flag;                  /**<　继承的标志位, defined as HTTP_CHAT_FLAG_XXX */
+    unsigned int flag;                  /**<���̳еı�־λ, defined as HTTP_CHAT_FLAG_XXX */
     int   timeout;
     short chunked;
-    http_off_t   chunk_len;             /**< 当前数据块所需要读的数据长度(字节) */
-    http_off_t   read_cnt;              /**< 当前数据块所读数据长度(字节) */
-    http_off_t   body_len;              /**< 所读到数据体总长度(字节) */
+    http_off_t   chunk_len;             /**< ��ǰ���ݿ�����Ҫ�������ݳ���(�ֽ�) */
+    http_off_t   read_cnt;              /**< ��ǰ���ݿ��������ݳ���(�ֽ�) */
+    http_off_t   body_len;              /**< �������������ܳ���(�ֽ�) */
     union {
         HTTP_HDR_NOTIFY  hdr_notify;
         HTTP_BODY_NOTIFY body_notify;
@@ -22,17 +22,16 @@ typedef struct HTTP_CHAT_CTX {
     void *arg;
     struct {
         int   chunk_oper;
-#define CHUNK_OPER_HEAD	1
-#define CHUNK_OPER_BODY	2
-#define CHUNK_OPER_LINE	3
-#define CHUNK_OPER_TAIL	4
+#define CHUNK_OPER_HEAD    1
+#define CHUNK_OPER_BODY    2
+#define CHUNK_OPER_LINE    3
+#define CHUNK_OPER_TAIL    4
     } chunk;
 } HTTP_CHAT_CTX;
 
 /*----------------------------------------------------------------------------*/
 static HTTP_CHAT_CTX *new_ctx(void)
 {
-    const char *myname = "new_ctx";
     HTTP_CHAT_CTX *ctx;
 
     ctx = (HTTP_CHAT_CTX*) acl_mycalloc(1, sizeof(HTTP_CHAT_CTX));
@@ -40,7 +39,7 @@ static HTTP_CHAT_CTX *new_ctx(void)
         char  ebuf[256];
 
         acl_msg_fatal("%s, %s(%d): calloc error(%s)",
-            __FILE__, myname, __LINE__, acl_last_strerror(ebuf, sizeof(ebuf)));
+            __FILE__, __FUNCTION__, __LINE__, acl_last_strerror(ebuf, sizeof(ebuf)));
     }
 
     return ctx;
@@ -52,7 +51,7 @@ static void free_ctx(void *ctx)
 }
 
 /*----------------------------------------------------------------------------*/
-/* 分析一行数据, 是否是一个完整的HTTP协议头 */
+/* ����һ������, �Ƿ���һ��������HTTPЭ��ͷ */
 
 static int hdr_ready(HTTP_HDR *hdr, const char *line, int dlen)
 {
@@ -84,11 +83,12 @@ static int hdr_ready(HTTP_HDR *hdr, const char *line, int dlen)
     return HTTP_CHAT_CONTINUE;
 }
 
-/* 同步读取一个完整的HTTP协议头 */
+/* ͬ����ȡһ��������HTTPЭ��ͷ */
 
 static int hdr_get(HTTP_HDR *hdr, ACL_VSTREAM *stream, int timeout)
 {
-    char  buf[8192];
+/* ��ʹ��Э�̹���ջʱ���������BUFF��Ĺ��󣬻�������ջ�Ŀռ��С������ڴ��˷� */
+    char  buf[HTTP_BUF_SIZE];
     int   ret;
 
     stream->rw_timeout = timeout;
@@ -163,13 +163,12 @@ static http_off_t chunked_data_get(HTTP_CHAT_CTX *ctx, void *buf, int size)
 
 static int chunked_hdr_get(HTTP_CHAT_CTX *ctx)
 {
-    const char *myname = "chunked_hdr_get";
 #if defined(ACL_WINDOWS) && _MSC_VER >= 1500
     char  ext[64];
 #else
     char *ext = NULL;
 #endif
-    char  buf[HTTP_BSIZE];
+    char  buf[HTTP_BUF_SIZE];
     int   ret, n, chunk_len;
 
     n = acl_vstream_gets(ctx->stream, buf, sizeof(buf));
@@ -192,7 +191,7 @@ static int chunked_hdr_get(HTTP_CHAT_CTX *ctx)
 
     if (ret < 0 || chunk_len < 0) {
         acl_msg_error("%s(%d): chunked hdr(%s) invalid, dlen(%d), "
-            "'\\n': %d, %d", myname, __LINE__, buf, n, buf[0], '\n');
+            "'\\n': %d, %d", __FUNCTION__, __LINE__, buf, n, buf[0], '\n');
         return -1;
     }
 
@@ -202,13 +201,12 @@ static int chunked_hdr_get(HTTP_CHAT_CTX *ctx)
 
 static int chunked_sep_gets(HTTP_CHAT_CTX *ctx)
 {
-    const char *myname = "chunked_sep_gets2";
-    char  buf[HTTP_BSIZE];
+    char  buf[HTTP_BUF_SIZE];
     int   n;
 
     n = acl_vstream_gets(ctx->stream, buf, sizeof(buf));
     if (n == ACL_VSTREAM_EOF) {
-        acl_msg_error("%s(%d): gets sep line error", myname, __LINE__);
+        acl_msg_error("%s(%d): gets sep line error", __FUNCTION__, __LINE__);
         return -1;
     }
 
@@ -218,14 +216,13 @@ static int chunked_sep_gets(HTTP_CHAT_CTX *ctx)
 
 static int chunked_trailer_get(HTTP_CHAT_CTX *ctx)
 {
-    const char *myname = "chunked_tailer_get2";
-    char  buf[HTTP_BSIZE];
+    char  buf[HTTP_BUF_SIZE];
     int   n;
 
     while (1) {
         n = acl_vstream_gets(ctx->stream, buf, sizeof(buf));
         if (n == ACL_VSTREAM_EOF) {
-            acl_msg_error("%s(%d): get line error", myname, __LINE__);
+            acl_msg_error("%s(%d): get line error", __FUNCTION__, __LINE__);
             return -1;
         }
         ctx->body_len += n;
@@ -239,10 +236,9 @@ static int chunked_trailer_get(HTTP_CHAT_CTX *ctx)
 
 static http_off_t body_get(HTTP_CHAT_CTX *ctx, void *buf, int size)
 {
-    const char *myname = "body_get";
     http_off_t   ret;
 
-    /* Transfer-Encoding: chunked 的优先级要高于 Conteng-Length */
+    /* Transfer-Encoding: chunked �����ȼ�Ҫ���� Conteng-Length */
 
     if (!ctx->chunked) {
         if (ctx->chunk_len > 0 && ctx->read_cnt >= ctx->chunk_len) {
@@ -279,7 +275,7 @@ static http_off_t body_get(HTTP_CHAT_CTX *ctx, void *buf, int size)
             return ret;
         } else {
             acl_msg_error("%s(%d): unknown oper status(%d)",
-                myname, __LINE__, ctx->chunk.chunk_oper);
+                __FUNCTION__, __LINE__, ctx->chunk.chunk_oper);
             return -1;
         }
     }
@@ -291,7 +287,7 @@ http_off_t http_req_body_get_sync(HTTP_REQ *request, ACL_VSTREAM *stream,
     HTTP_CHAT_CTX *ctx;
 
     if (request->hdr_req->hdr.content_length == 0) {
-        /* 扩展了HTTP请求协议部分, 允许请求数据为块传输 */
+        /* ��չ��HTTP����Э�鲿��, ������������Ϊ�鴫�� */
         if (request->hdr_req->hdr.chunked == 0) {
             return 0;
         }
@@ -302,7 +298,7 @@ http_off_t http_req_body_get_sync(HTTP_REQ *request, ACL_VSTREAM *stream,
         ctx->hdr       = &request->hdr_req->hdr;
         ctx->stream    = stream;
 
-        /* 扩展了HTTP请求协议部分, 允许请求数据为块传输 */
+        /* ��չ��HTTP����Э�鲿��, ������������Ϊ�鴫�� */
         ctx->chunked   = request->hdr_req->hdr.chunked;
         ctx->chunk_len = request->hdr_req->hdr.content_length;
         ctx->body_len  = 0;
@@ -326,10 +322,10 @@ http_off_t http_res_body_get_sync(HTTP_RES *respond, ACL_VSTREAM *stream,
     HTTP_CHAT_CTX *ctx;
 
     if (respond->hdr_res->reply_status == 204) {
-        /* 如果服务器响应状态码为 204 则表示没有数据体 */
+        /* �����������Ӧ״̬��Ϊ 204 ���ʾû�������� */
         return 0;
     } else if (respond->hdr_res->hdr.content_length == 0) {
-        /* 块传输协议优先于 content-length */
+        /* �鴫��Э�������� content-length */
         if (respond->hdr_res->hdr.chunked == 0) {
             return 0;
         }
@@ -357,7 +353,6 @@ http_off_t http_res_body_get_sync(HTTP_RES *respond, ACL_VSTREAM *stream,
 
 void http_chat_sync_reqctl(HTTP_REQ *request, int name, ...)
 {
-    const char *myname = "http_chat_sync_reqctl";
     va_list ap;
     int   n;
 
@@ -374,7 +369,7 @@ void http_chat_sync_reqctl(HTTP_REQ *request, int name, ...)
             break;
         default:
             acl_msg_panic("%s, %s(%d): bad name %d",
-                myname, __FILE__, __LINE__, name);
+                __FUNCTION__, __FILE__, __LINE__, name);
             break;
         }
     }
@@ -383,7 +378,6 @@ void http_chat_sync_reqctl(HTTP_REQ *request, int name, ...)
 
 void http_chat_sync_resctl(HTTP_RES *respond, int name, ...)
 {
-    const char *myname = "http_chat_sync_resctl";
     va_list ap;
     int   n;
 
@@ -400,7 +394,7 @@ void http_chat_sync_resctl(HTTP_RES *respond, int name, ...)
             break;
         default:
             acl_msg_panic("%s, %s(%d): bad name %d",
-                myname, __FILE__, __LINE__, name);
+                __FUNCTION__, __FILE__, __LINE__, name);
             break;
         }
     }

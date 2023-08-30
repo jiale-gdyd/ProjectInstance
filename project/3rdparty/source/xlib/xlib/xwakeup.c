@@ -24,7 +24,7 @@ XWakeup *x_wakeup_new(void)
         return wakeup;
     }
 
-    if (!x_unix_open_pipe(wakeup->fds, FD_CLOEXEC | O_NONBLOCK, &error)) {
+    if (!x_unix_open_pipe(wakeup->fds, O_CLOEXEC | O_NONBLOCK, &error)) {
         x_error("Creating pipes for XWakeup: %s", error->message);
     }
 

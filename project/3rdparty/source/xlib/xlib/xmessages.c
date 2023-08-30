@@ -29,6 +29,7 @@
 #include <xlib/xlib/xbacktrace.h>
 #include <xlib/xlib/xtestutils.h>
 #include <xlib/xlib/xthreadprivate.h>
+#include <xlib/xlib/xutilsprivate.h>
 
 typedef struct _XLogDomain XLogDomain;
 typedef struct _XLogHandler XLogHandler;
@@ -992,7 +993,7 @@ xchar *x_log_writer_format_fields(XLogLevelFlags log_level, const XLogField *fie
     xint64 now;
     time_t now_secs;
     XString *gstring;
-    struct tm *now_tm;
+    struct tm now_tm;
     xchar time_buf[128];
     xssize message_length = -1;
     const xchar *message = NULL;
@@ -1044,10 +1045,8 @@ xchar *x_log_writer_format_fields(XLogLevelFlags log_level, const XLogField *fie
 
     now = x_get_real_time();
     now_secs = (time_t)(now / 1000000);
-    now_tm = localtime(&now_secs);
-
-    if (X_LIKELY(now_tm != NULL)) {
-        strftime(time_buf, sizeof(time_buf), "%H:%M:%S", now_tm);
+    if (_x_localtime(now_secs, &now_tm)) {
+        strftime(time_buf, sizeof(time_buf), "%H:%M:%S", &now_tm);
     } else {
         strcpy(time_buf, "(error)");
     }

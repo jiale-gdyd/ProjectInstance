@@ -251,12 +251,12 @@ static int htable_grow(ACL_HTABLE *table)
     return 0;
 }
 
-#define	_RWLOCK_TYPE	acl_pthread_mutex_t
-#define	_RWLOCK_INIT	acl_pthread_mutex_init
-#define	_RWLOCK_DESTROY	acl_pthread_mutex_destroy
-#define	_RWLOCK_RDLOCK	acl_pthread_mutex_lock
-#define	_RWLOCK_WRLOCK	acl_pthread_mutex_lock
-#define	_RWLOCK_UNLOCK	acl_pthread_mutex_unlock
+#define    _RWLOCK_TYPE    acl_pthread_mutex_t
+#define    _RWLOCK_INIT    acl_pthread_mutex_init
+#define    _RWLOCK_DESTROY    acl_pthread_mutex_destroy
+#define    _RWLOCK_RDLOCK    acl_pthread_mutex_lock
+#define    _RWLOCK_WRLOCK    acl_pthread_mutex_lock
+#define    _RWLOCK_UNLOCK    acl_pthread_mutex_unlock
 
 static int __init_table_rwlock(ACL_HTABLE *table, int enable)
 {
@@ -312,7 +312,7 @@ ACL_HTABLE *acl_htable_create(int size, unsigned int flag)
 ACL_HTABLE *acl_htable_create3(int size, unsigned int flag, ACL_SLICE_POOL *slice)
 {
     ACL_HTABLE *table;
-    int	ret;
+    int    ret;
 
     if (slice) {
         table = (ACL_HTABLE *) acl_slice_pool_calloc(__FILE__, __LINE__,
@@ -322,7 +322,7 @@ ACL_HTABLE *acl_htable_create3(int size, unsigned int flag, ACL_SLICE_POOL *slic
         }
         table->slice = slice;
     } else {
-        table =	(ACL_HTABLE *) acl_mycalloc(1, sizeof(ACL_HTABLE));
+        table =    (ACL_HTABLE *) acl_mycalloc(1, sizeof(ACL_HTABLE));
         if (table == NULL) {
             return NULL;
         }
@@ -397,7 +397,7 @@ static void UNLOCK_TABLE(const ACL_HTABLE *table)
     } \
 } while (0)
 
-#define	LOCK_TABLE_WRITE(_table) do { \
+#define    LOCK_TABLE_WRITE(_table) do { \
     int   _ret; \
     if (_table->rwlock && (_ret = _RWLOCK_WRLOCK(_table->rwlock))) { \
         acl_msg_fatal("%s(%d): write lock error(%s)", \
@@ -405,7 +405,7 @@ static void UNLOCK_TABLE(const ACL_HTABLE *table)
     } \
 } while (0)
 
-#define	UNLOCK_TABLE(_table) do { \
+#define    UNLOCK_TABLE(_table) do { \
     int   _ret; \
     if (_table->rwlock && (_ret = _RWLOCK_UNLOCK(_table->rwlock))) { \
         acl_msg_fatal("%s(%d): unlock error(%s)", \
@@ -461,7 +461,7 @@ void acl_htable_set_errno(ACL_HTABLE *table, int error)
     }
 }
 
-#define	STREQ(x,y) (x == y || (x[0] == y[0] && strcmp(x,y) == 0))
+#define    STREQ(x,y) (x == y || (x[0] == y[0] && strcmp(x,y) == 0))
 
 /* acl_htable_enter - enter (key, value) pair */
 
@@ -514,8 +514,8 @@ ACL_HTABLE_INFO *acl_htable_enter(ACL_HTABLE *table, const char *key_in, void *v
     for (ht = table->data[n]; ht; ht = ht->next) {
         if (STREQ(key, ht->key.c_key)) {
             table->status = ACL_HTABLE_STAT_DUPLEX_KEY;
-            acl_msg_info("%s(%d): duplex key(%s) exist",
-                myname, __LINE__, key);
+            // acl_msg_info("%s(%d): duplex key(%s) exist",
+            //    myname, __LINE__, key);
             RETURN (ht);
         }
     }
@@ -561,7 +561,12 @@ ACL_HTABLE_INFO *acl_htable_enter(ACL_HTABLE *table, const char *key_in, void *v
 ACL_HTABLE_INFO *acl_htable_enter_r(ACL_HTABLE *table,
     const char *key_in, void *value)
 {
-    const char *myname = "acl_htable_enter_r";
+    return acl_htable_enter_r2(table, key_in, value, NULL);
+}
+
+ACL_HTABLE_INFO *acl_htable_enter_r2(ACL_HTABLE *table,
+    const char *key_in, void *value, void **old_holder)
+{
     ACL_HTABLE_INFO *ht;
     int   ret;
     unsigned hash, n;
@@ -610,9 +615,11 @@ ACL_HTABLE_INFO *acl_htable_enter_r(ACL_HTABLE *table,
 
     for (ht = table->data[n]; ht; ht = ht->next) {
         if (STREQ(key, ht->key.c_key)) {
-            acl_msg_info("%s(%d): duplex key(%s) exist",
-                myname, __LINE__, key);
             table->status = ACL_HTABLE_STAT_DUPLEX_KEY;
+            if (old_holder) {
+                *old_holder = ht->value;
+                ht->value = value;
+            }
             UNLOCK_TABLE(table);
             RETURN (ht);
         }
@@ -639,6 +646,10 @@ ACL_HTABLE_INFO *acl_htable_enter_r(ACL_HTABLE *table,
     htable_link(table, ht, n);
 
     UNLOCK_TABLE(table);
+
+    if (old_holder) {
+        *old_holder = NULL;
+    }
     RETURN (ht);
 }
 /* acl_htable_find - lookup value */
@@ -1164,7 +1175,7 @@ ACL_HTABLE_INFO **acl_htable_list(const ACL_HTABLE *table)
 void acl_htable_stat(const ACL_HTABLE *table)
 {
     ACL_HTABLE_INFO *member;
-    int	i, count;
+    int    i, count;
 
     LOCK_TABLE_READ(table);
     printf("hash stat count for each key:\n");

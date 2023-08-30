@@ -121,8 +121,7 @@ namespace asio2::detail
 		explicit client_impl_t(
 			std::size_t init_buf_size,
 			std::size_t  max_buf_size,
-			ThreadCountOrScheduler&& tcos,
-			Args&&...   args
+			ThreadCountOrScheduler&& tcos
 		)
 			: super()
 			, iopool_cp           <derived_t, args_t>(std::forward<ThreadCountOrScheduler>(tcos))
@@ -131,7 +130,7 @@ namespace asio2::detail
 			, user_data_cp        <derived_t, args_t>()
 			, connect_time_cp     <derived_t, args_t>()
 			, alive_time_cp       <derived_t, args_t>()
-			, socket_cp           <derived_t, args_t>(iopoolcp::_get_io(0)->context(), std::forward<Args>(args)...)
+			, socket_cp           <derived_t, args_t>(iopoolcp::_get_io(0)->context())
 			, connect_cp          <derived_t, args_t>()
 			, shutdown_cp         <derived_t, args_t>()
 			, close_cp            <derived_t, args_t>()
@@ -248,8 +247,9 @@ namespace asio2::detail
 		{
 			derived_t& derive = this->derived();
 
-			derive.listener_.clear();
+			derive.socket_.reset();
 			derive.io_.reset();
+			derive.listener_.clear();
 
 			derive.destroy_iopool();
 		}
@@ -310,6 +310,9 @@ namespace asio2::detail
 		 * @brief get the send/write allocator object reference
 		 */
 		inline auto & wallocator() noexcept { return this->wallocator_; }
+
+		inline listener_t                 & listener() noexcept { return this->listener_; }
+		inline std::atomic<state_t>       & state   () noexcept { return this->state_;    }
 
 		inline const char*                  life_id () noexcept { return this->life_id_.get(); }
 		inline void                   reset_life_id () noexcept { this->life_id_ = std::make_unique<char>(); }

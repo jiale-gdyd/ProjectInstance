@@ -73,11 +73,32 @@ namespace asio2::detail
 		 */
 		template<class... Args>
 		explicit https_client_impl_t(
-			asio::ssl::context::method method = asio::ssl::context::sslv23,
+			asio::ssl::context::method method,
 			Args&&... args
 		)
 			: ssl_context_comp(method)
 			, super(std::forward<Args>(args)...)
+			, ssl_stream_comp(*this, asio::ssl::stream_base::client)
+		{
+		}
+
+		/**
+		 * @brief constructor
+		 */
+		template<class... Args>
+		explicit https_client_impl_t(Args&&... args)
+			: ssl_context_comp(ASIO2_DEFAULT_SSL_METHOD)
+			, super(std::forward<Args>(args)...)
+			, ssl_stream_comp(*this, asio::ssl::stream_base::client)
+		{
+		}
+
+		/**
+		 * @brief constructor
+		 */
+		explicit https_client_impl_t()
+			: ssl_context_comp(ASIO2_DEFAULT_SSL_METHOD)
+			, super()
 			, ssl_stream_comp(*this, asio::ssl::stream_base::client)
 		{
 		}
@@ -139,7 +160,7 @@ namespace asio2::detail
 		{
 			super::_do_init(ecs);
 
-			this->derived()._ssl_init(ecs, this->socket_, *this);
+			this->derived()._ssl_init(ecs, this->derived().socket(), *this);
 		}
 
 		template<typename DeferEvent>
@@ -170,7 +191,7 @@ namespace asio2::detail
 				return derive._done_connect(ec, std::move(this_ptr), std::move(ecs), std::move(chain));
 			}
 
-			derive._ssl_start(this_ptr, ecs, this->socket_, *this);
+			derive._ssl_start(this_ptr, ecs, derive.socket(), *this);
 
 			derive._post_handshake(std::move(this_ptr), std::move(ecs), std::move(chain));
 		}

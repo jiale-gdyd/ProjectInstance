@@ -32,9 +32,9 @@ extern "C" {
 
 #define LIBDRM_VERSION_MAJOR                                2
 #define LIBDRM_VERSION_MINOR                                4
-#define LIBDRM_VERSION_PATCH                                115
+#define LIBDRM_VERSION_PATCH                                116
 
-#define LIBDRM_VERSION_STRING                               "2.4.115"
+#define LIBDRM_VERSION_STRING                               "2.4.116"
 
 #define DRM_NAME                                            "drm"
 

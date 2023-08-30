@@ -12,6 +12,7 @@
 #include <xlib/xlib/xconvert.h>
 #include <xlib/xlib/xstrfuncs.h>
 #include <xlib/xlib/xtestutils.h>
+#include <xlib/xlib/xutilsprivate.h>
 
 XDate *x_date_new(void)
 {
@@ -684,12 +685,40 @@ void x_date_set_parse(XDate *d, const xchar *str)
     X_UNLOCK(x_date_global);
 }
 
+xboolean _x_localtime(time_t timet, struct tm *out_tm)
+{
+    xboolean success = TRUE;
+
+#ifdef HAVE_LOCALTIME_R
+    if (!localtime_r(&timet, out_tm)) {
+        success = FALSE;
+    }
+#else
+    {
+        struct tm *ptm = localtime(&timet);
+        if (ptm == NULL) {
+            success = FALSE;
+        } else
+            memcpy(out_tm, ptm, sizeof(struct tm));
+        }
+#endif
+
+    return success;
+}
+
 void x_date_set_time_t(XDate *date, time_t timet)
 {
     struct tm tm;
+    xboolean success;
 
     x_return_if_fail(date != NULL);
-    localtime_r(&timet, &tm);
+
+    success = _x_localtime(timet, &tm);
+    if (!success) {
+        tm.tm_mon = 0;
+        tm.tm_mday = 1;
+        tm.tm_year = 100;
+    }
 
     date->julian = FALSE;
     date->month = tm.tm_mon + 1;
@@ -698,6 +727,12 @@ void x_date_set_time_t(XDate *date, time_t timet)
 
     x_return_if_fail(x_date_valid_dmy(date->day, (XDateMonth)date->month, date->year));
     date->dmy = TRUE;
+
+#ifndef X_DISABLE_CHECKS
+    if (!success) {
+        x_return_if_fail_warning(X_LOG_DOMAIN, "x_date_set_time", "localtime() == NULL");
+    }
+#endif
 }
 
 X_GNUC_BEGIN_IGNORE_DEPRECATIONS

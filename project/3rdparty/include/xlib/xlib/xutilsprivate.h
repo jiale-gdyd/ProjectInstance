@@ -1,6 +1,8 @@
 #ifndef __X_UTILS_PRIVATE_H__
 #define __X_UTILS_PRIVATE_H__
 
+#include <time.h>
+
 #include "xlibconfig.h"
 #include "xtypes.h"
 #include "xtestutils.h"
@@ -28,6 +30,8 @@ static inline xsize x_nearest_pow(xsize num)
 }
 
 void _x_unset_cached_tmp_dir(void);
+
+xboolean _x_localtime(time_t timet, struct tm *tm);
 
 X_END_DECLS
 

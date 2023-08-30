@@ -8,7 +8,7 @@
 #include "acl/lib_acl_cpp/stdlib/zlib_stream.hpp"
 #endif
 
-#ifndef	HAS_ZLIB
+#ifndef HAS_ZLIB
 # define HAS_ZLIB
 #endif
 
@@ -45,7 +45,7 @@ static acl_pthread_once_t __zlib_once = ACL_PTHREAD_ONCE_INIT;
 static ACL_DLL_HANDLE __zlib_dll = NULL;
 static acl::string __zlib_path;
 
-// 程序退出时释放动态加载的 zlib.dll 库
+// �����˳�ʱ�ͷŶ�̬���ص� zlib.dll ��
 #ifndef HAVE_NO_ATEXIT
 static void __zlib_dll_unload(void)
 {
@@ -57,7 +57,7 @@ static void __zlib_dll_unload(void)
 }
 #endif
 
-// 加载 zlib 动态库中的函数符号
+// ���� zlib ��̬���еĺ�������
 static bool __zlib_dll_load_symbols(void)
 {
     if (__zlib_dll == NULL) {
@@ -69,9 +69,9 @@ static bool __zlib_dll_load_symbols(void)
 
     //__deflateInit = (deflateInit_fn) acl_dlsym(__zlib_dll, "deflateInit_");
     //if (__deflateInit == NULL) {
-    //	logger_fatal("load deflateInit from %s error: %s",
-    //		path, acl_dlerror());
-    //	return false;
+    //    logger_fatal("load deflateInit from %s error: %s",
+    //        path, acl_dlerror());
+    //    return false;
     //}
 
     __deflateInit2 = (deflateInit2_fn) acl_dlsym(__zlib_dll, "deflateInit2_");
@@ -140,7 +140,7 @@ static bool __zlib_dll_load_symbols(void)
     return true;
 }
 
-// 动态加载 zlib.dll 库
+// ��̬���� zlib.dll ��
 static void __zlib_dll_load(void)
 {
     if (__zlib_dll != NULL) {
@@ -166,7 +166,7 @@ static void __zlib_dll_load(void)
         return;
     }
 
-    // 记录动态库路径，以便于在动态库卸载时输出库路径名
+    // ��¼��̬��·�����Ա����ڶ�̬��ж��ʱ�����·����
     __zlib_path = path;
 
     if (!__zlib_dll_load_symbols()) {
@@ -185,11 +185,11 @@ static void __zlib_dll_load(void)
 //#  define __deflateInit         deflateInit_
 #  define __deflateInit2        deflateInit2_
 #  define __deflate             deflate
-#  define __deflateReset	deflateReset
+#  define __deflateReset    deflateReset
 #  define __deflateEnd          deflateEnd
 #  define __inflateInit2        inflateInit2_
 #  define __inflate             inflate
-#  define __inflateReset	inflateReset
+#  define __inflateReset    inflateReset
 #  define __inflateEnd          inflateEnd
 #  define __crc32               crc32
 # endif
@@ -226,14 +226,14 @@ bool zlib_stream::zlib_load_once(void)
 {
 #ifdef  HAS_ZLIB
 # if defined(ACL_CPP_DLL) || defined(HAS_ZLIB_DLL)
-    // 当需要加载 zlib 动态库时，需要保证加载过程的唯一性
+    // ����Ҫ���� zlib ��̬��ʱ����Ҫ��֤���ع��̵�Ψһ��
     acl_pthread_once(&__zlib_once, __zlib_dll_load);
     if (__zlib_dll != NULL) {
         return true;
     }
     return false;
 # else
-    return true;  // 对于静态库，则直接返回成功即可
+    return true;  // ���ھ�̬�⣬��ֱ�ӷ��سɹ�����
 # endif
     logger_warn("zlib not support!");
     return false;
@@ -249,7 +249,7 @@ zlib_stream::zlib_stream(void)
     zstream_->zfree  = __zlib_free;
     zstream_->opaque = (void*) this;
 
-    is_compress_     = true;  // 默认为压缩状态
+    is_compress_     = true;  // Ĭ��Ϊѹ��״̬
     flush_           = zlib_flush_off;
 
 #ifdef  HAS_ZLIB
@@ -262,13 +262,13 @@ zlib_stream::zlib_stream(void)
 zlib_stream::~zlib_stream(void)
 {
     if ((zlib_flags_ & zlib_flags_zip_begin)
-        && !(zlib_flags_ & zlib_flags_zip_end)) {
+          && !(zlib_flags_ & zlib_flags_zip_end)) {
         string dummy(256);
         (void) zip_finish(&dummy);
     }
 
     if ((zlib_flags_ & zlib_flags_unzip_begin)
-        && !(zlib_flags_ & zlib_flags_unzip_end)) {
+          && !(zlib_flags_ & zlib_flags_unzip_end)) {
         string dummy(256);
         (void) unzip_finish(&dummy);
     }
@@ -308,7 +308,7 @@ bool zlib_stream::zlib_uncompress(const char* in, int len, string* out,
     return unzip_finish(out);
 }
 
-#define BUF_MIN	4000
+#define BUF_MIN    4000
 
 bool zlib_stream::update(int (*func)(z_stream*, int),
     zlib_flush_t flag, const char* in, int len, string* out)
@@ -322,9 +322,10 @@ bool zlib_stream::update(int (*func)(z_stream*, int),
         return true;
     }
 
-    acl_assert(in);
-    acl_assert(len >= 0);
-    acl_assert(out);
+    if (in == NULL || len < 0 || out == NULL) {
+        logger_warn("invalid args, in=%p, len=%d, out=%p", in, len, out);
+        return false;
+    }
 
     int   pos = 0;
     int   dlen, nbuf, ret;
@@ -332,11 +333,14 @@ bool zlib_stream::update(int (*func)(z_stream*, int),
     zstream_->avail_out = 0;
 
     while (true) {
-        acl_assert(len >= 0);
+        if (len < 0) {
+            logger_error("when update, invalid len=%d", len);
+            return false;
+        }
 
         nbuf = (int) (out->capacity() - out->length());
 
-        // 需要保证输出缓冲区的可用空间
+        // ��Ҫ��֤����������Ŀ��ÿռ�
         if (nbuf < BUF_MIN) {
             nbuf = (int) out->length() + BUF_MIN;
             out->space(nbuf);
@@ -357,11 +361,21 @@ bool zlib_stream::update(int (*func)(z_stream*, int),
 
         ret = func(zstream_, flag);
         if (ret == Z_STREAM_END) {
-            acl_assert(flag == Z_FINISH || func == __inflate);
             finished_ = true;
 
-            // 修改输出缓冲区的指针位置
-            acl_assert(nbuf >= (int) zstream_->avail_out);
+            if (flag != Z_FINISH && func != __inflate) {
+                logger_error("flag=%d, func=%p, inflate=%p",
+                    flag, func, __inflate);
+                return false;
+            }
+
+            // �޸������������ָ��λ��
+            if (nbuf < (int) zstream_->avail_out) {
+                logger_error("Pos err, nbuf=%d, avail_out=%d",
+                    nbuf, (int) zstream_->avail_out);
+                return false;
+            }
+
             dlen += nbuf - zstream_->avail_out;
             out->set_offset((ssize_t) dlen);
 
@@ -376,22 +390,32 @@ bool zlib_stream::update(int (*func)(z_stream*, int),
             return false;
         }
 
-        // 修改输出缓冲区的指针位置
-        acl_assert(nbuf >= (int) zstream_->avail_out);
+        // �޸������������ָ��λ��
+        if (nbuf < (int) zstream_->avail_out) {
+            logger_error("nbuf=%d, avail_out=%d",
+                nbuf, (int) zstream_->avail_out);
+            return false;
+        }
+
         dlen += nbuf - zstream_->avail_out;
         out->set_offset((ssize_t) dlen);
 
-        // 如输入数据完成则退出循环
+        // ����������������˳�ѭ��
         if (zstream_->avail_in == 0) {
             zstream_->next_in = NULL;
             break;
         }
 
-        // 更新输入数据的下一个位置
-        acl_assert(len >= (int) zstream_->avail_in);
+        // �����������ݵ���һ��λ��
+        if (len < (int) zstream_->avail_in) {
+            logger_error("Pos err, len=%d, avail_in=%d",
+                len, (int) zstream_->avail_in);
+            return false;
+        }
+
         pos += len - zstream_->avail_in;
 
-        // 更新剩余数据长度
+        // ����ʣ�����ݳ���
         len = zstream_->avail_in;
     }
 
@@ -410,8 +434,15 @@ bool zlib_stream::flush_out(int (*func)(z_stream*, int),
         return true;
     }
 
-    acl_assert(zstream_->avail_in == 0);
-    acl_assert(zstream_->next_in == NULL);
+    if (zstream_->avail_in != 0) {
+        logger_warn("not completed, avali_in not 0");
+        return false;
+    }
+
+    if (zstream_->next_in != NULL) {
+        logger_warn("not completed, next_in not NULL");
+        return false;
+    }
 
     int   dlen, nbuf, ret;
 
@@ -419,7 +450,7 @@ bool zlib_stream::flush_out(int (*func)(z_stream*, int),
     while (true) {
         nbuf = (int) (out->capacity() - out->length());
 
-        // 需要保证输出缓冲区的可用空间
+        // ��Ҫ��֤����������Ŀ��ÿռ�
         if (nbuf < BUF_MIN) {
             nbuf = (int) out->length() + BUF_MIN;
             out->space(nbuf);
@@ -438,11 +469,20 @@ bool zlib_stream::flush_out(int (*func)(z_stream*, int),
 
         ret = func(zstream_, flag);
         if (ret == Z_STREAM_END) {
-            acl_assert(flag == Z_FINISH || func == __inflate);
             finished_ = true;
+            if (flag != Z_FINISH && func != __inflate) {
+                logger_error("flag=%d, fnc=%p, inflate=%p",
+                    flag, func, __inflate);
+                return false;
+            }
 
-            // 修改输出缓冲区的指针位置
-            acl_assert(nbuf >= (int) zstream_->avail_out);
+            // �޸������������ָ��λ��
+            if (nbuf < (int) zstream_->avail_out) {
+                logger_error("Pos err, nbuf=%d, avail_out=%d",
+                    nbuf, (int) zstream_->avail_out);
+                return false;
+            }
+
             dlen += nbuf - zstream_->avail_out;
             out->set_offset((ssize_t) dlen);
 
@@ -458,8 +498,13 @@ bool zlib_stream::flush_out(int (*func)(z_stream*, int),
                 return false;
             }
 
-            // 修改输出缓冲区的指针位置
-            acl_assert(nbuf >= (int) zstream_->avail_out);
+            // �޸������������ָ��λ��
+            if (nbuf < (int) zstream_->avail_out) {
+                logger_error("Pos err, nbuf=%d, avail_out=%d",
+                    nbuf, (int) zstream_->avail_out);
+                return false;
+            }
+
             dlen += nbuf - zstream_->avail_out;
             out->set_offset((ssize_t) dlen);
         } else if (ret != Z_OK) {
@@ -467,8 +512,13 @@ bool zlib_stream::flush_out(int (*func)(z_stream*, int),
                 "deflate" : "inflate");
             return false;
         } else if (zstream_->avail_out == 0) {
-            // 修改输出缓冲区的指针位置
-            acl_assert(nbuf >= (int) zstream_->avail_out);
+            // �޸������������ָ��λ��
+            if (nbuf < (int) zstream_->avail_out) {
+                logger_error("Pos err, nbuf=%d, avail_out=%d",
+                    nbuf, (int) zstream_->avail_out);
+                return false;
+            }
+
             dlen += nbuf - zstream_->avail_out;
             out->set_offset((size_t) dlen);
         } else {
@@ -495,7 +545,7 @@ bool zlib_stream::zip_begin(zlib_level_t level /* = zlib_default */,
     zlib_flags_  = zlib_flags_zip_begin;
     finished_    = false;
     is_compress_ = true;
-//	int ret = __deflateInit(zstream_, level, ZLIB_VERSION, sizeof(z_stream));
+//    int ret = __deflateInit(zstream_, level, ZLIB_VERSION, sizeof(z_stream));
 
     int ret = __deflateInit2(zstream_, level, Z_DEFLATED,
             wbits, mlevel, Z_DEFAULT_STRATEGY, ZLIB_VERSION,

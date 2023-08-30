@@ -161,8 +161,8 @@ namespace asio2::detail
 		{
 			derived_t& derive = this->derived();
 
-			derive.listener_.clear();
 			derive.io_.reset();
+			derive.listener_.clear();
 
 			derive.destroy_iopool();
 		}
@@ -343,6 +343,10 @@ namespace asio2::detail
 		 * @brief get the send/write/post allocator object reference
 		 */
 		inline auto & wallocator() noexcept { return this->wallocator_; }
+
+		inline session_mgr_t<session_t> & sessions() noexcept { return this->sessions_; }
+		inline listener_t               & listener() noexcept { return this->listener_; }
+		inline std::atomic<state_t>     & state   () noexcept { return this->state_;    }
 
 	protected:
 		// The memory to use for handler-based custom memory allocation. used for acceptor.
