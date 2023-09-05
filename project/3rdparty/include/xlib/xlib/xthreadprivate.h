@@ -66,7 +66,7 @@ XRealThread *x_system_thread_new(XThreadFunc proxy, xulong stack_size, const cha
 
 void x_system_thread_free(XRealThread  *thread);
 
-void x_system_thread_exit(void);
+X_NORETURN void x_system_thread_exit(void);
 void x_system_thread_set_name(const xchar *name);
 
 XThread *x_thread_new_internal(const xchar *name, XThreadFunc proxy, XThreadFunc func, xpointer data, xsize stack_size, XError **error);

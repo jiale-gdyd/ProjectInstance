@@ -28,7 +28,7 @@
 
 namespace asio2::detail
 {
-	struct template_args_udp_session
+	struct template_args_udp_session : public udp_tag
 	{
 		static constexpr bool is_session = true;
 		static constexpr bool is_client  = false;
@@ -52,6 +52,7 @@ namespace asio2::detail
 		: public session_impl_t<derived_t, args_t>
 		, public udp_send_op   <derived_t, args_t>
 		, public udp_recv_op   <derived_t, args_t>
+		, public udp_tag
 	{
 		ASIO2_CLASS_FRIEND_DECLARE_BASE;
 		ASIO2_CLASS_FRIEND_DECLARE_UDP_BASE;

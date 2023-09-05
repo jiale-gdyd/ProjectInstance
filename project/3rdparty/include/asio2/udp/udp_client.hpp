@@ -26,9 +26,11 @@
 #include <asio2/udp/impl/udp_recv_op.hpp>
 #include <asio2/udp/impl/kcp_stream_cp.hpp>
 
+#include <asio2/proxy/socks5_client.hpp>
+
 namespace asio2::detail
 {
-	struct template_args_udp_client
+	struct template_args_udp_client : public udp_tag
 	{
 		static constexpr bool is_session = false;
 		static constexpr bool is_client  = true;
@@ -38,6 +40,9 @@ namespace asio2::detail
 		using buffer_t    = asio2::linear_buffer;
 		using send_data_t = std::string_view;
 		using recv_data_t = std::string_view;
+
+		template<class derived_t>
+		using socks5_client_t = asio2::socks5_client_t<derived_t>;
 
 		static constexpr std::size_t allocator_storage_size = 256;
 	};
@@ -51,6 +56,7 @@ namespace asio2::detail
 		: public client_impl_t<derived_t, args_t>
 		, public udp_send_op  <derived_t, args_t>
 		, public udp_recv_op  <derived_t, args_t>
+		, public udp_tag
 	{
 		ASIO2_CLASS_FRIEND_DECLARE_BASE;
 		ASIO2_CLASS_FRIEND_DECLARE_UDP_BASE;
@@ -607,6 +613,8 @@ namespace asio2::detail
 		inline void _handle_stop(const error_code& ec, std::shared_ptr<derived_t> this_ptr, DeferEvent chain)
 		{
 			detail::ignore_unused(ec, this_ptr, chain);
+
+			this->derived()._socks5_stop();
 
 			ASIO2_ASSERT(this->state_ == state_t::stopped);
 		}

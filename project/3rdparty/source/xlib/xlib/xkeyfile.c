@@ -2320,7 +2320,10 @@ static xboolean x_key_file_line_is_key_value_pair(const xchar *line)
 static xchar *x_key_file_parse_value_as_string(XKeyFile *key_file, const xchar *value, XSList **pieces, XError **error)
 {
     const xchar *p;
+    XSList *tmp_pieces = NULL;
     xchar *string_value, *q0, *q;
+
+    x_assert(pieces == NULL || *pieces == NULL);
 
     string_value = x_new(xchar, strlen(value) + 1);
 
@@ -2353,7 +2356,7 @@ static xchar *x_key_file_parse_value_as_string(XKeyFile *key_file, const xchar *
 
                 case '\0':
                     x_set_error_literal(error, X_KEY_FILE_ERROR, X_KEY_FILE_ERROR_INVALID_VALUE, _("Key file contains escape character at end of line"));
-                    break;
+                    goto error;
 
                 default:
                     if (pieces && *p == key_file->list_separator) {
@@ -2370,6 +2373,7 @@ static xchar *x_key_file_parse_value_as_string(XKeyFile *key_file, const xchar *
                             sequence[2] = '\0';
 
                             x_set_error(error, X_KEY_FILE_ERROR, X_KEY_FILE_ERROR_INVALID_VALUE, _("Key file contains invalid escape sequence “%s”"), sequence);
+                            goto error;
                         }
                     }
                     break;
@@ -2377,8 +2381,8 @@ static xchar *x_key_file_parse_value_as_string(XKeyFile *key_file, const xchar *
         } else {
             *q = *p;
             if (pieces && (*p == key_file->list_separator)) {
-                *pieces = x_slist_prepend(*pieces, x_strndup(q0, q - q0));
-                q0 = q + 1; 
+                tmp_pieces = x_slist_prepend(tmp_pieces, x_strndup(q0, q - q0));
+                q0 = q + 1;
             }
         }
 
@@ -2393,13 +2397,19 @@ static xchar *x_key_file_parse_value_as_string(XKeyFile *key_file, const xchar *
     *q = '\0';
     if (pieces) {
         if (q0 < q) {
-            *pieces = x_slist_prepend(*pieces, x_strndup(q0, q - q0));
+            tmp_pieces = x_slist_prepend(tmp_pieces, x_strndup(q0, q - q0));
         }
 
-        *pieces = x_slist_reverse(*pieces);
+        *pieces = x_slist_reverse(tmp_pieces);
     }
 
     return string_value;
+
+error:
+    x_free(string_value);
+    x_slist_free_full(tmp_pieces, x_free);
+
+    return NULL;
 }
 
 static xchar *x_key_file_parse_string_as_value(XKeyFile *key_file, const xchar *string, xboolean escape_separator)

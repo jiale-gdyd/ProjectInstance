@@ -1,5 +1,9 @@
 # 变更日志
 
+## 2023-09-05
+  * acl  : test https
+  * asio2: continue to develop socks5 proxy function 2.
+
 ## 2023-08-26
   * libdrm: build: bump version to 2.4.116
   * acl   : mod test sample.

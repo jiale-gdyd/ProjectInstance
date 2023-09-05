@@ -25,7 +25,7 @@
 
 namespace asio2::detail
 {
-	struct template_args_tcp_client
+	struct template_args_tcp_client : public tcp_tag
 	{
 		static constexpr bool is_session = false;
 		static constexpr bool is_client  = true;
@@ -47,6 +47,7 @@ namespace asio2::detail
 		, public tcp_keepalive_cp      <derived_t, args_t>
 		, public tcp_send_op           <derived_t, args_t>
 		, public tcp_recv_op           <derived_t, args_t>
+		, public tcp_tag
 	{
 		ASIO2_CLASS_FRIEND_DECLARE_BASE;
 		ASIO2_CLASS_FRIEND_DECLARE_TCP_BASE;
@@ -563,6 +564,8 @@ namespace asio2::detail
 		inline void _handle_stop(const error_code& ec, std::shared_ptr<derived_t> this_ptr, DeferEvent chain)
 		{
 			detail::ignore_unused(ec, this_ptr, chain);
+
+			this->derived()._socks5_stop();
 
 			ASIO2_ASSERT(this->state_ == state_t::stopped);
 		}

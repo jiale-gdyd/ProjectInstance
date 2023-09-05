@@ -27,7 +27,7 @@
 #include <asio2/http/detail/http_make.hpp>
 #include <asio2/http/detail/http_traits.hpp>
 
-#include <asio2/component/socks/socks5_client.hpp>
+#include <asio2/component/socks/socks5_client_cp.hpp>
 
 namespace asio2::detail
 {
@@ -57,6 +57,11 @@ namespace asio2::detail
 			std::string_view h{ sk5->host() };
 			std::string_view p{ sk5->port() };
 
+			if (static_cast<int>(sk5->command()) == 0)
+			{
+				sk5->command(socks5::command::connect);
+			}
+
 			// Look up the domain name
 			resolver.async_resolve(h, p, [&, s5 = std::move(sk5)]
 			(const error_code& ec1, const asio::ip::tcp::resolver::results_type& endpoints) mutable
@@ -69,14 +74,13 @@ namespace asio2::detail
 				{
 					if (ec2) { set_last_error(ec2); return; }
 
-					detail::socks5_client_connect_op
-					{
-						ioc,
+					socks5_async_handshake
+					(
 						detail::to_string(std::forward<String  >(host)),
 						detail::to_string(std::forward<StrOrInt>(port)),
 						socket,
 						std::move(s5),
-						[&](error_code ecs5) mutable
+						[&](error_code ecs5, std::string, std::string) mutable
 						{
 							if (ecs5) { set_last_error(ecs5); return; }
 
@@ -104,7 +108,7 @@ namespace asio2::detail
 								});
 							});
 						}
-					};
+					);
 				});
 			});
 		}
@@ -250,18 +254,13 @@ namespace asio2::detail
 
 		/**
 		 * @brief blocking download the http file until it is returned on success or failure
-		 * @param url - The url of the file to download.
+		 * @param req - The web_request which can be create by http::make_request(...)
 		 * @param filepath - The file path to saved the received file content.
 		 */
-		template<class String1, class String2>
-		typename std::enable_if_t<detail::can_convert_to_string_v<detail::remove_cvref_t<String1>> &&
-			detail::can_convert_to_string_v<detail::remove_cvref_t<String2>>, bool>
-		static inline download(const asio::ssl::context& ctx, String1&& url, String2&& filepath)
+		template<class String2>
+		typename std::enable_if_t<detail::can_convert_to_string_v<detail::remove_cvref_t<String2>>, bool>
+		static inline download(const asio::ssl::context& ctx, http::web_request& req, String2&& filepath)
 		{
-			http::web_request req = http::make_request(std::forward<String1>(url));
-			if (get_last_error())
-				return false;
-
 			std::filesystem::path path(std::forward<String2>(filepath));
 
 			std::filesystem::create_directories(path.parent_path(), get_last_error());
@@ -282,6 +281,37 @@ namespace asio2::detail
 			return derived_t::download(ctx, req.host(), req.port(), req.base(), cbh, cbb, std::in_place);
 		}
 
+		/**
+		 * @brief blocking download the http file until it is returned on success or failure
+		 * @param req - The web_request which can be create by http::make_request(...)
+		 * @param filepath - The file path to saved the received file content.
+		 */
+		template<class String2>
+		typename std::enable_if_t<detail::can_convert_to_string_v<detail::remove_cvref_t<String2>>, bool>
+		static inline download(http::web_request& req, String2&& filepath)
+		{
+			return derived_t::download(asio::ssl::context{ ASIO2_DEFAULT_SSL_METHOD },
+				req, std::forward<String2>(filepath));
+		}
+
+		/**
+		 * @brief blocking download the http file until it is returned on success or failure
+		 * @param url - The url of the file to download.
+		 * @param filepath - The file path to saved the received file content.
+		 */
+		template<class String1, class String2>
+		typename std::enable_if_t<
+			detail::can_convert_to_string_v<detail::remove_cvref_t<String1>> &&
+			detail::can_convert_to_string_v<detail::remove_cvref_t<String2>>, bool>
+		static inline download(const asio::ssl::context& ctx, String1&& url, String2&& filepath)
+		{
+			http::web_request req = http::make_request(std::forward<String1>(url));
+			if (get_last_error())
+				return false;
+
+			return derived_t::download(ctx, req, std::forward<String2>(filepath));
+		}
+
 		// ----------------------------------------------------------------------------------------
 
 		/**
@@ -290,7 +320,8 @@ namespace asio2::detail
 		 * @param filepath - The file path to saved the received file content.
 		 */
 		template<class String1, class String2>
-		typename std::enable_if_t<detail::can_convert_to_string_v<detail::remove_cvref_t<String1>> &&
+		typename std::enable_if_t<
+			detail::can_convert_to_string_v<detail::remove_cvref_t<String1>> &&
 			detail::can_convert_to_string_v<detail::remove_cvref_t<String2>>, bool>
 		static inline download(String1&& url, String2&& filepath)
 		{
@@ -306,7 +337,8 @@ namespace asio2::detail
 		 * @param cbb - A function that circularly receives the contents of the file in chunks. void(std::string_view data)
 		 */
 		template<class String1, class BodyCallback>
-		typename std::enable_if_t<detail::can_convert_to_string_v<detail::remove_cvref_t<String1>> &&
+		typename std::enable_if_t<
+			detail::can_convert_to_string_v<detail::remove_cvref_t<String1>> &&
 			detail::is_callable_v<BodyCallback>, bool>
 		static inline download(const asio::ssl::context& ctx, String1&& url, BodyCallback&& cbb)
 		{
@@ -319,6 +351,58 @@ namespace asio2::detail
 			return derived_t::download(ctx, req.host(), req.port(), req.base(), cbh, cbb, std::in_place);
 		}
 
+		/**
+		 * @brief blocking download the http file until it is returned on success or failure
+		 * @param req - The web_request which can be create by http::make_request(...)
+		 * @param cbb - A function that circularly receives the contents of the file in chunks. void(std::string_view data)
+		 */
+		template<class BodyCallback>
+		typename std::enable_if_t<detail::is_callable_v<BodyCallback>, bool>
+		static inline download(const asio::ssl::context& ctx, http::web_request& req, BodyCallback&& cbb)
+		{
+			auto cbh = [](const auto&) {};
+
+			return derived_t::download(ctx, req.host(), req.port(), req.base(), cbh, cbb, std::in_place);
+		}
+
+		/**
+		 * @brief blocking download the http file until it is returned on success or failure
+		 * @param req - The web_request which can be create by http::make_request(...)
+		 * @param cbb - A function that circularly receives the contents of the file in chunks. void(std::string_view data)
+		 */
+		template<class BodyCallback>
+		typename std::enable_if_t<detail::is_callable_v<BodyCallback>, bool>
+		static inline download(http::web_request& req, BodyCallback&& cbb)
+		{
+			return derived_t::download(asio::ssl::context{ ASIO2_DEFAULT_SSL_METHOD }, req, cbb);
+		}
+
+		/**
+		 * @brief blocking download the http file until it is returned on success or failure
+		 * @param req - The web_request which can be create by http::make_request(...)
+		 * @param cbh - A function that recv the http response header message. void(auto& message)
+		 * @param cbb - A function that circularly receives the contents of the file in chunks. void(std::string_view data)
+		 */
+		template<class HeaderCallback, class BodyCallback>
+		typename std::enable_if_t<detail::is_callable_v<BodyCallback>, bool>
+		static inline download(const asio::ssl::context& ctx, http::web_request& req, HeaderCallback&& cbh, BodyCallback&& cbb)
+		{
+			return derived_t::download(ctx, req.host(), req.port(), req.base(), cbh, cbb, std::in_place);
+		}
+
+		/**
+		 * @brief blocking download the http file until it is returned on success or failure
+		 * @param req - The web_request which can be create by http::make_request(...)
+		 * @param cbh - A function that recv the http response header message. void(auto& message)
+		 * @param cbb - A function that circularly receives the contents of the file in chunks. void(std::string_view data)
+		 */
+		template<class HeaderCallback, class BodyCallback>
+		typename std::enable_if_t<detail::is_callable_v<BodyCallback>, bool>
+		static inline download(http::web_request& req, HeaderCallback&& cbh, BodyCallback&& cbb)
+		{
+			return derived_t::download(asio::ssl::context{ ASIO2_DEFAULT_SSL_METHOD }, req, cbh, cbb);
+		}
+
 		// ----------------------------------------------------------------------------------------
 
 		/**
@@ -327,7 +411,8 @@ namespace asio2::detail
 		 * @param cbb - A function that circularly receives the contents of the file in chunks. void(std::string_view data)
 		 */
 		template<class String1, class BodyCallback>
-		typename std::enable_if_t<detail::can_convert_to_string_v<detail::remove_cvref_t<String1>> &&
+		typename std::enable_if_t<
+			detail::can_convert_to_string_v<detail::remove_cvref_t<String1>> &&
 			detail::is_callable_v<BodyCallback>, bool>
 		static inline download(String1&& url, BodyCallback&& cbb)
 		{
@@ -344,7 +429,8 @@ namespace asio2::detail
 		 * @param cbb - A function that circularly receives the contents of the file in chunks. void(std::string_view data)
 		 */
 		template<class String1, class HeaderCallback, class BodyCallback>
-		typename std::enable_if_t<detail::can_convert_to_string_v<detail::remove_cvref_t<String1>> &&
+		typename std::enable_if_t<
+			detail::can_convert_to_string_v<detail::remove_cvref_t<String1>> &&
 			detail::is_callable_v<BodyCallback>, bool>
 		static inline download(const asio::ssl::context& ctx, String1&& url, HeaderCallback&& cbh, BodyCallback&& cbb)
 		{
@@ -364,7 +450,8 @@ namespace asio2::detail
 		 * @param cbb - A function that circularly receives the contents of the file in chunks. void(std::string_view data)
 		 */
 		template<class String1, class HeaderCallback, class BodyCallback>
-		typename std::enable_if_t<detail::can_convert_to_string_v<detail::remove_cvref_t<String1>> &&
+		typename std::enable_if_t<
+			detail::can_convert_to_string_v<detail::remove_cvref_t<String1>> &&
 			detail::is_callable_v<BodyCallback>, bool>
 		static inline download(String1&& url, HeaderCallback&& cbh, BodyCallback&& cbb)
 		{

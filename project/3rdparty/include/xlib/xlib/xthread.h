@@ -90,7 +90,7 @@ XThread *x_thread_try_new(const xchar *name, XThreadFunc func, xpointer data, XE
 XLIB_AVAILABLE_IN_ALL
 XThread *x_thread_self(void);
 
-XLIB_AVAILABLE_IN_ALL
+X_NORETURN XLIB_AVAILABLE_IN_ALL
 void x_thread_exit(xpointer retval);
 
 XLIB_AVAILABLE_IN_ALL
