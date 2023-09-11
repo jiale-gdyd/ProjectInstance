@@ -76,7 +76,7 @@ struct mosquitto_client_msg {
     uint16_t   mid;
     uint8_t    qos;
     bool       retain;
-    bool       dup;
+    uint8_t    dup;
     uint8_t    direction;
     uint8_t    state;
     uint8_t    padding[5];

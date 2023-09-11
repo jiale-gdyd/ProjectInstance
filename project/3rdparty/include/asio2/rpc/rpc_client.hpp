@@ -182,7 +182,7 @@ namespace asio2::detail
 		inline void _fire_recv(
 			std::shared_ptr<derived_t>& this_ptr, std::shared_ptr<ecs_t<C>>& ecs, std::string_view data)
 		{
-			data = this->derived().data_filter_before_recv(data);
+			data = detail::call_data_filter_before_recv(this->derived(), data);
 
 			this->listener_.notify(event_type::recv, data);
 
@@ -277,6 +277,8 @@ namespace asio2
 		using rpc_client_t<rpc_client_use<np>, np>::rpc_client_t;
 	};
 	
+	using rpc_tcp_client = rpc_client_use<asio2::net_protocol::tcp>;
+	using rpc_ws_client  = rpc_client_use<asio2::net_protocol::ws>;
 	using rpc_kcp_client = rpc_client_use<asio2::net_protocol::udp>;
 
 #if !defined(ASIO2_USE_WEBSOCKET_RPC)

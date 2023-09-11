@@ -58,6 +58,21 @@ namespace asio2::detail
 			this->stop();
 		}
 
+		/**
+		 * @brief start the server
+		 * @param host - A string identifying a location. May be a descriptive name or
+		 * a numeric address string.
+		 * @param service - A string identifying the requested service. This may be a
+		 * descriptive name or a numeric string corresponding to a port number.
+		 */
+		template<typename String, typename StrOrInt, typename... Args>
+		inline bool start(String&& host, StrOrInt&& service, Args&&... args)
+		{
+			return this->derived()._do_start(
+				std::forward<String>(host), std::forward<StrOrInt>(service),
+				ecs_helper::make_ecs(detail::socks5_server_match_role{}, std::forward<Args>(args)...));
+		}
+
 	public:
 		/**
 		 * @brief bind socks5 handshake listener

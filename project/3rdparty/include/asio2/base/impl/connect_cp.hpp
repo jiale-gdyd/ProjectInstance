@@ -33,7 +33,7 @@ namespace asio2::detail
 	class run_connect_op : public asio::coroutine
 	{
 	public:
-		using socket_t           = typename SocketT;
+		using socket_t           = SocketT;
 		using decay_socket_t     = typename std::remove_cv_t<std::remove_reference_t<socket_t>>;
 		using lowest_layer_t     = typename decay_socket_t::lowest_layer_type;
 		using resolver_type      = typename asio::ip::basic_resolver<typename lowest_layer_t::protocol_type>;
@@ -127,36 +127,6 @@ namespace asio2
 			detail::run_connect_op<SocketT>{
 			std::move(host), std::move(port), socket},
 			token, socket);
-	}
-
-	/**
-	 * @brief Perform the socks5 handshake in the client role.
-	 * @param host - The target server ip.
-	 * @param port - The target server port.
-	 * @param socket - The asio::ip::tcp::socket object reference.
-	 * @param ec - Save the error information when handshake failed.
-	 * @return true if handshake successed, otherwise false.
-	 */
-	template <typename SocketT>
-	bool connect(std::string host, std::string port, SocketT& socket, error_code& ec)
-	{
-		std::future<void> f = async_connect(
-			std::move(host), std::move(port), socket, asio::use_future);
-
-		try
-		{
-			f.get();
-
-			ec = {};
-
-			return true;
-		}
-		catch (const system_error& e)
-		{
-			ec = e.code();
-		}
-
-		return false;
 	}
 }
 

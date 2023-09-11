@@ -48,12 +48,15 @@
 #include <asio2/base/impl/post_cp.hpp>
 #include <asio2/base/impl/event_queue_cp.hpp>
 #include <asio2/base/impl/condition_event_cp.hpp>
+#include <asio2/base/impl/connect_cp.hpp>
 
 #include <asio2/base/detail/linear_buffer.hpp>
 #include <asio2/udp/impl/udp_send_cp.hpp>
 #include <asio2/udp/impl/udp_send_op.hpp>
 
-#include <asio2/proxy/socks5_client.hpp>
+//#include <asio2/component/socks/socks5_client_cp.hpp>
+
+//#include <asio2/proxy/socks5_client.hpp>
 
 namespace asio2::detail
 {
@@ -62,8 +65,8 @@ namespace asio2::detail
 		using socket_t = asio::ip::udp::socket;
 		using buffer_t = asio2::linear_buffer;
 
-		template<class derived_t>
-		using socks5_client_t = asio2::socks5_client_t<derived_t>;
+		//template<class derived_t>
+		//using socks5_client_t = asio2::socks5_tcp_client_t<derived_t>;
 
 		static constexpr std::size_t function_storage_size = 88;
 		static constexpr std::size_t allocator_storage_size = 256;
@@ -71,6 +74,7 @@ namespace asio2::detail
 
 	ASIO2_CLASS_FORWARD_DECLARE_BASE;
 	ASIO2_CLASS_FORWARD_DECLARE_UDP_BASE;
+	ASIO2_CLASS_FORWARD_DECLARE_UDP_CLIENT;
 
 	template<class derived_t, class args_t = template_args_udp_cast>
 	class udp_cast_impl_t
@@ -87,10 +91,14 @@ namespace asio2::detail
 		, public condition_event_cp<derived_t, args_t>
 		, public udp_send_cp       <derived_t, args_t>
 		, public udp_send_op       <derived_t, args_t>
+		, public connect_cp_member_variables<derived_t, args_t, false>
+		//, public socks5_client_cp  <derived_t, args_t>
 		, public udp_tag
+		, public cast_tag
 	{
 		ASIO2_CLASS_FRIEND_DECLARE_BASE;
 		ASIO2_CLASS_FRIEND_DECLARE_UDP_BASE;
+		ASIO2_CLASS_FRIEND_DECLARE_UDP_CLIENT;
 
 	public:
 		using super = object_t       <derived_t        >;
@@ -189,7 +197,22 @@ namespace asio2::detail
 		#endif
 		#endif
 
-			return this->derived()._do_start(
+			return this->derived().template _do_start<false>(
+				std::forward<String>(host), std::forward<StrOrInt>(service),
+				ecs_helper::make_ecs('0', std::forward<Args>(args)...));
+		}
+
+		/**
+		 * @brief start the udp cast
+		 * @param host - A string identifying a location. May be a descriptive name or
+		 * a numeric address string.
+		 * @param service - A string identifying the requested service. This may be a
+		 * descriptive name or a numeric string corresponding to a port number.
+		 */
+		template<typename String, typename StrOrInt, typename... Args>
+		inline bool async_start(String&& host, StrOrInt&& service, Args&&... args)
+		{
+			return this->derived().template _do_start<true>(
 				std::forward<String>(host), std::forward<StrOrInt>(service),
 				ecs_helper::make_ecs('0', std::forward<Args>(args)...));
 		}
@@ -365,7 +388,7 @@ namespace asio2::detail
 		}
 
 	protected:
-		template<typename String, typename StrOrInt, typename C>
+		template<bool IsAsync, typename String, typename StrOrInt, typename C>
 		bool _do_start(String&& host, StrOrInt&& port, std::shared_ptr<ecs_t<C>> ecs)
 		{
 			derived_t& derive = this->derived();
@@ -446,14 +469,14 @@ namespace asio2::detail
 			#endif
 
 				// convert to string maybe throw some exception.
-				std::string h = detail::to_string(std::move(host));
-				std::string p = detail::to_string(std::move(port));
+				this->host_ = detail::to_string(std::move(host));
+				this->port_ = detail::to_string(std::move(port));
 
 				expected = state_t::starting;
 				if (!this->state_.compare_exchange_strong(expected, state_t::starting))
 				{
 					ASIO2_ASSERT(false);
-					derive._handle_start(asio::error::operation_aborted,
+					derive._handle_connect(asio::error::operation_aborted,
 						std::move(this_ptr), std::move(ecs), std::move(chain));
 					return;
 				}
@@ -466,17 +489,17 @@ namespace asio2::detail
 				// parse address and port
 				asio::ip::udp::resolver resolver(this->io_->context());
 
-				auto results = resolver.resolve(h, p,
+				auto results = resolver.resolve(this->host_, this->port_,
 					asio::ip::resolver_base::flags::passive |
 					asio::ip::resolver_base::flags::address_configured, ec);
 				if (ec)
 				{
-					derive._handle_start(ec, std::move(this_ptr), std::move(ecs), std::move(chain));
+					derive._handle_connect(ec, std::move(this_ptr), std::move(ecs), std::move(chain));
 					return;
 				}
 				if (results.empty())
 				{
-					derive._handle_start(asio::error::host_not_found,
+					derive._handle_connect(asio::error::host_not_found,
 						std::move(this_ptr), std::move(ecs), std::move(chain));
 					return;
 				}
@@ -486,7 +509,7 @@ namespace asio2::detail
 				this->socket().open(endpoint.protocol(), ec);
 				if (ec)
 				{
-					derive._handle_start(ec, std::move(this_ptr), std::move(ecs), std::move(chain));
+					derive._handle_connect(ec, std::move(this_ptr), std::move(ecs), std::move(chain));
 					return;
 				}
 
@@ -502,6 +525,8 @@ namespace asio2::detail
 				// set port reuse
 				this->socket().set_option(asio::ip::udp::socket::reuse_address(true), ec_ignore);
 
+				//derive._socks5_init(ecs);
+
 				clear_last_error();
 
 				derive._fire_init();
@@ -509,34 +534,93 @@ namespace asio2::detail
 				this->socket().bind(endpoint, ec);
 				if (ec)
 				{
-					derive._handle_start(ec, std::move(this_ptr), std::move(ecs), std::move(chain));
+					derive._handle_connect(ec, std::move(this_ptr), std::move(ecs), std::move(chain));
 					return;
 				}
 
-				derive._handle_start(ec, std::move(this_ptr), std::move(ecs), std::move(chain));
+				derive._post_proxy(ec, std::move(this_ptr), std::move(ecs), std::move(chain));
 			});
 
-			if (!derive.io_->running_in_this_thread())
+			if constexpr (IsAsync)
 			{
-				set_last_error(future.get());
+				set_last_error(asio::error::in_progress);
 
-				return static_cast<bool>(!get_last_error());
+				return true;
 			}
 			else
 			{
-				set_last_error(asio::error::in_progress);
-			}
+				if (!derive.io_->running_in_this_thread())
+				{
+					set_last_error(future.get());
 
-			// if the state is stopped , the return value is "is_started()".
-			// if the state is stopping, the return value is false, the last error is already_started
-			// if the state is starting, the return value is false, the last error is already_started
-			// if the state is started , the return value is true , the last error is already_started
-			return derive.is_started();
+					return static_cast<bool>(!get_last_error());
+				}
+				else
+				{
+					set_last_error(asio::error::in_progress);
+				}
+
+				// if the state is stopped , the return value is "is_started()".
+				// if the state is stopping, the return value is false, the last error is already_started
+				// if the state is starting, the return value is false, the last error is already_started
+				// if the state is started , the return value is true , the last error is already_started
+				return derive.is_started();
+			}
 		}
 
 		template<typename C, typename DeferEvent>
-		void _handle_start(
-			error_code ec, std::shared_ptr<derived_t> this_ptr, std::shared_ptr<ecs_t<C>> ecs, DeferEvent chain)
+		inline void _post_proxy(
+			const error_code& ec,
+			std::shared_ptr<derived_t> this_ptr, std::shared_ptr<ecs_t<C>> ecs, DeferEvent chain)
+		{
+			set_last_error(ec);
+
+			derived_t& derive = static_cast<derived_t&>(*this);
+
+			ASIO2_ASSERT(derive.io_->running_in_this_thread());
+
+			//if constexpr (std::is_base_of_v<component_tag, detail::remove_cvref_t<C>>)
+			//{
+			//	if (ec)
+			//		return derive._handle_proxy(ec, std::move(this_ptr), std::move(ecs), std::move(chain));
+
+			//	if constexpr (C::has_socks5())
+			//		derive._socks5_start(std::move(this_ptr), std::move(ecs), std::move(chain));
+			//	else
+			//		derive._handle_proxy(ec, std::move(this_ptr), std::move(ecs), std::move(chain));
+			//}
+			//else
+			{
+				derive._handle_proxy(ec, std::move(this_ptr), std::move(ecs), std::move(chain));
+			}
+		}
+
+		template<typename C, typename DeferEvent>
+		inline void _handle_proxy(
+			const error_code& ec,
+			std::shared_ptr<derived_t> this_ptr, std::shared_ptr<ecs_t<C>> ecs, DeferEvent chain)
+		{
+			set_last_error(ec);
+
+			derived_t& derive = static_cast<derived_t&>(*this);
+
+			derive._handle_connect(ec, std::move(this_ptr), std::move(ecs), std::move(chain));
+		}
+
+		template<typename C, typename DeferEvent>
+		inline void _handle_connect(
+			const error_code& ec,
+			std::shared_ptr<derived_t> this_ptr, std::shared_ptr<ecs_t<C>> ecs, DeferEvent chain)
+		{
+			set_last_error(ec);
+
+			this->derived()._handle_start(ec, std::move(this_ptr), std::move(ecs), std::move(chain));
+		}
+
+		template<typename C, typename DeferEvent>
+		inline void _handle_start(
+			error_code ec,
+			std::shared_ptr<derived_t> this_ptr, std::shared_ptr<ecs_t<C>> ecs, DeferEvent chain)
 		{
 			ASIO2_ASSERT(this->derived().io_->running_in_this_thread());
 
@@ -565,6 +649,18 @@ namespace asio2::detail
 			this->buffer_.consume(this->buffer_.size());
 
 			this->derived()._post_recv(std::move(this_ptr), std::move(ecs));
+		}
+
+		template<typename E = defer_event<void, derived_t>>
+		inline void _do_disconnect(
+			const error_code& ec, std::shared_ptr<derived_t> this_ptr, E chain = defer_event<void, derived_t>{})
+		{
+			derived_t& derive = this->derived();
+
+			derive.dispatch([&derive, ec, this_ptr = std::move(this_ptr), chain = std::move(chain)]() mutable
+			{
+				derive._do_stop(ec, std::move(this_ptr), std::move(chain));
+			});
 		}
 
 		template<typename E = defer_event<void, derived_t>>
@@ -618,43 +714,47 @@ namespace asio2::detail
 		template<typename DeferEvent>
 		inline void _handle_stop(const error_code& ec, std::shared_ptr<derived_t> this_ptr, DeferEvent chain)
 		{
+			derived_t& derive = this->derived();
+
 			detail::ignore_unused(ec, this_ptr, chain);
 
-			ASIO2_ASSERT(this->derived().io_->running_in_this_thread());
+			ASIO2_ASSERT(derive.io_->running_in_this_thread());
 
 			// close user custom timers
-			this->_dispatch_stop_all_timers();
+			derive._dispatch_stop_all_timers();
 
 			// close all posted timed tasks
-			this->_dispatch_stop_all_timed_events();
+			derive._dispatch_stop_all_timed_events();
 
 			// close all async_events
-			this->notify_all_condition_events();
+			derive.notify_all_condition_events();
+
+			//derive._socks5_stop();
 
 			error_code ec_ignore{};
 
 			// call socket's close function to notify the _handle_recv function
 			// response with error > 0 ,then the socket can get notify to exit
 			// Call shutdown() to indicate that you will not write any more data to the socket.
-			this->socket().shutdown(asio::socket_base::shutdown_both, ec_ignore);
+			derive.socket().shutdown(asio::socket_base::shutdown_both, ec_ignore);
 
-			this->socket().cancel(ec_ignore);
+			derive.socket().cancel(ec_ignore);
 
 			// Call close,otherwise the _handle_recv will never return
-			this->socket().close(ec_ignore);
+			derive.socket().close(ec_ignore);
 
 			// clear recv buffer
-			this->buffer().consume(this->buffer().size());
+			derive.buffer().consume(derive.buffer().size());
 
 			// destroy user data, maybe the user data is self shared_ptr,
 			// if don't destroy it, will cause loop reference.
-			this->user_data_.reset();
+			derive.user_data_.reset();
 
 			// destroy the ecs
-			this->ecs_.reset();
+			derive.ecs_.reset();
 
 			//
-			this->reset_life_id();
+			derive.reset_life_id();
 		}
 
 	protected:
@@ -662,17 +762,6 @@ namespace asio2::detail
 		inline bool _do_send(Endpoint& endpoint, Data& data, Callback&& callback)
 		{
 			return this->derived()._udp_send_to(endpoint, data, std::forward<Callback>(callback));
-		}
-
-	protected:
-		/**
-		 * @brief Pre process the data before recv callback was called.
-		 * You can overload this function in a derived class to implement additional
-		 * processing of the data. eg: decrypt data with a custom encryption algorithm.
-		 */
-		inline std::string_view data_filter_before_recv(std::string_view data)
-		{
-			return data;
 		}
 
 	protected:
@@ -764,7 +853,7 @@ namespace asio2::detail
 		{
 			detail::ignore_unused(this_ptr, ecs);
 
-			data = this->derived().data_filter_before_recv(data);
+			data = detail::call_data_filter_before_recv(this->derived(), data);
 
 			this->listener_.notify(event_type::recv, this->remote_endpoint_, data);
 		}

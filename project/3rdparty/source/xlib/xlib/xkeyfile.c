@@ -2355,6 +2355,7 @@ static xchar *x_key_file_parse_value_as_string(XKeyFile *key_file, const xchar *
                     break;
 
                 case '\0':
+                    x_clear_error(error);
                     x_set_error_literal(error, X_KEY_FILE_ERROR, X_KEY_FILE_ERROR_INVALID_VALUE, _("Key file contains escape character at end of line"));
                     goto error;
 
@@ -2373,7 +2374,6 @@ static xchar *x_key_file_parse_value_as_string(XKeyFile *key_file, const xchar *
                             sequence[2] = '\0';
 
                             x_set_error(error, X_KEY_FILE_ERROR, X_KEY_FILE_ERROR_INVALID_VALUE, _("Key file contains invalid escape sequence “%s”"), sequence);
-                            goto error;
                         }
                     }
                     break;

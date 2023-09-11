@@ -41,19 +41,20 @@ int mosquitto_loop(struct mosquitto *mosq, int timeout, int max_packets)
         maxfd = mosq->sock;
         FD_SET(mosq->sock, &readfds);
 
-        pthread_mutex_lock(&mosq->out_packet_mutex);
-        if (mosq->out_packet) {
+        if (mosq->want_write) {
             FD_SET(mosq->sock, &writefds);
-        }
-    
+        } else {
 #ifdef WITH_TLS
-        if (mosq->ssl)  {
-            if (mosq->want_write) {
-                FD_SET(mosq->sock, &writefds);
+            if ((mosq->ssl == NULL) || SSL_is_init_finished(mosq->ssl))
+#endif
+            {
+                pthread_mutex_lock(&mosq->out_packet_mutex);
+                if (mosq->out_packet) {
+                    FD_SET(mosq->sock, &writefds);
+                }
+                pthread_mutex_unlock(&mosq->out_packet_mutex);
             }
         }
-#endif
-        pthread_mutex_unlock(&mosq->out_packet_mutex);
     } else {
         return MOSQ_ERR_NO_CONN;
     }

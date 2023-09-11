@@ -1,3 +1,6 @@
+#include <pwd.h>
+#include <grp.h>
+#include <fcntl.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <errno.h>
@@ -21,7 +24,30 @@ FILE *mosquitto__fopen(const char *path, const char *mode, bool restrict_read)
         mode_t old_mask;
 
         old_mask = umask(0077);
-        fptr = fopen(path, mode);
+        int open_flags = O_NOFOLLOW;
+
+        for (size_t i = 0; i < strlen(mode); i++) {
+            if (mode[i] == 'r') {
+                open_flags |= O_RDONLY;
+            } else if (mode[i] == 'w') {
+                open_flags |= O_WRONLY;
+                open_flags |= (O_TRUNC | O_CREAT | O_EXCL);
+            } else if (mode[i] == 'a') {
+                open_flags |= O_WRONLY;
+                open_flags |= (O_APPEND | O_CREAT);
+            } else if(mode[i] == 't') {
+            } else if(mode[i] == 'b') {
+            } else if(mode[i] == '+') {
+                open_flags |= O_RDWR;
+            }
+        }
+
+        int fd = open(path, open_flags, 0600);
+        if (fd < 0) {
+            return NULL;
+        }
+
+        fptr = fdopen(fd, mode);
         umask(old_mask);
     } else {
         fptr = fopen(path, mode);
@@ -34,6 +60,32 @@ FILE *mosquitto__fopen(const char *path, const char *mode, bool restrict_read)
     if (fstat(fileno(fptr), &statbuf) < 0) {
         fclose(fptr);
         return NULL;
+    }
+
+    if (restrict_read) {
+        if (statbuf.st_mode & S_IRWXO){
+            fprintf(stderr, "Warning: File %s has world readable permissions. Future versions will refuse to load this file.", path);
+        }
+
+        if (statbuf.st_uid != getuid()) {
+            char buf[4096];
+            struct passwd pw, *result;
+
+            getpwuid_r(getuid(), &pw, buf, sizeof(buf), &result);
+            if (result) {
+                fprintf(stderr, "Warning: File %s owner is not %s. Future versions will refuse to load this file.", path, result->pw_name);
+            }
+        }
+
+        if (statbuf.st_gid != getgid()) {
+            char buf[4096];
+            struct group grp, *result;
+
+            getgrgid_r(getgid(), &grp, buf, sizeof(buf), &result);
+            if (result) {
+                fprintf(stderr, "Warning: File %s group is not %s. Future versions will refuse to load this file.", path, result->gr_name);
+            }
+        }
     }
 
     if (!S_ISREG(statbuf.st_mode) && !S_ISLNK(statbuf.st_mode)) {

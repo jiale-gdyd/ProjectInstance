@@ -8,6 +8,7 @@
 #include "config.h"
 #include "memory_mosq.h"
 #include "packet_mosq.h"
+#include "logging_mosq.h"
 #include "property_mosq.h"
 
 static int property__read(struct mosquitto__packet_in *packet, uint32_t *len, mosquitto_property *property)
@@ -1369,12 +1370,10 @@ int mosquitto_property_copy_all(mosquitto_property **dest, const mosquitto_prope
 
             case MQTT_PROP_TYPE_STRING:
                 pnew->value.s.len = src->value.s.len;
-                if (src->value.s.v) {
-                    pnew->value.s.v = strdup(src->value.s.v);
-                    if (!pnew->value.s.v) {
-                        mosquitto_property_free_all(dest);
-                        return MOSQ_ERR_NOMEM;
-                    }
+                pnew->value.s.v = src->value.s.v ? strdup(src->value.s.v) : (char *)calloc(1, 1);
+                if (!pnew->value.s.v) {
+                    mosquitto_property_free_all(dest);
+                    return MOSQ_ERR_NOMEM;
                 }
                 break;
 
@@ -1393,21 +1392,17 @@ int mosquitto_property_copy_all(mosquitto_property **dest, const mosquitto_prope
 
             case MQTT_PROP_TYPE_STRING_PAIR:
                 pnew->value.s.len = src->value.s.len;
-                if (src->value.s.v) {
-                    pnew->value.s.v = strdup(src->value.s.v);
-                    if (!pnew->value.s.v) {
-                        mosquitto_property_free_all(dest);
-                        return MOSQ_ERR_NOMEM;
-                    }
+                pnew->value.s.v = src->value.s.v ? strdup(src->value.s.v) : (char *)calloc(1, 1);
+                if (!pnew->value.s.v){
+                    mosquitto_property_free_all(dest);
+                    return MOSQ_ERR_NOMEM;
                 }
 
                 pnew->name.len = src->name.len;
-                if (src->name.v) {
-                    pnew->name.v = strdup(src->name.v);
-                    if (!pnew->name.v) {
-                        mosquitto_property_free_all(dest);
-                        return MOSQ_ERR_NOMEM;
-                    }
+                pnew->name.v = src->name.v ? strdup(src->name.v) : (char *)calloc(1, 1);
+                if (!pnew->name.v) {
+                    mosquitto_property_free_all(dest);
+                    return MOSQ_ERR_NOMEM;
                 }
                 break;
 

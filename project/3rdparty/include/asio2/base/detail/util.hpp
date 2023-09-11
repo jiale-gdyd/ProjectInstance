@@ -55,52 +55,52 @@
 namespace asio2
 {
 	template<typename = void>
-	inline std::string to_string(const asio::const_buffer& v)
+	inline std::string to_string(const asio::const_buffer& v) noexcept
 	{
 		return std::string{ (std::string::pointer)(v.data()), v.size() };
 	}
 
 	template<typename = void>
-	inline std::string to_string(const asio::mutable_buffer& v)
+	inline std::string to_string(const asio::mutable_buffer& v) noexcept
 	{
 		return std::string{ (std::string::pointer)(v.data()), v.size() };
 	}
 
 #if !defined(ASIO_NO_DEPRECATED) && !defined(BOOST_ASIO_NO_DEPRECATED)
 	template<typename = void>
-	inline std::string to_string(const asio::const_buffers_1& v)
+	inline std::string to_string(const asio::const_buffers_1& v) noexcept
 	{
 		return std::string{ (std::string::pointer)(v.data()), v.size() };
 	}
 
 	template<typename = void>
-	inline std::string to_string(const asio::mutable_buffers_1& v)
+	inline std::string to_string(const asio::mutable_buffers_1& v) noexcept
 	{
 		return std::string{ (std::string::pointer)(v.data()), v.size() };
 	}
 #endif
 
 	template<typename = void>
-	inline std::string_view to_string_view(const asio::const_buffer& v)
+	inline std::string_view to_string_view(const asio::const_buffer& v) noexcept
 	{
 		return std::string_view{ (std::string_view::const_pointer)(v.data()), v.size() };
 	}
 
 	template<typename = void>
-	inline std::string_view to_string_view(const asio::mutable_buffer& v)
+	inline std::string_view to_string_view(const asio::mutable_buffer& v) noexcept
 	{
 		return std::string_view{ (std::string_view::const_pointer)(v.data()), v.size() };
 	}
 
 #if !defined(ASIO_NO_DEPRECATED) && !defined(BOOST_ASIO_NO_DEPRECATED)
 	template<typename = void>
-	inline std::string_view to_string_view(const asio::const_buffers_1& v)
+	inline std::string_view to_string_view(const asio::const_buffers_1& v) noexcept
 	{
 		return std::string_view{ (std::string_view::const_pointer)(v.data()), v.size() };
 	}
 
 	template<typename = void>
-	inline std::string_view to_string_view(const asio::mutable_buffers_1& v)
+	inline std::string_view to_string_view(const asio::mutable_buffers_1& v) noexcept
 	{
 		return std::string_view{ (std::string_view::const_pointer)(v.data()), v.size() };
 	}
@@ -116,8 +116,9 @@ namespace asio2::detail
 
 namespace asio2::detail
 {
-	struct tcp_tag { using tl_tag_type = tcp_tag; }; // transport layer
-	struct udp_tag { using tl_tag_type = udp_tag; }; // transport layer
+	struct tcp_tag  { using tl_tag_type = tcp_tag ; }; // transport layer
+	struct udp_tag  { using tl_tag_type = udp_tag ; }; // transport layer
+	struct cast_tag { using tl_tag_type = cast_tag; };
 
 	struct ssl_stream_tag {};
 	struct ws_stream_tag  {};
@@ -462,10 +463,53 @@ namespace asio2::detail
 	 * @tparam DataSize - The true size of the data
 	 */
 	template <std::size_t DataSize>
-	inline void swap_bytes(std::uint8_t * data) noexcept
+	inline void swap_bytes(std::uint8_t* data) noexcept
 	{
 		for (std::size_t i = 0, end = DataSize / 2; i < end; ++i)
 			std::swap(data[i], data[DataSize - i - 1]);
+	}
+
+	/**
+	 * Swaps the order of bytes for some chunk of memory
+	 * @param v - The variable reference.
+	 */
+	template <class T>
+	inline void swap_bytes(T& v) noexcept
+	{
+		std::uint8_t* p = reinterpret_cast<std::uint8_t*>(std::addressof(v));
+		swap_bytes<sizeof(T)>(p);
+	}
+
+	/**
+	 * converts the value from host to TCP/IP network byte order (which is big-endian).
+	 * @param v - The variable reference.
+	 */
+	template <class T>
+	inline T host_to_network(T v) noexcept
+	{
+		if (is_little_endian())
+		{
+			std::uint8_t* p = reinterpret_cast<std::uint8_t*>(std::addressof(v));
+			swap_bytes<sizeof(T)>(p);
+		}
+
+		return v;
+	}
+
+	/**
+	 * converts the value from TCP/IP network order to host byte order (which is little-endian on Intel processors).
+	 * @param v - The variable reference.
+	 */
+	template <class T>
+	inline T network_to_host(T v) noexcept
+	{
+		if (is_little_endian())
+		{
+			std::uint8_t* p = reinterpret_cast<std::uint8_t*>(std::addressof(v));
+			swap_bytes<sizeof(T)>(p);
+		}
+
+		return v;
 	}
 
 	template<class T, class Pointer>
@@ -774,6 +818,73 @@ namespace asio2::detail
 			}
 		}
 	};
+
+	class data_filter_before_helper
+	{
+	public:
+		template<class, class = void>
+		struct has_member_data_filter_before_recv : std::false_type {};
+
+		template<class T>
+		struct has_member_data_filter_before_recv<T, std::void_t<decltype(
+			std::declval<std::decay_t<T>&>().data_filter_before_recv(std::string_view{}))>> : std::true_type {};
+
+		template<class, class = void>
+		struct has_member_data_filter_before_send : std::false_type {};
+
+		template<class T>
+		struct has_member_data_filter_before_send<T, std::void_t<decltype(
+			std::declval<std::decay_t<T>&>().data_filter_before_send(std::string_view{}))>> : std::true_type {};
+
+		template<class derived_t>
+		inline static std::string_view call_data_filter_before_recv(derived_t& derive, std::string_view data) noexcept
+		{
+			if constexpr (has_member_data_filter_before_recv<derived_t>::value)
+				return derive.data_filter_before_recv(data);
+			else
+				return data;
+		}
+
+		template<class derived_t, class T>
+		inline static auto call_data_filter_before_send(derived_t& derive, T&& data) noexcept
+		{
+			if constexpr (has_member_data_filter_before_send<derived_t>::value)
+				return derive.data_filter_before_send(std::forward<T>(data));
+			else
+				return std::forward<T>(data);
+		}
+	};
+
+	template<class derived_t>
+	inline std::string_view call_data_filter_before_recv(derived_t& derive, std::string_view data) noexcept
+	{
+		return data_filter_before_helper::call_data_filter_before_recv(derive, data);
+	}
+
+	template<class derived_t, class T>
+	inline auto call_data_filter_before_send(derived_t& derive, T&& data) noexcept
+	{
+		return data_filter_before_helper::call_data_filter_before_send(derive, std::forward<T>(data));
+	}
+
+	template<class, class = void>
+	struct has_member_insert : std::false_type {};
+
+	template<class T>
+	struct has_member_insert<T, std::void_t<decltype(
+		std::declval<std::decay_t<T>&>().insert(std::declval<std::decay_t<T>&>().begin(),
+			std::string_view{}.begin(), std::string_view{}.end()))>> : std::true_type {};
+}
+
+namespace asio2
+{
+	// helper type for the visitor #4
+	template<class... Ts>
+	struct variant_overloaded : Ts... { using Ts::operator()...; };
+
+	// explicit deduction guide (not needed as of C++20)
+	template<class... Ts>
+	variant_overloaded(Ts...) -> variant_overloaded<Ts...>;
 }
 
 #endif // !__ASIO2_UTIL_HPP__

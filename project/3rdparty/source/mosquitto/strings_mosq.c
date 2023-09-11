@@ -87,7 +87,7 @@ const char *mosquitto_strerror(int mosq_errno)
             return "Keepalive exceeded";
 
         case MOSQ_ERR_LOOKUP:
-            return "Lookup failed";
+            return "DNS Lookup failed";
 
         case MOSQ_ERR_MALFORMED_PACKET:
             return "Malformed packet";
