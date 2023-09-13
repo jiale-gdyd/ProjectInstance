@@ -1,5 +1,9 @@
 # 变更日志
 
+## 2023-09-13
+  * acl: Optimize redis_client_pipeline when no redis node got in the beginning.
+  * rga: replace dependency on ANDROID_12 by USE_HARDWARE_ROCKCHIP
+
 ## 2023-09-11
   * acl: Rename demo base64 to coder.
 

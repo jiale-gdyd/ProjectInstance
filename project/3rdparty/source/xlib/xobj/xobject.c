@@ -2613,7 +2613,7 @@ xsize x_object_compat_control(xsize what, xpointer data)
 
     switch (what) {
         case 1:
-            return X_TYPE_INITIALLY_UNOWNED;
+            return (xsize)X_TYPE_INITIALLY_UNOWNED;
 
         case 2:
             floating_flag_handler = (xuint(*)(XObject *, xint))data;

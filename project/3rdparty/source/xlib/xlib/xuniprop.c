@@ -271,7 +271,7 @@ xunichar x_unichar_toupper(xunichar c)
     if (t == X_UNICODE_LOWERCASE_LETTER) {
         xunichar val = ATTTABLE(c >> 8, c & 0xff);
         if (val >= 0x1000000) {
-            const xchar *p = special_case_table + val - 0x1000000;
+            const xchar *p = special_case_table + (val - 0x1000000);
             val = x_utf8_get_char(p);
         }
 
@@ -294,7 +294,7 @@ xunichar x_unichar_tolower(xunichar c)
     if (t == X_UNICODE_UPPERCASE_LETTER) {
         xunichar val = ATTTABLE (c >> 8, c & 0xff);
         if (val >= 0x1000000) {
-            const xchar *p = special_case_table + val - 0x1000000;
+            const xchar *p = special_case_table + (val - 0x1000000);
             return x_utf8_get_char(p);
         } else {
             return val ? val : c;

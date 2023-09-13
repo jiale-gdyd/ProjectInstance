@@ -533,7 +533,7 @@ static xuint param_spec_pool_hash(xconstpointer key_spec)
 {
     const xchar *p;
     const XParamSpec *key = (const XParamSpec *)key_spec;
-    xuint h = key->owner_type;
+    xuint h = (xuint)key->owner_type;
 
     for (p = key->name; *p; p++) {
         h = (h << 5) - h + *p;

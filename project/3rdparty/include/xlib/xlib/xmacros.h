@@ -353,7 +353,7 @@
 #define X_N_ELEMENTS(arr)                                   (sizeof(arr) / sizeof((arr)[0]))
 
 #define XPOINTER_TO_SIZE(p)                                 ((xsize)(p))
-#define XSIZE_TO_POINTER(s)                                 ((xpointer)(xsize)(s))
+#define XSIZE_TO_POINTER(s)                                 ((xpointer)(xuintptr)(xsize)(s))
 
 #if X_GNUC_CHECK_VERSION(4, 0)
 #define X_OFFSETOF(st_type, mem_name)                       (xsize)&(((st_type *)0)->mem_name)

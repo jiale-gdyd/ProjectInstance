@@ -48,8 +48,8 @@ bool redis_pipeline_channel::start_thread(void)
 
 void redis_pipeline_channel::stop_thread(void)
 {
-    box<redis_pipeline_message>* box = new mbox<redis_pipeline_message>;
-    redis_pipeline_message message(redis_pipeline_t_stop, box);
+    //box<redis_pipeline_message>* box = new mbox<redis_pipeline_message>;
+    redis_pipeline_message message(redis_pipeline_t_stop, NULL);
     push(&message);
     this->wait();
 }
@@ -74,7 +74,8 @@ bool redis_pipeline_channel::flush_all(void)
 
 #if 0
     if (msgs_.size() > 10) {
-        logger(">>>messages size is %zd<<<<", msgs_.size());
+        logger(">>>messages size is %zd, buf size=%zd<<<<",
+            msgs_.size(), buf_.size());
     }
 #endif
 
@@ -86,7 +87,7 @@ bool redis_pipeline_channel::flush_all(void)
                 return true;
             }
 
-            logger_error("write error=%s, addr=%s, buf=%s",
+            logger_error("Write error=%s, addr=%s, buf=%s",
                 last_serror(), addr_.c_str(), buf_.c_str());
         }
 
@@ -100,7 +101,7 @@ bool redis_pipeline_channel::flush_all(void)
 
         // Reopen the new connection
         if (!((connect_client*) client_)->open()) {
-            logger_error("reopen connection failed!");
+            logger_error("Reopen connection failed!");
             return false;
         }
         retried = true;
@@ -135,13 +136,13 @@ bool redis_pipeline_channel::wait_one(socket_stream& conn,
     }
 
     if (result == NULL) {
-        logger_error("can't get result");
+        logger_error("Can't get result");
         return false;
     }
 
     int type = result->get_type();
     if (type == REDIS_RESULT_UNKOWN) {
-        logger_warn("unknown type=%d", (int) type);
+        logger_warn("Unknown type=%d", (int) type);
         msg.push(result);
         return true;
     } else if (type != REDIS_RESULT_ERROR) {
@@ -149,7 +150,7 @@ bool redis_pipeline_channel::wait_one(socket_stream& conn,
         return true;
     }
 
-#define	EQ(x, y) !strncasecmp((x), (y), sizeof(y) -1)
+#define    EQ(x, y) !strncasecmp((x), (y), sizeof(y) -1)
 
     const char* ptr = result->get_error();
     if (ptr == NULL || *ptr == 0) {
@@ -158,10 +159,10 @@ bool redis_pipeline_channel::wait_one(socket_stream& conn,
     } else if (EQ(ptr, "MOVED") || EQ(ptr, "ASK")) {
         const char* addr = redis_command::get_addr(dbuf, ptr);
         if (addr == NULL) {
-            logger_error("no redirect addr got");
+            logger_error("No redirect addr got");
             msg.push(result);
         } if (msg.get_redirect_count() >= 5) {
-            logger_error("redirect count(%d) exceed limit(5)",
+            logger_error("Redirect count(%d) exceed limit(5)",
                 (int) msg.get_redirect_count());
             msg.push(result);
         } else {
@@ -171,12 +172,19 @@ bool redis_pipeline_channel::wait_one(socket_stream& conn,
             pipeline_.push(&msg);
         }
     } else if (EQ(ptr, "CLUSTERDOWN")) {
-        msg.set_addr(this->get_addr());
-        msg.set_type(redis_pipeline_t_clusterdonw);
+        // Notify the waiter the result.
+        msg.push(result);
+
+        // And notify the pipeline thread the redis node down now,
+        // the message created here will be delete in pipeline thread.
+        redis_pipeline_message* m = new redis_pipeline_message(
+                redis_pipeline_t_clusterdonw, NULL);
+        m->set_addr(this->get_addr());
         // Transfer to pipeline processs again
-        pipeline_.push(&msg);
+        pipeline_.push(m);
+        return false; // Return false to break the loop process.
     } else {
-        logger_error("unknown error: %s", ptr);
+        logger_error("Unknown error: %s", ptr);
         msg.push(result);
     }
     return true;
@@ -190,7 +198,7 @@ bool redis_pipeline_channel::wait_results(void)
 
     socket_stream* conn = client_->get_stream(false);
     if (conn == NULL) {
-        logger_error("get_stream null");
+        logger_error("Get_stream null");
         return false;
     }
 
@@ -214,7 +222,7 @@ bool redis_pipeline_channel::wait_results(void)
     // If we can't get the first result, the socket maybe be disconnected,
     // so we should return false and retry again.
     if (it == msgs_.begin()) {
-        logger_error("get the first result failed");
+        logger_error("Get the first result failed");
         return false;
     }
 
@@ -225,6 +233,9 @@ bool redis_pipeline_channel::wait_results(void)
         (*it)->unrefer();
     }
 
+    // We'll return true even some messages were failed, because we've
+    // handled some messages correctly. If return false, all the messages
+    // will all be notified again including the handled messages.
     return true;
 }
 
@@ -234,7 +245,7 @@ bool redis_pipeline_channel::handle_messages(void)
 
     while (true) {
         if (!flush_all()) {
-            logger_error("all failed ...");
+            logger_error("All failed ...");
             break;
         }
 
@@ -244,14 +255,14 @@ bool redis_pipeline_channel::handle_messages(void)
         }
 
         if (retried) {
-            logger_error("retried failed");
+            logger_error("Retried failed");
             break;
         }
         retried = true;
 
         client_->close();
         if (!((connect_client*) client_)->open()) {
-            logger_error("reopen failed");
+            logger_error("Reopen failed");
             break;
         }
     }
@@ -268,17 +279,23 @@ void* redis_pipeline_channel::run(void)
 
     while (!client_->eof()) {
         redis_pipeline_message* msg = box_->pop(timeout, &success);
+
         if (msg != NULL) {
             timeout = 0;
 
             switch (msg->get_type()) {
+
+            // Handle normal message for handling redis command.
             case redis_pipeline_t_cmd:
                 msgs_.push_back(msg);
                 break;
+
+            // Handle stop message from redis_client_pipeline
+            // and stop the channel.
             case redis_pipeline_t_stop:
-                // Handle left messages and stop the channel.
-                handle_messages();
                 return NULL;
+
+            // XXX: ignore other message type.
             default:
                 break;
             }
@@ -290,6 +307,13 @@ void* redis_pipeline_channel::run(void)
         }
     }
 
+    logger("Channel thread exit now, addr=%s, connection=%s",
+        addr_.c_str(), client_->eof() ? "closed" : "opened");
+
+    redis_pipeline_message* m = new
+        redis_pipeline_message(redis_pipeline_t_channel_closed, NULL);
+    m->set_channel(this);
+    pipeline_.push(m);
     return NULL;
 }
 
@@ -401,8 +425,8 @@ void* redis_client_pipeline::run(void)
     }
 
     if (channels_->first_node() == NULL) {
-        logger_error("no channel created!");
-        return NULL;
+        logger_warn("No channel created in the beginning!");
+        // return NULL;
     }
 
     redis_pipeline_channel* channel;
@@ -414,6 +438,7 @@ void* redis_client_pipeline::run(void)
         if (msg != NULL) {
             redis_pipeline_type_t type = msg->get_type();
             if (type == redis_pipeline_t_stop) {
+                logger("Got stop message");
                 break;
             }
 
@@ -430,13 +455,21 @@ void* redis_client_pipeline::run(void)
                 msg->set_type(redis_pipeline_t_cmd);
                 redirect(*msg, slot);
             } else if (type == redis_pipeline_t_clusterdonw) {
+                logger_error("Redis cluster down");
                 cluster_down(*msg);
-                break;
+                // The msg was created in channel thread.
+                delete msg;
+                continue;
+            } else if (type == redis_pipeline_t_channel_closed) {
+                channel_closed(msg->get_channel());
+                // The msg was created in channel thread.
+                delete msg;
+                continue;
             }
 
             channel = get_channel(slot);
             if (channel == NULL) {
-                logger_error("channel null, slot=%d", slot);
+                logger_error("Channel null, slot=%d", slot);
                 msg->push(NULL);
                 timeout = -1;
             } else {
@@ -444,14 +477,17 @@ void* redis_client_pipeline::run(void)
                 timeout = 0;
             }
         } else if (box_->has_null() && flag) {
+            logger_error("Got empty message successfully");
             break;
         } else if (!box_->has_null() && !flag) {
+            logger_error("Got message failed");
             break;
         } else {
             timeout = -1;
         }
     }
 
+    // Stop all channels before the pipeline thread exit.
     stop_channels();
     return NULL;
 }
@@ -481,7 +517,7 @@ void redis_client_pipeline::cluster_down(const redis_pipeline_message &msg)
     // Reset the default addr which different from the the dead node
     if (addr_ == addr) {
         for (std::vector<char*>::const_iterator it = addrs_.begin();
-            it != addrs_.end(); ++it) {
+             it != addrs_.end(); ++it) {
             if (strcmp(*it, addr) != 0) {
                 addr_ = *it;
                 break;
@@ -489,6 +525,7 @@ void redis_client_pipeline::cluster_down(const redis_pipeline_message &msg)
         }
 
         // Stop and remove the dead node
+        logger("Stop one channel thread, addr=%s", addr);
         stop_channel(addr);
     }
 }
@@ -533,7 +570,7 @@ void redis_client_pipeline::set_all_slot(void)
 
     const std::vector<redis_slot*>* slots = cluster.cluster_slots();
     if (slots == NULL) {
-        logger("can't get cluster slots");
+        logger("Can't get cluster slots");
         return;
     }
 
@@ -575,11 +612,12 @@ void redis_client_pipeline::stop_channels(void)
 
     // Delete all channels threads
     for (std::vector<redis_pipeline_channel*>::iterator
-            it = channels.begin(); it != channels.end(); ++it) {
+             it = channels.begin(); it != channels.end(); ++it) {
         channels_->remove(((*it)->get_addr()));
         delete *it;
     }
-    logger("all channels in pipeline have been stopped!");
+
+    logger("All channels in pipeline have been stopped!");
 }
 
 void redis_client_pipeline::start_channels(void)
@@ -620,6 +658,7 @@ void redis_client_pipeline::stop_channel(const char *addr)
             node->get_ctx();
         channels_->remove(addr);
         channel->stop_thread();
+        delete channel;
     }
 }
 
@@ -644,6 +683,33 @@ redis_pipeline_channel* redis_client_pipeline::get_channel(int slot)
     }
 
     return start_channel(addr);
+}
+
+void redis_client_pipeline::channel_closed(redis_pipeline_channel* channel)
+{
+    if (channel == NULL) {
+        logger_error("The channel null!");
+        return;
+    }
+
+    const char* addr = channel->get_addr();
+    const token_node* node = channels_->find(addr);
+
+    if (node == NULL) {
+        channel->wait(); // Wait the thread to exit.
+        delete channel;
+        return;
+    }
+
+    redis_pipeline_channel* chan = (redis_pipeline_channel*) node->get_ctx();
+    if (chan == NULL || chan != channel) {
+        logger_warn("The channel=%p not mine=%p", channel, chan);
+    }
+
+    logger("The channel closed, addr=%s", addr);
+    channels_->remove(addr);
+    channel->wait();
+    delete channel;
 }
 
 } // namespace acl
