@@ -195,32 +195,23 @@ RK_S32 mpi_enc_opt_vstride(void *ctx, const char *next)
 RK_S32 mpi_enc_opt_f(void *ctx, const char *next)
 {
     MpiEncTestArgs *cmd = (MpiEncTestArgs *)ctx;
-    MppFrameFormat format = MPP_FMT_BUTT;
 
     if (next) {
-        if (strstr(next, "x") || strstr(next, "X")) {
-            /* hex value with 0x prefix, use sscanf */
-            sscanf(next, "0x%x", &format);
-        } else if (strstr(next, "a") || strstr(next, "A") ||
-                   strstr(next, "b") || strstr(next, "B") ||
-                   strstr(next, "c") || strstr(next, "C") ||
-                   strstr(next, "d") || strstr(next, "D") ||
-                   strstr(next, "e") || strstr(next, "E") ||
-                   strstr(next, "f") || strstr(next, "F")) {
-            /* hex value without 0x prefix, use sscanf */
-            sscanf(next, "%x", &format);
-        } else {
-            /* decimal value, use atoi */
-            format = (MppFrameFormat)atoi(next);
-        }
-        if (MPP_FRAME_FMT_IS_BE(format) &&
-            (MPP_FRAME_FMT_IS_YUV(format) || MPP_FRAME_FMT_IS_RGB(format))) {
-            cmd->format = format;
-            return 1;
+        long number = 0;
+        MppFrameFormat format = MPP_FMT_BUTT;
+
+        if (MPP_OK == str_to_frm_fmt(next, &number)) {
+            format = (MppFrameFormat)number;
+
+            if (MPP_FRAME_FMT_IS_BE(format) &&
+                (MPP_FRAME_FMT_IS_YUV(format) || MPP_FRAME_FMT_IS_RGB(format))) {
+                cmd->format = format;
+                return 1;
+            }
         }
     }
 
-    mpp_err("invalid input format %x\n", format);
+    mpp_err("invalid input format\n");
     cmd->format = MPP_FMT_YUV420SP;
     return 0;
 }
@@ -861,7 +852,7 @@ MPP_RET mpi_enc_gen_smart_gop_ref_cfg(MppEncRefCfg ref, RK_S32 gop_len, RK_S32 v
     /* st 1 layer 1 - non-ref */
     if (vi_len > 1) {
         st_ref[pos].is_non_ref  = 0;
-        st_ref[pos].temporal_id = 1;
+        st_ref[pos].temporal_id = 0;
         st_ref[pos].ref_mode    = REF_TO_PREV_REF_FRM;
         st_ref[pos].ref_arg     = 0;
         st_ref[pos].repeat      = vi_len - 2;

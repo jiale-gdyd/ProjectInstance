@@ -36,6 +36,7 @@
 #include "../common/vepu540c_common.h"
 
 #include "hal_h264e_vepu540c_reg.h"
+#include "../../common/h264/hal_h264e_stream_amend.h"
 
 #define DUMP_REG 0
 #define MAX_CORE_NUM 2
@@ -68,6 +69,7 @@ typedef struct HalH264eVepu540cCtx_t {
     H264eReorderInfo        *reorder;
     H264eMarkingInfo        *marking;
     H264ePrefixNal          *prefix;
+    HalH264eVepuStreamAmend  amend;
 
     /* syntax for output to enc_impl */
     EncRcTaskInfo           hal_rc_cfg;
@@ -104,7 +106,7 @@ static RK_S32 h264_P_aq_step_default[16] = {
 static RK_S32 h264_I_aq_step_default[16] = {
     -8, -7, -6, -5,
     -4, -3, -2, -1,
-    0,  1,  3,  3,
+    0,  1,  2,  3,
     4,  5,  8,  8,
 };
 
@@ -112,6 +114,8 @@ static MPP_RET hal_h264e_vepu540c_deinit(void *hal)
 {
     HalH264eVepu540cCtx *p = (HalH264eVepu540cCtx *)hal;
     hal_h264e_dbg_func("enter %p\n", p);
+
+    h264e_vepu_stream_amend_deinit(&p->amend);
 
     if (p->dev) {
         mpp_dev_deinit(p->dev);
@@ -167,8 +171,8 @@ static MPP_RET hal_h264e_vepu540c_init(void *hal, MppEncHalCfg *cfg)
     {   /* setup default hardware config */
         MppEncHwCfg *hw = &cfg->cfg->hw;
 
-        hw->qp_delta_row_i  = 0;
-        hw->qp_delta_row    = 1;
+        hw->qp_delta_row_i  = 1;
+        hw->qp_delta_row    = 2;
 
         memcpy(hw->aq_thrd_i, h264_aq_tthd_default, sizeof(hw->aq_thrd_i));
         memcpy(hw->aq_thrd_p, h264_aq_tthd_default, sizeof(hw->aq_thrd_p));
@@ -186,6 +190,8 @@ static MPP_RET hal_h264e_vepu540c_init(void *hal, MppEncHalCfg *cfg)
 DONE:
     if (ret)
         hal_h264e_vepu540c_deinit(hal);
+
+    h264e_vepu_stream_amend_init(&p->amend);
 
     hal_h264e_dbg_func("leave %p\n", p);
     return ret;
@@ -343,6 +349,7 @@ static RK_U32 update_vepu540c_syntax(HalH264eVepu540cCtx *ctx, MppSyntax *syntax
 static MPP_RET hal_h264e_vepu540c_get_task(void *hal, HalEncTask *task)
 {
     HalH264eVepu540cCtx *ctx = (HalH264eVepu540cCtx *)hal;
+    MppEncH264HwCfg *hw_cfg = &ctx->cfg->codec.h264.hw_cfg;
     RK_U32 updated = update_vepu540c_syntax(ctx, &task->syntax);
     EncFrmStatus *frm_status = &task->rc_task->frm;
     hal_h264e_dbg_func("enter %p\n", hal);
@@ -356,6 +363,13 @@ static MPP_RET hal_h264e_vepu540c_get_task(void *hal, HalEncTask *task)
 
         mpp_meta_get_ptr(meta, KEY_ROI_DATA, (void **)&ctx->roi_data);
     }
+
+    /* if not VEPU1/2, update log2_max_frame_num_minus4 in hw_cfg */
+    hw_cfg->hw_log2_max_frame_num_minus4 = ctx->sps->log2_max_frame_num_minus4;
+
+    h264e_vepu_stream_amend_config(&ctx->amend, task->packet, ctx->cfg,
+                                   ctx->slice, ctx->prefix);
+
     hal_h264e_dbg_func("leave %p\n", hal);
 
     return MPP_OK;
@@ -462,7 +476,6 @@ static MPP_RET setup_vepu540c_prep(HalVepu540cRegSet *regs, MppEncPrepCfg *prep)
     regs->reg_base.src_fmt.src_cfmt   = hw_fmt;
     regs->reg_base.src_fmt.alpha_swap = cfg.alpha_swap;
     regs->reg_base.src_fmt.rbuv_swap  = cfg.rbuv_swap;
-//    regs->reg_base.src_fmt.src_range  = cfg.src_range;
     regs->reg_base.src_fmt.out_fmt    = 1;
 
     y_stride = (MPP_FRAME_FMT_IS_FBC(fmt)) ? (MPP_ALIGN(prep->width, 16)) :
@@ -751,9 +764,9 @@ static void setup_vepu540c_rdo_pred(HalVepu540cRegSet *regs, H264eSps *sps,
     hal_h264e_dbg_func("enter\n");
 
     if (slice->slice_type == H264_I_SLICE) {
-        regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = 0;
+        regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = 6;
     } else {
-        regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = 3;
+        regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = 9;
     }
 
     regs->reg_base.rdo_cfg.rect_size      = (sps->profile_idc == H264_PROFILE_BASELINE &&
@@ -763,9 +776,9 @@ static void setup_vepu540c_rdo_pred(HalVepu540cRegSet *regs, H264eSps *sps,
     regs->reg_base.rdo_cfg.chrm_spcl      = 1;
     regs->reg_base.rdo_cfg.ccwa_e         = 1;
     regs->reg_base.rdo_cfg.scl_lst_sel    = pps->pic_scaling_matrix_present;
-    regs->reg_base.rdo_cfg.atf_e          = 0;
-    regs->reg_base.rdo_cfg.atr_e          = 0;
-
+    regs->reg_base.rdo_cfg.atf_e          = 1;
+    regs->reg_base.rdo_cfg.atr_e          = 1;
+    regs->reg_base.rdo_cfg.intra_cost_e   = 1;
     regs->reg_base.iprd_csts.rdo_mark_mode       = 0x100;
 
     hal_h264e_dbg_func("leave\n");
@@ -778,13 +791,13 @@ static void setup_vepu540c_rdo_cfg(vepu540c_rdo_cfg *reg)
     rdo_noskip_par *p_rdo_noskip = NULL;
 
     reg->rdo_smear_cfg_comb.rdo_smear_en      =  0;
-    reg->rdo_smear_cfg_comb.rdo_smear_lvl16_multi = 12;
+    reg->rdo_smear_cfg_comb.rdo_smear_lvl16_multi = 9;
     reg->rdo_smear_cfg_comb.rdo_smear_dlt_qp      = 0 ;
     reg->rdo_smear_cfg_comb.rdo_smear_order_state = 0;
     reg->rdo_smear_cfg_comb.stated_mode           = 0;
     reg->rdo_smear_cfg_comb.online_en             = 0;
     reg->rdo_smear_cfg_comb.smear_stride          = 0;
-    reg->rdo_smear_madp_thd0_comb.rdo_smear_madp_cur_thd0 =  0 ;
+    reg->rdo_smear_madp_thd0_comb.rdo_smear_madp_cur_thd0 =  0;
     reg->rdo_smear_madp_thd0_comb.rdo_smear_madp_cur_thd1 =  24;
     reg->rdo_smear_madp_thd1_comb.rdo_smear_madp_cur_thd2 =  48;
     reg->rdo_smear_madp_thd1_comb.rdo_smear_madp_cur_thd3 =  64;
@@ -796,53 +809,53 @@ static void setup_vepu540c_rdo_cfg(vepu540c_rdo_cfg *reg)
     reg->rdo_smear_madp_thd4_comb.rdo_smear_madp_around_thd5 = 24;
     reg->rdo_smear_madp_thd5_comb.rdo_smear_madp_ref_thd0 =  96;
     reg->rdo_smear_madp_thd5_comb.rdo_smear_madp_ref_thd1 =  48;
-    reg->rdo_smear_cnt_thd0_comb.rdo_smear_cnt_cur_thd0    = 1 ;
-    reg->rdo_smear_cnt_thd0_comb.rdo_smear_cnt_cur_thd1    = 4 ;
-    reg->rdo_smear_cnt_thd0_comb.rdo_smear_cnt_cur_thd2    = 1 ;
-    reg->rdo_smear_cnt_thd0_comb.rdo_smear_cnt_cur_thd3    = 4 ;
-    reg->rdo_smear_cnt_thd1_comb.rdo_smear_cnt_around_thd0 = 1 ;
-    reg->rdo_smear_cnt_thd1_comb.rdo_smear_cnt_around_thd1 = 4 ;
-    reg->rdo_smear_cnt_thd1_comb.rdo_smear_cnt_around_thd2 = 1 ;
-    reg->rdo_smear_cnt_thd1_comb.rdo_smear_cnt_around_thd3 = 4 ;
-    reg->rdo_smear_cnt_thd2_comb.rdo_smear_cnt_around_thd4 = 1 ;
-    reg->rdo_smear_cnt_thd2_comb.rdo_smear_cnt_around_thd5 = 4 ;
-    reg->rdo_smear_cnt_thd2_comb.rdo_smear_cnt_around_thd6 = 1 ;
-    reg->rdo_smear_cnt_thd2_comb.rdo_smear_cnt_around_thd7 = 4 ;
+    reg->rdo_smear_cnt_thd0_comb.rdo_smear_cnt_cur_thd0    = 1;
+    reg->rdo_smear_cnt_thd0_comb.rdo_smear_cnt_cur_thd1    = 3;
+    reg->rdo_smear_cnt_thd0_comb.rdo_smear_cnt_cur_thd2    = 1;
+    reg->rdo_smear_cnt_thd0_comb.rdo_smear_cnt_cur_thd3    = 3;
+    reg->rdo_smear_cnt_thd1_comb.rdo_smear_cnt_around_thd0 = 1;
+    reg->rdo_smear_cnt_thd1_comb.rdo_smear_cnt_around_thd1 = 4;
+    reg->rdo_smear_cnt_thd1_comb.rdo_smear_cnt_around_thd2 = 1;
+    reg->rdo_smear_cnt_thd1_comb.rdo_smear_cnt_around_thd3 = 4;
+    reg->rdo_smear_cnt_thd2_comb.rdo_smear_cnt_around_thd4 = 0;
+    reg->rdo_smear_cnt_thd2_comb.rdo_smear_cnt_around_thd5 = 3;
+    reg->rdo_smear_cnt_thd2_comb.rdo_smear_cnt_around_thd6 = 0;
+    reg->rdo_smear_cnt_thd2_comb.rdo_smear_cnt_around_thd7 = 3;
     reg->rdo_smear_cnt_thd3_comb.rdo_smear_cnt_ref_thd0    = 1 ;
-    reg->rdo_smear_cnt_thd3_comb.rdo_smear_cnt_ref_thd1    = 4 ;
+    reg->rdo_smear_cnt_thd3_comb.rdo_smear_cnt_ref_thd1    = 3;
     reg->rdo_smear_resi_thd0_comb.rdo_smear_resi_small_cur_th0    = 6;
-    reg->rdo_smear_resi_thd0_comb.rdo_smear_resi_big_cur_th0      = 8;
+    reg->rdo_smear_resi_thd0_comb.rdo_smear_resi_big_cur_th0      = 9;
     reg->rdo_smear_resi_thd0_comb.rdo_smear_resi_small_cur_th1    = 6;
-    reg->rdo_smear_resi_thd0_comb.rdo_smear_resi_big_cur_th1      = 11;
+    reg->rdo_smear_resi_thd0_comb.rdo_smear_resi_big_cur_th1      = 9;
     reg->rdo_smear_resi_thd1_comb.rdo_smear_resi_small_around_th0 = 6;
-    reg->rdo_smear_resi_thd1_comb.rdo_smear_resi_big_around_th0   = 8;
+    reg->rdo_smear_resi_thd1_comb.rdo_smear_resi_big_around_th0   = 11;
     reg->rdo_smear_resi_thd1_comb.rdo_smear_resi_small_around_th1 = 6;
-    reg->rdo_smear_resi_thd1_comb.rdo_smear_resi_big_around_th1   = 11;
+    reg->rdo_smear_resi_thd1_comb.rdo_smear_resi_big_around_th1   = 8;
     reg->rdo_smear_resi_thd2_comb.rdo_smear_resi_small_around_th2 = 9;
     reg->rdo_smear_resi_thd2_comb.rdo_smear_resi_big_around_th2   = 20;
-    reg->rdo_smear_resi_thd2_comb.rdo_smear_resi_small_around_th3 = 9;
+    reg->rdo_smear_resi_thd2_comb.rdo_smear_resi_small_around_th3 = 6;
     reg->rdo_smear_resi_thd2_comb.rdo_smear_resi_big_around_th3  = 20;
-    reg->rdo_smear_resi_thd3_comb.rdo_smear_resi_small_ref_th0  = 9;
-    reg->rdo_smear_resi_thd3_comb.rdo_smear_resi_big_ref_th0 = 20;
-    reg->rdo_smear_st_thd0_comb.rdo_smear_resi_th0 = 12;
-    reg->rdo_smear_st_thd0_comb.rdo_smear_resi_th1 = 12;
+    reg->rdo_smear_resi_thd3_comb.rdo_smear_resi_small_ref_th0  = 7;
+    reg->rdo_smear_resi_thd3_comb.rdo_smear_resi_big_ref_th0 = 16;
+    reg->rdo_smear_st_thd0_comb.rdo_smear_resi_th0 = 10;
+    reg->rdo_smear_st_thd0_comb.rdo_smear_resi_th1 = 6;
     reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th0 = 1;
-    reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th1 = 2;
+    reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th1 = 5;
     reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th2 = 1;
-    reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th3 = 2;
-    reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th4 = 1;
-    reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th5 = 2;
+    reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th3 = 3;
+    reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th4 = 9;
+    reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th5 = 10;
 
     p_rdo_skip = &reg->rdo_b16_skip;
-    p_rdo_skip->atf_thd0.madp_thd0 = 5  ;
-    p_rdo_skip->atf_thd0.madp_thd1 = 10 ;
-    p_rdo_skip->atf_thd1.madp_thd2 = 15 ;
-    p_rdo_skip->atf_thd1.madp_thd3 = 25 ;
-    p_rdo_skip->atf_wgt0.wgt0 =      20 ;
-    p_rdo_skip->atf_wgt0.wgt1 =      14 ;
-    p_rdo_skip->atf_wgt0.wgt2 =      15 ;
-    p_rdo_skip->atf_wgt0.wgt3 =      16 ;
-    p_rdo_skip->atf_wgt1.wgt4 =      16 ;
+    p_rdo_skip->atf_thd0.madp_thd0 = 1;
+    p_rdo_skip->atf_thd0.madp_thd1 = 10;
+    p_rdo_skip->atf_thd1.madp_thd2 = 15;
+    p_rdo_skip->atf_thd1.madp_thd3 = 25;
+    p_rdo_skip->atf_wgt0.wgt0 = 20;
+    p_rdo_skip->atf_wgt0.wgt1 = 16;
+    p_rdo_skip->atf_wgt0.wgt2 = 16;
+    p_rdo_skip->atf_wgt0.wgt3 = 16;
+    p_rdo_skip->atf_wgt1.wgt4 = 16;
 
     p_rdo_noskip = &reg->rdo_b16_inter;
     p_rdo_noskip->ratf_thd0.madp_thd0 = 20;
@@ -862,99 +875,14 @@ static void setup_vepu540c_rdo_cfg(vepu540c_rdo_cfg *reg)
     p_rdo_noskip->atf_wgt.wgt2 =        20;
     p_rdo_noskip->atf_wgt.wgt3 =        16;
 
-    reg->rdo_b16_intra_atf_cnt_thd_comb.thd0 = 8 ;
-    reg->rdo_b16_intra_atf_cnt_thd_comb.thd1 = 9 ;
-    reg->rdo_b16_intra_atf_cnt_thd_comb.thd2 = 10 ;
-    reg->rdo_b16_intra_atf_cnt_thd_comb.thd3 = 11 ;
-    reg->rdo_atf_resi_thd_comb.big_th0     = 10;
-    reg->rdo_atf_resi_thd_comb.big_th1     = 12;
-    reg->rdo_atf_resi_thd_comb.small_th0   = 11;
-    reg->rdo_atf_resi_thd_comb.small_th1   = 13;
-
-    hal_h264e_dbg_func("leave\n");
-}
-
-static void setup_vepu540c_scl_cfg(vepu540c_scl_cfg *regs)
-{
-    static RK_U32 vepu540c_h264_scl_tab[] = {
-        /* 0x2200 */
-        0x2fbe3333, 0x2fbe4189, 0x2fbe3333, 0x2fbe4189, 0x2ca42fbe, 0x2ca43c79, 0x2ca42fbe, 0x2ca43c79,
-        0x3c794189, 0x3c7951ec, 0x3c794189, 0x3c7951ec, 0x2ca42fbe, 0x2ca43c79, 0x2ca42fbe, 0x2ca43c79,
-        0x2fbe3333, 0x2fbe4189, 0x2fbe3333, 0x2fbe4189, 0x2ca42fbe, 0x2ca43c79, 0x2ca42fbe, 0x2ca43c79,
-        0x3c794189, 0x3c7951ec, 0x3c794189, 0x3c7951ec, 0x2ca42fbe, 0x2ca43c79, 0x2ca42fbe, 0x2ca43c79,
-        0x2b322e8c, 0x2b323a84, 0x2b322e8c, 0x2b323a84, 0x2a4a2b32, 0x2a4a37d2, 0x2a4a2b32, 0x2a4a37d2,
-        0x37d23a84, 0x37d24ae6, 0x37d23a84, 0x37d24ae6, 0x2a4a2b32, 0x2a4a37d2, 0x2a4a2b32, 0x2a4a37d2,
-        0x2b322e8c, 0x2b323a84, 0x2b322e8c, 0x2b323a84, 0x2a4a2b32, 0x2a4a37d2, 0x2a4a2b32, 0x2a4a37d2,
-        0x37d23a84, 0x37d24ae6, 0x37d23a84, 0x37d24ae6, 0x2a4a2b32, 0x2a4a37d2, 0x2a4a2b32, 0x2a4a37d2,
-        0x25cb2762, 0x25cb31a6, 0x25cb2762, 0x25cb31a6, 0x22ef25cb, 0x22ef2ed1, 0x22ef25cb, 0x22ef2ed1,
-        0x2ed131a6, 0x2ed13e6a, 0x2ed131a6, 0x2ed13e6a, 0x22ef25cb, 0x22ef2ed1, 0x22ef25cb, 0x22ef2ed1,
-        0x25cb2762, 0x25cb31a6, 0x25cb2762, 0x25cb31a6, 0x22ef25cb, 0x22ef2ed1, 0x22ef25cb, 0x22ef2ed1,
-        0x2ed131a6, 0x2ed13e6a, 0x2ed131a6, 0x2ed13e6a, 0x22ef25cb, 0x22ef2ed1, 0x22ef25cb, 0x22ef2ed1,
-        0x22e32492, 0x22e32ed0, 0x22e32492, 0x22e32ed0, 0x202422e3, 0x20242bfb, 0x202422e3, 0x20242bfb,
-        0x2bfb2ed0, 0x2bfb3a41, 0x2bfb2ed0, 0x2bfb3a41, 0x202422e3, 0x20242bfb, 0x202422e3, 0x20242bfb,
-        0x22e32492, 0x22e32ed0, 0x22e32492, 0x22e32ed0, 0x202422e3, 0x20242bfb, 0x202422e3, 0x20242bfb,
-        0x2bfb2ed0, 0x2bfb3a41, 0x2bfb2ed0, 0x2bfb3a41, 0x202422e3, 0x20242bfb, 0x202422e3, 0x20242bfb,
-        0x1e3c2000, 0x1e3c28f6, 0x1e3c2000, 0x1e3c28f6, 0x1cb21e3c, 0x1cb22631, 0x1cb21e3c, 0x1cb22631,
-        0x263128f6, 0x26313367, 0x263128f6, 0x26313367, 0x1cb21e3c, 0x1cb22631, 0x1cb21e3c, 0x1cb22631,
-        0x1e3c2000, 0x1e3c28f6, 0x1e3c2000, 0x1e3c28f6, 0x1cb21e3c, 0x1cb22631, 0x1cb21e3c, 0x1cb22631,
-        0x263128f6, 0x26313367, 0x263128f6, 0x26313367, 0x1cb21e3c, 0x1cb22631, 0x1cb21e3c, 0x1cb22631,
-        0x1aae1c72, 0x1aae239e, 0x1aae1c72, 0x1aae239e, 0x191c1aae, 0x191c21c0, 0x191c1aae, 0x191c21c0,
-        0x21c0239e, 0x21c02d32, 0x21c0239e, 0x21c02d32, 0x191c1aae, 0x191c21c0, 0x191c1aae, 0x191c21c0,
-        0x1aae1c72, 0x1aae239e, 0x1aae1c72, 0x1aae239e, 0x191c1aae, 0x191c21c0, 0x191c1aae, 0x191c21c0,
-        0x21c0239e, 0x21c02d32, 0x21c0239e, 0x21c02d32, 0x191c1aae, 0x191c21c0, 0x191c1aae, 0x191c21c0,
-        0x00be0033, 0x00be0089, 0x00be0033, 0x00be0089, 0x00a400be, 0x00a40079, 0x00a400be, 0x00a40079,
-        0x00790089, 0x007900ec, 0x00790089, 0x007900ec, 0x00a400be, 0x00a40079, 0x00a400be, 0x00a40079,
-        0x00be0033, 0x00be0089, 0x00be0033, 0x00be0089, 0x00a400be, 0x00a40079, 0x00a400be, 0x00a40079,
-        0x00790089, 0x007900ec, 0x00790089, 0x007900ec, 0x00a400be, 0x00a40079, 0x00a400be, 0x00a40079,
-        0x0032008c, 0x00320084, 0x0032008c, 0x00320084, 0x004a0032, 0x004a00d2, 0x004a0032, 0x004a00d2,
-        0x00d20084, 0x00d200e6, 0x00d20084, 0x00d200e6, 0x004a0032, 0x004a00d2, 0x004a0032, 0x004a00d2,
-        0x0032008c, 0x00320084, 0x0032008c, 0x00320084, 0x004a0032, 0x004a00d2, 0x004a0032, 0x004a00d2,
-        0x00d20084, 0x00d200e6, 0x00d20084, 0x00d200e6, 0x004a0032, 0x004a00d2, 0x004a0032, 0x004a00d2,
-        0x00cb0062, 0x00cb00a6, 0x00cb0062, 0x00cb00a6, 0x00ef00cb, 0x00ef00d1, 0x00ef00cb, 0x00ef00d1,
-        0x00d100a6, 0x00d1006a, 0x00d100a6, 0x00d1006a, 0x00ef00cb, 0x00ef00d1, 0x00ef00cb, 0x00ef00d1,
-        0x00cb0062, 0x00cb00a6, 0x00cb0062, 0x00cb00a6, 0x00ef00cb, 0x00ef00d1, 0x00ef00cb, 0x00ef00d1,
-        0x00d100a6, 0x00d1006a, 0x00d100a6, 0x00d1006a, 0x00ef00cb, 0x00ef00d1, 0x00ef00cb, 0x00ef00d1,
-        0x00e30092, 0x00e300d0, 0x00e30092, 0x00e300d0, 0x002400e3, 0x002400fb, 0x002400e3, 0x002400fb,
-        0x00fb00d0, 0x00fb0041, 0x00fb00d0, 0x00fb0041, 0x002400e3, 0x002400fb, 0x002400e3, 0x002400fb,
-        0x00e30092, 0x00e300d0, 0x00e30092, 0x00e300d0, 0x002400e3, 0x002400fb, 0x002400e3, 0x002400fb,
-        0x00fb00d0, 0x00fb0041, 0x00fb00d0, 0x00fb0041, 0x002400e3, 0x002400fb, 0x002400e3, 0x002400fb,
-        0x003c0000, 0x003c00f6, 0x003c0000, 0x003c00f6, 0x00b2003c, 0x00b20031, 0x00b2003c, 0x00b20031,
-        0x003100f6, 0x00310067, 0x003100f6, 0x00310067, 0x00b2003c, 0x00b20031, 0x00b2003c, 0x00b20031,
-        0x003c0000, 0x003c00f6, 0x003c0000, 0x003c00f6, 0x00b2003c, 0x00b20031, 0x00b2003c, 0x00b20031,
-        0x003100f6, 0x00310067, 0x003100f6, 0x00310067, 0x00b2003c, 0x00b20031, 0x00b2003c, 0x00b20031,
-        0x00ae0072, 0x00ae009e, 0x00ae0072, 0x00ae009e, 0x001c00ae, 0x001c00c0, 0x001c00ae, 0x001c00c0,
-        0x00c0009e, 0x00c00032, 0x00c0009e, 0x00c00032, 0x001c00ae, 0x001c00c0, 0x001c00ae, 0x001c00c0,
-        0x00ae0072, 0x00ae009e, 0x00ae0072, 0x00ae009e, 0x001c00ae, 0x001c00c0, 0x001c00ae, 0x001c00c0,
-        0x00c0009e, 0x00c00032, 0x00c0009e, 0x00c00032, 0x001c00ae, 0x001c00c0, 0x001c00ae, 0x001c00c0,
-        0x002f0033, 0x002f0041, 0x002f0033, 0x002f0041, 0x002c002f, 0x002c003c, 0x002c002f, 0x002c003c,
-        0x003c0041, 0x003c0051, 0x003c0041, 0x003c0051, 0x002c002f, 0x002c003c, 0x002c002f, 0x002c003c,
-        0x002f0033, 0x002f0041, 0x002f0033, 0x002f0041, 0x002c002f, 0x002c003c, 0x002c002f, 0x002c003c,
-        0x003c0041, 0x003c0051, 0x003c0041, 0x003c0051, 0x002c002f, 0x002c003c, 0x002c002f, 0x002c003c,
-        0x002b002e, 0x002b003a, 0x002b002e, 0x002b003a, 0x002a002b, 0x002a0037, 0x002a002b, 0x002a0037,
-        0x0037003a, 0x0037004a, 0x0037003a, 0x0037004a, 0x002a002b, 0x002a0037, 0x002a002b, 0x002a0037,
-        0x002b002e, 0x002b003a, 0x002b002e, 0x002b003a, 0x002a002b, 0x002a0037, 0x002a002b, 0x002a0037,
-        0x0037003a, 0x0037004a, 0x0037003a, 0x0037004a, 0x002a002b, 0x002a0037, 0x002a002b, 0x002a0037,
-        0x01250127, 0x01250131, 0x01250127, 0x01250131, 0x01220125, 0x0122012e, 0x01220125, 0x0122012e,
-        0x012e0131, 0x012e013e, 0x012e0131, 0x012e013e, 0x01220125, 0x0122012e, 0x01220125, 0x0122012e,
-        0x01250127, 0x01250131, 0x01250127, 0x01250131, 0x01220125, 0x0122012e, 0x01220125, 0x0122012e,
-        0x012e0131, 0x012e013e, 0x012e0131, 0x012e013e, 0x01220125, 0x0122012e, 0x01220125, 0x0122012e,
-        0x01220124, 0x0122012e, 0x01220124, 0x0122012e, 0x01200122, 0x0120012b, 0x01200122, 0x0120012b,
-        0x012b012e, 0x012b013a, 0x012b012e, 0x012b013a, 0x01200122, 0x0120012b, 0x01200122, 0x0120012b,
-        0x01220124, 0x0122012e, 0x01220124, 0x0122012e, 0x01200122, 0x0120012b, 0x01200122, 0x0120012b,
-        0x012b012e, 0x012b013a, 0x012b012e, 0x012b013a, 0x01200122, 0x0120012b, 0x01200122, 0x0120012b,
-        0x001e0020, 0x001e0028, 0x001e0020, 0x001e0028, 0x001c001e, 0x001c0026, 0x001c001e, 0x001c0026,
-        0x00260028, 0x00260033, 0x00260028, 0x00260033, 0x001c001e, 0x001c0026, 0x001c001e, 0x001c0026,
-        0x001e0020, 0x001e0028, 0x001e0020, 0x001e0028, 0x001c001e, 0x001c0026, 0x001c001e, 0x001c0026,
-        0x00260028, 0x00260033, 0x00260028, 0x00260033, 0x001c001e, 0x001c0026, 0x001c001e, 0x001c0026,
-        0x001a001c, 0x001a0023, 0x001a001c, 0x001a0023, 0x0019001a, 0x00190021, 0x0019001a, 0x00190021,
-        0x00210023, 0x0021002d, 0x00210023, 0x0021002d, 0x0019001a, 0x00190021, 0x0019001a, 0x00190021,
-        0x001a001c, 0x001a0023, 0x001a001c, 0x001a0023, 0x0019001a, 0x00190021, 0x0019001a, 0x00190021,
-        0x00210023, 0x0021002d, 0x00210023, 0x0021002d, 0x0019001a, 0x00190021, 0x0019001a, 0x00190021,
-    };
-
-    hal_h264e_dbg_func("enter\n");
-
-    memcpy(&regs->q_intra_y8, vepu540c_h264_scl_tab, sizeof(vepu540c_h264_scl_tab));
+    reg->rdo_b16_intra_atf_cnt_thd_comb.thd0 = 1;
+    reg->rdo_b16_intra_atf_cnt_thd_comb.thd1 = 4;
+    reg->rdo_b16_intra_atf_cnt_thd_comb.thd2 = 1;
+    reg->rdo_b16_intra_atf_cnt_thd_comb.thd3 = 4;
+    reg->rdo_atf_resi_thd_comb.big_th0     = 16;
+    reg->rdo_atf_resi_thd_comb.big_th1     = 16;
+    reg->rdo_atf_resi_thd_comb.small_th0   = 8;
+    reg->rdo_atf_resi_thd_comb.small_th1   = 8;
 
     hal_h264e_dbg_func("leave\n");
 }
@@ -983,8 +911,8 @@ static void setup_vepu540c_rc_base(HalVepu540cRegSet *regs, H264eSps *sps,
     }
 
     mb_target_bits = (mb_target_bits_mul_16 * mb_w) >> 4;
-    negative_bits_thd = 0 - mb_target_bits / 4;
-    positive_bits_thd = mb_target_bits / 4;
+    negative_bits_thd = 0 - 5 * mb_target_bits / 16;
+    positive_bits_thd = 5 * mb_target_bits / 16;
 
     hal_h264e_dbg_func("enter\n");
 
@@ -1002,25 +930,25 @@ static void setup_vepu540c_rc_base(HalVepu540cRegSet *regs, H264eSps *sps,
 
     regs->reg_base.rc_tgt.ctu_ebit       = mb_target_bits_mul_16;
 
-    regs->reg_rc_roi.rc_adj0.qp_adj0        = -1;
-    regs->reg_rc_roi.rc_adj0.qp_adj1        = 0;
+    regs->reg_rc_roi.rc_adj0.qp_adj0        = -2;
+    regs->reg_rc_roi.rc_adj0.qp_adj1        = -1;
     regs->reg_rc_roi.rc_adj0.qp_adj2        = 0;
-    regs->reg_rc_roi.rc_adj0.qp_adj3        = 0;
-    regs->reg_rc_roi.rc_adj0.qp_adj4        = 0;
+    regs->reg_rc_roi.rc_adj0.qp_adj3        = 1;
+    regs->reg_rc_roi.rc_adj0.qp_adj4        = 2;
     regs->reg_rc_roi.rc_adj1.qp_adj5        = 0;
     regs->reg_rc_roi.rc_adj1.qp_adj6        = 0;
     regs->reg_rc_roi.rc_adj1.qp_adj7        = 0;
-    regs->reg_rc_roi.rc_adj1.qp_adj8        = 1;
+    regs->reg_rc_roi.rc_adj1.qp_adj8        = 0;
 
-    regs->reg_rc_roi.rc_dthd_0_8[0] = negative_bits_thd;
-    regs->reg_rc_roi.rc_dthd_0_8[1] = positive_bits_thd;
+    regs->reg_rc_roi.rc_dthd_0_8[0] = 4 * negative_bits_thd;
+    regs->reg_rc_roi.rc_dthd_0_8[1] = negative_bits_thd;
     regs->reg_rc_roi.rc_dthd_0_8[2] = positive_bits_thd;
-    regs->reg_rc_roi.rc_dthd_0_8[3] = positive_bits_thd;
-    regs->reg_rc_roi.rc_dthd_0_8[4] = positive_bits_thd;
-    regs->reg_rc_roi.rc_dthd_0_8[5] = positive_bits_thd;
-    regs->reg_rc_roi.rc_dthd_0_8[6] = positive_bits_thd;
-    regs->reg_rc_roi.rc_dthd_0_8[7] = positive_bits_thd;
-    regs->reg_rc_roi.rc_dthd_0_8[8] = positive_bits_thd;
+    regs->reg_rc_roi.rc_dthd_0_8[3] = 4 * positive_bits_thd;
+    regs->reg_rc_roi.rc_dthd_0_8[4] = 0x7FFFFFFF;
+    regs->reg_rc_roi.rc_dthd_0_8[5] = 0x7FFFFFFF;
+    regs->reg_rc_roi.rc_dthd_0_8[6] = 0x7FFFFFFF;
+    regs->reg_rc_roi.rc_dthd_0_8[7] = 0x7FFFFFFF;
+    regs->reg_rc_roi.rc_dthd_0_8[8] = 0x7FFFFFFF;
 
     regs->reg_rc_roi.roi_qthd0.qpmin_area0    = qp_min;
     regs->reg_rc_roi.roi_qthd0.qpmax_area0    = qp_max;
@@ -1352,44 +1280,45 @@ static void setup_vepu540c_l2(HalVepu540cRegSet *regs, H264eSlice *slice, MppEnc
 
     regs->reg_s3.RDO_QUANT.quant_f_bias_I = 683;
     regs->reg_s3.RDO_QUANT.quant_f_bias_P = 341;
-    regs->reg_s3.iprd_tthdy4_0.iprd_tthdy4_0    = 1;
-    regs->reg_s3.iprd_tthdy4_0.iprd_tthdy4_1    = 4;
-    regs->reg_s3.iprd_tthdy4_1.iprd_tthdy4_2    = 9;
-    regs->reg_s3.iprd_tthdy4_1.iprd_tthdy4_3    = 36;
-    regs->reg_s3.iprd_tthdc8_0.iprd_tthdc8_0    = 1;
-    regs->reg_s3.iprd_tthdc8_0.iprd_tthdc8_1    = 4;
-    regs->reg_s3.iprd_tthdc8_1.iprd_tthdc8_2    = 9;
-    regs->reg_s3.iprd_tthdc8_1.iprd_tthdc8_3    = 36;
-    regs->reg_s3.iprd_tthdy8_0.iprd_tthdy8_0    = 1;
-    regs->reg_s3.iprd_tthdy8_0.iprd_tthdy8_1    = 4;
-    regs->reg_s3.iprd_tthdy8_1.iprd_tthdy8_2    = 9;
-    regs->reg_s3.iprd_tthdy8_1.iprd_tthdy8_3    = 36;
-    regs->reg_s3.iprd_tthd_ul.iprd_tthd_ul = 0;
-    regs->reg_s3.iprd_wgty8.iprd_wgty8_0   = 48;
-    regs->reg_s3.iprd_wgty8.iprd_wgty8_1   = 60;
-    regs->reg_s3.iprd_wgty8.iprd_wgty8_2   = 40;
-    regs->reg_s3.iprd_wgty8.iprd_wgty8_3   = 48;
-    regs->reg_s3.iprd_wgty4.iprd_wgty4_0   = 48;
-    regs->reg_s3.iprd_wgty4.iprd_wgty4_1   = 60;
-    regs->reg_s3.iprd_wgty4.iprd_wgty4_2   = 40;
-    regs->reg_s3.iprd_wgty4.iprd_wgty4_3   = 48;
-    regs->reg_s3.iprd_wgty16.iprd_wgty16_0 = 48;
-    regs->reg_s3.iprd_wgty16.iprd_wgty16_1 = 60;
-    regs->reg_s3.iprd_wgty16.iprd_wgty16_2 = 40;
-    regs->reg_s3.iprd_wgty16.iprd_wgty16_3 = 48;
-    regs->reg_s3.iprd_wgtc8.iprd_wgtc8_0   = 36;
-    regs->reg_s3.iprd_wgtc8.iprd_wgtc8_1   = 42;
-    regs->reg_s3.iprd_wgtc8.iprd_wgtc8_2   = 28;
-    regs->reg_s3.iprd_wgtc8.iprd_wgtc8_3   = 32;
+    regs->reg_s3.iprd_tthdy4_0.iprd_tthdy4_0 = 1;
+    regs->reg_s3.iprd_tthdy4_0.iprd_tthdy4_1 = 3;
+    regs->reg_s3.iprd_tthdy4_1.iprd_tthdy4_2 = 6;
+    regs->reg_s3.iprd_tthdy4_1.iprd_tthdy4_3 = 8;
+    regs->reg_s3.iprd_tthdc8_0.iprd_tthdc8_0 = 1;
+    regs->reg_s3.iprd_tthdc8_0.iprd_tthdc8_1 = 3;
+    regs->reg_s3.iprd_tthdc8_1.iprd_tthdc8_2 = 6;
+    regs->reg_s3.iprd_tthdc8_1.iprd_tthdc8_3 = 8;
+    regs->reg_s3.iprd_tthdy8_0.iprd_tthdy8_0 = 1;
+    regs->reg_s3.iprd_tthdy8_0.iprd_tthdy8_1 = 3;
+    regs->reg_s3.iprd_tthdy8_1.iprd_tthdy8_2 = 6;
+    regs->reg_s3.iprd_tthdy8_1.iprd_tthdy8_3 = 8;
+    regs->reg_s3.iprd_tthd_ul.iprd_tthd_ul = 4;
+    regs->reg_s3.iprd_wgty8.iprd_wgty8_0 = 22;
+    regs->reg_s3.iprd_wgty8.iprd_wgty8_1 = 23;
+    regs->reg_s3.iprd_wgty8.iprd_wgty8_2 = 20;
+    regs->reg_s3.iprd_wgty8.iprd_wgty8_3 = 22;
+    regs->reg_s3.iprd_wgty4.iprd_wgty4_0 = 22;
+    regs->reg_s3.iprd_wgty4.iprd_wgty4_1 = 26;
+    regs->reg_s3.iprd_wgty4.iprd_wgty4_2 = 20;
+    regs->reg_s3.iprd_wgty4.iprd_wgty4_3 = 22;
+    regs->reg_s3.iprd_wgty16.iprd_wgty16_0 = 22;
+    regs->reg_s3.iprd_wgty16.iprd_wgty16_1 = 26;
+    regs->reg_s3.iprd_wgty16.iprd_wgty16_2 = 20;
+    regs->reg_s3.iprd_wgty16.iprd_wgty16_3 = 22;
+    regs->reg_s3.iprd_wgtc8.iprd_wgtc8_0 = 18;
+    regs->reg_s3.iprd_wgtc8.iprd_wgtc8_1 = 21;
+    regs->reg_s3.iprd_wgtc8.iprd_wgtc8_2 = 20;
+    regs->reg_s3.iprd_wgtc8.iprd_wgtc8_3 = 19;
+
 
     if (slice->slice_type == H264_I_SLICE) {
         regs->reg_s3.ATR_THD0.atr_thd0 = 1;
-        regs->reg_s3.ATR_THD0.atr_thd1 = 4;
-        regs->reg_s3.ATR_THD1.atr_thd2 = 36;
+        regs->reg_s3.ATR_THD0.atr_thd1 = 2;
+        regs->reg_s3.ATR_THD1.atr_thd2 = 6;
     } else {
-        regs->reg_s3.ATR_THD0.atr_thd0 = 1;
+        regs->reg_s3.ATR_THD0.atr_thd0 = 2;
         regs->reg_s3.ATR_THD0.atr_thd1 = 4;
-        regs->reg_s3.ATR_THD1.atr_thd2 = 49;
+        regs->reg_s3.ATR_THD1.atr_thd2 = 9;
     }
     regs->reg_s3.ATR_THD1.atr_thdqp = 32;
 
@@ -1398,25 +1327,25 @@ static void setup_vepu540c_l2(HalVepu540cRegSet *regs, H264eSlice *slice, MppEnc
         regs->reg_s3.Lvl16_ATR_WGT.lvl16_atr_wgt1 = 16;
         regs->reg_s3.Lvl16_ATR_WGT.lvl16_atr_wgt2 = 16;
 
-        regs->reg_s3.Lvl8_ATR_WGT.lvl8_atr_wgt0 = 32;
-        regs->reg_s3.Lvl8_ATR_WGT.lvl8_atr_wgt1 = 32;
-        regs->reg_s3.Lvl8_ATR_WGT.lvl8_atr_wgt2 = 32;
+        regs->reg_s3.Lvl8_ATR_WGT.lvl8_atr_wgt0 = 22;
+        regs->reg_s3.Lvl8_ATR_WGT.lvl8_atr_wgt1 = 21;
+        regs->reg_s3.Lvl8_ATR_WGT.lvl8_atr_wgt2 = 20;
 
         regs->reg_s3.Lvl4_ATR_WGT.lvl4_atr_wgt0 = 20;
         regs->reg_s3.Lvl4_ATR_WGT.lvl4_atr_wgt1 = 18;
         regs->reg_s3.Lvl4_ATR_WGT.lvl4_atr_wgt2 = 16;
     } else {
-        regs->reg_s3.Lvl16_ATR_WGT.lvl16_atr_wgt0 = 16;
-        regs->reg_s3.Lvl16_ATR_WGT.lvl16_atr_wgt1 = 17;
-        regs->reg_s3.Lvl16_ATR_WGT.lvl16_atr_wgt2 = 17;
+        regs->reg_s3.Lvl16_ATR_WGT.lvl16_atr_wgt0 = 25;
+        regs->reg_s3.Lvl16_ATR_WGT.lvl16_atr_wgt1 = 20;
+        regs->reg_s3.Lvl16_ATR_WGT.lvl16_atr_wgt2 = 16;
 
-        regs->reg_s3.Lvl8_ATR_WGT.lvl8_atr_wgt0 = 31;
-        regs->reg_s3.Lvl8_ATR_WGT.lvl8_atr_wgt1 = 31;
-        regs->reg_s3.Lvl8_ATR_WGT.lvl8_atr_wgt2 = 31;
+        regs->reg_s3.Lvl8_ATR_WGT.lvl8_atr_wgt0 = 25;
+        regs->reg_s3.Lvl8_ATR_WGT.lvl8_atr_wgt1 = 20;
+        regs->reg_s3.Lvl8_ATR_WGT.lvl8_atr_wgt2 = 18;
 
-        regs->reg_s3.Lvl4_ATR_WGT.lvl4_atr_wgt0 = 21;
-        regs->reg_s3.Lvl4_ATR_WGT.lvl4_atr_wgt1 = 19;
-        regs->reg_s3.Lvl4_ATR_WGT.lvl4_atr_wgt2 = 17;
+        regs->reg_s3.Lvl4_ATR_WGT.lvl4_atr_wgt0 = 25;
+        regs->reg_s3.Lvl4_ATR_WGT.lvl4_atr_wgt1 = 20;
+        regs->reg_s3.Lvl4_ATR_WGT.lvl4_atr_wgt2 = 16;
     }
     /* CIME */
     {
@@ -1424,46 +1353,58 @@ static void setup_vepu540c_l2(HalVepu540cRegSet *regs, H264eSlice *slice, MppEnc
         regs->reg_s3.cime_sqi_cfg.cime_pmv_num = 1;
         regs->reg_s3.cime_sqi_cfg.cime_fuse   = 1;
         regs->reg_s3.cime_sqi_cfg.itp_mode    = 0;
-        regs->reg_s3.cime_sqi_cfg.move_lambda = 12;
-        regs->reg_s3.cime_sqi_cfg.rime_lvl_mrg     = 1;
+        regs->reg_s3.cime_sqi_cfg.move_lambda = 0;
+        regs->reg_s3.cime_sqi_cfg.rime_lvl_mrg     = 0;
         regs->reg_s3.cime_sqi_cfg.rime_prelvl_en   = 0;
         regs->reg_s3.cime_sqi_cfg.rime_prersu_en   = 0;
 
         /* 0x1764 */
-        regs->reg_s3.cime_mvd_th.cime_mvd_th0 = 500;
-        regs->reg_s3.cime_mvd_th.cime_mvd_th1 = 511;
-        regs->reg_s3.cime_mvd_th.cime_mvd_th2 = 0;
+        regs->reg_s3.cime_mvd_th.cime_mvd_th0 = 16;
+        regs->reg_s3.cime_mvd_th.cime_mvd_th1 = 48;
+        regs->reg_s3.cime_mvd_th.cime_mvd_th2 = 80;
 
         /* 0x1768 */
-        regs->reg_s3.cime_madp_th.cime_madp_th = 160;
+        regs->reg_s3.cime_madp_th.cime_madp_th = 16;
 
         /* 0x176c */
-        regs->reg_s3.cime_multi.cime_multi0 = 192;
-        regs->reg_s3.cime_multi.cime_multi1 = 255;
-        regs->reg_s3.cime_multi.cime_multi2 = 0;
-        regs->reg_s3.cime_multi.cime_multi3 = 15;
+        regs->reg_s3.cime_multi.cime_multi0 = 8;
+        regs->reg_s3.cime_multi.cime_multi1 = 12;
+        regs->reg_s3.cime_multi.cime_multi2 = 16;
+        regs->reg_s3.cime_multi.cime_multi3 = 20;
     }
 
     /* RIME && FME */
     {
         /* 0x1770 */
-        regs->reg_s3.rime_mvd_th.rime_mvd_th0  = 0;
-        regs->reg_s3.rime_mvd_th.rime_mvd_th1  = 1;
+        regs->reg_s3.rime_mvd_th.rime_mvd_th0  = 1;
+        regs->reg_s3.rime_mvd_th.rime_mvd_th1  = 2;
         regs->reg_s3.rime_mvd_th.fme_madp_th   = 0;
 
         /* 0x1774 */
-        regs->reg_s3.rime_madp_th.rime_madp_th0 = 192;
-        regs->reg_s3.rime_madp_th.rime_madp_th1 = 123;
+        regs->reg_s3.rime_madp_th.rime_madp_th0 = 8;
+        regs->reg_s3.rime_madp_th.rime_madp_th1 = 16;
 
         /* 0x1778 */
-        regs->reg_s3.rime_multi.rime_multi0 = 192;
-        regs->reg_s3.rime_multi.rime_multi1 = 1023;
-        regs->reg_s3.rime_multi.rime_multi2 = 0;
+        regs->reg_s3.rime_multi.rime_multi0 = 4;
+        regs->reg_s3.rime_multi.rime_multi1 = 8;
+        regs->reg_s3.rime_multi.rime_multi2 = 12;
 
         /* 0x177C */
         regs->reg_s3.cmv_st_th.cmv_th0 = 64;
         regs->reg_s3.cmv_st_th.cmv_th1 = 96;
         regs->reg_s3.cmv_st_th.cmv_th2 = 128;
+    }
+    /* madi and madp */
+    {
+        /* 0x1064 */
+        regs->reg_rc_roi.madi_st_thd.madi_th0 = 5;
+        regs->reg_rc_roi.madi_st_thd.madi_th1 = 12;
+        regs->reg_rc_roi.madi_st_thd.madi_th2 = 20;
+        /* 0x1068 */
+        regs->reg_rc_roi.madp_st_thd0.madp_th0 = 4 << 4;
+        regs->reg_rc_roi.madp_st_thd0.madp_th1 = 9 << 4;
+        /* 0x106C */
+        regs->reg_rc_roi.madp_st_thd1.madp_th2 = 15 << 4;
     }
 
     {
@@ -1537,7 +1478,10 @@ static MPP_RET hal_h264e_vepu540c_gen_regs(void *hal, HalEncTask *task)
     setup_vepu540c_codec(regs, sps, pps, slice);
     setup_vepu540c_rdo_pred(regs, sps, pps, slice);
     setup_vepu540c_rdo_cfg(&regs->reg_rdo);
-    setup_vepu540c_scl_cfg(&regs->reg_scl);
+
+    // scl cfg
+    memcpy(&regs->reg_scl.q_intra_y8, vepu580_540_h264_flat_scl_tab, sizeof(vepu580_540_h264_flat_scl_tab));
+
     setup_vepu540c_rc_base(regs, sps, slice, &cfg->hw, task->rc_task);
     setup_vepu540c_io_buf(regs, ctx->dev, task);
     setup_vepu540c_recn_refr(ctx, regs);
@@ -1725,6 +1669,21 @@ static MPP_RET hal_h264e_vepu540c_wait(void *hal, HalEncTask *task)
     } else {
         hal_h264e_vepu540c_status_check(hal);
         task->hw_length += regs_set->reg_st.bs_lgth_l32;
+    }
+
+    {
+        HalH264eVepuStreamAmend *amend = &ctx->amend;
+
+        if (amend->enable) {
+            amend->old_length = task->hw_length;
+            amend->slice->is_multi_slice = (ctx->cfg->split.split_mode > 0);
+            h264e_vepu_stream_amend_proc(amend, &ctx->cfg->codec.h264.hw_cfg);
+            task->hw_length = amend->new_length;
+        } else if (amend->prefix) {
+            /* check prefix value */
+            amend->old_length = task->hw_length;
+            h264e_vepu_stream_amend_sync_ref_idc(amend);
+        }
     }
 
     hal_h264e_dbg_func("leave %p\n", hal);

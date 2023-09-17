@@ -1,5 +1,9 @@
 # 变更日志
 
+## 2023-09-17
+  * acl: Using proc_pidpath() API to get the path of the running process, thanks to wfeii1980.
+  * 更新rkmpp源码
+
 ## 2023-09-13
   * acl: Optimize redis_client_pipeline when no redis node got in the beginning.
   * rga: replace dependency on ANDROID_12 by USE_HARDWARE_ROCKCHIP
