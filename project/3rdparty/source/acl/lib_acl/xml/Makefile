@@ -1,9 +1,0 @@
-obj-y += acl_xml_parse.o
-obj-y += acl_xml_util.o
-obj-y += acl_xml.o
-obj-y += acl_xml2_parse.o
-obj-y += acl_xml2_util.o
-obj-y += acl_xml2.o
-obj-y += acl_xml3_parse.o
-obj-y += acl_xml3_util.o
-obj-y += acl_xml3.o

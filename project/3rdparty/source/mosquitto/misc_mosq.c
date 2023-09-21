@@ -88,7 +88,7 @@ FILE *mosquitto__fopen(const char *path, const char *mode, bool restrict_read)
         }
     }
 
-    if (!S_ISREG(statbuf.st_mode) && !S_ISLNK(statbuf.st_mode)) {
+    if (!S_ISREG(statbuf.st_mode)) {
         fclose(fptr);
         return NULL;
     }

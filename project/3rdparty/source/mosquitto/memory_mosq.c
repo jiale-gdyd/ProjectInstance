@@ -36,3 +36,26 @@ char *mosquitto__strdup(const char *s)
     str = strdup(s);
     return str;
 }
+
+char *mosquitto__strndup(const char *s, size_t n)
+{
+    char *str;
+#ifdef REAL_WITH_MEMORY_TRACKING
+    if (mem_limit && ((memcount + strlen(s)) > mem_limit)) {
+        return NULL;
+    }
+#endif
+
+    str = strndup(s, n);
+
+#ifdef REAL_WITH_MEMORY_TRACKING
+    if (str) {
+        memcount += malloc_usable_size(str);
+        if (memcount > max_memcount) {
+            max_memcount = memcount;
+        }
+    }
+#endif
+
+    return str;
+}

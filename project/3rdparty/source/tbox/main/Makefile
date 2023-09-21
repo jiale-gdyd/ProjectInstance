@@ -1,9 +1,0 @@
-obj-y += args.o
-obj-y += context_imp.o
-obj-y += error_signals.o
-obj-y += log.o
-obj-y += misc.o
-obj-y += module.o
-obj-y += run_in_backend.o
-obj-y += run_in_frontend.o
-obj-y += terminate.o

@@ -1,9 +1,0 @@
-obj-y += acl_test_cfg_general.o
-obj-y += acl_test_cfg.o
-obj-y += acl_test_inner.o
-obj-y += acl_test_log.o
-obj-y += acl_test_loop.o
-obj-y += acl_test_misc.o
-obj-y += acl_test_outer.o
-obj-y += acl_test_runner.o
-obj-y += acl_test_token.o

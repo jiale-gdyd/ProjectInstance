@@ -1,9 +1,0 @@
-obj-y += icmp_chat_aio.o
-obj-y += icmp_chat_sio.o
-obj-y += icmp_chat.o
-obj-y += icmp_host.o
-obj-y += icmp_ping.o
-obj-y += icmp_pkt.o
-obj-y += icmp_stat.o
-obj-y += icmp_stream.o
-obj-y += icmp_timer.o

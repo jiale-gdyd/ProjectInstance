@@ -317,6 +317,7 @@ void *mosquitto_realloc(void *ptr, size_t size);
 void *mosquitto_calloc(size_t nmemb, size_t size);
 
 char *mosquitto_strdup(const char *s);
+char *mosquitto_strndup(const char *s, size_t n);
 void mosquitto_log_printf(int level, const char *fmt, ...);
 
 struct mosquitto *mosquitto_client(const char *clientid);
