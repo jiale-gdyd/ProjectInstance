@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2023-09-28
+  * live555: update to 2023-07-24
+
 ## 2023-09-17
   * acl: Using proc_pidpath() API to get the path of the running process, thanks to wfeii1980.
   * 更新rkmpp源码
