@@ -29,9 +29,11 @@
 #define x_assert_type_system_initialized()                                                      \
     x_assert(static_quark_type_flags)
 
+#define x_type_test_flags(t, f)                     _x_type_test_flags(t, f)
+
 #define TYPE_FUNDAMENTAL_FLAG_MASK                  (X_TYPE_FLAG_CLASSED | X_TYPE_FLAG_INSTANTIATABLE | X_TYPE_FLAG_DERIVABLE | X_TYPE_FLAG_DEEP_DERIVABLE)
 #define TYPE_FLAG_MASK                              (X_TYPE_FLAG_ABSTRACT | X_TYPE_FLAG_VALUE_ABSTRACT | X_TYPE_FLAG_FINAL | X_TYPE_FLAG_DEPRECATED)
-#define	NODE_FLAG_MASK                              (X_TYPE_FLAG_CLASSED | X_TYPE_FLAG_INSTANTIATABLE | X_TYPE_FLAG_FINAL)
+#define	NODE_FLAG_MASK                              (X_TYPE_FLAG_ABSTRACT | X_TYPE_FLAG_CLASSED | X_TYPE_FLAG_DEPRECATED | X_TYPE_FLAG_INSTANTIATABLE | X_TYPE_FLAG_FINAL)
 #define SIZEOF_FUNDAMENTAL_INFO                     ((xssize)MAX(MAX(sizeof(XTypeFundamentalInfo), sizeof(xpointer)), sizeof(xlong)))
 
 #define STRUCT_ALIGNMENT                            (2 * sizeof(xsize))
@@ -48,6 +50,7 @@ typedef struct _IFaceHolder IFaceHolder;
 typedef struct _InstanceData InstanceData;
 typedef struct _IFaceEntries IFaceEntries;
 
+static inline xboolean _x_type_test_flags(XType type, xuint flags);
 static inline XTypeFundamentalInfo *type_node_fundamental_info_I(TypeNode *node);
 static void type_add_flags_W(TypeNode *node, XTypeFlags flags);
 static void type_data_make_W(TypeNode *node, const XTypeInfo *info, const XTypeValueTable *value_table);
@@ -76,7 +79,9 @@ struct _TypeNode {
     xuint       n_children;
     xuint       n_supers : 8;
     xuint       n_prerequisites : 9;
+    xuint       is_abstract : 1;
     xuint       is_classed : 1;
+    xuint       is_deprecated : 1;
     xuint       is_instantiatable : 1;
     xuint       is_final : 1;
     xuint       mutatable_check_cache : 1;
@@ -271,7 +276,9 @@ static TypeNode *type_node_any_new_W(TypeNode *pnode, XType ftype, const xchar *
         node->supers[0] = type;
         node->supers[1] = 0;
 
+        node->is_abstract = (type_flags & X_TYPE_FLAG_ABSTRACT) != 0;
         node->is_classed = (type_flags & X_TYPE_FLAG_CLASSED) != 0;
+        node->is_deprecated = (type_flags & X_TYPE_FLAG_DEPRECATED) != 0;
         node->is_instantiatable = (type_flags & X_TYPE_FLAG_INSTANTIATABLE) != 0;
 
         if (NODE_IS_IFACE(node)) {
@@ -284,8 +291,12 @@ static TypeNode *type_node_any_new_W(TypeNode *pnode, XType ftype, const xchar *
         node->supers[0] = type;
         memcpy(node->supers + 1, pnode->supers, sizeof(XType) * (1 + pnode->n_supers + 1));
 
+        node->is_abstract = (type_flags & X_TYPE_FLAG_ABSTRACT) != 0;
         node->is_classed = pnode->is_classed;
+        node->is_deprecated = (type_flags & X_TYPE_FLAG_DEPRECATED) != 0;
         node->is_instantiatable = pnode->is_instantiatable;
+
+        node->is_deprecated |= pnode->is_deprecated;
 
         if (NODE_IS_IFACE(node)) {
             IFACE_NODE_N_PREREQUISITES(node) = 0;
@@ -348,10 +359,9 @@ static TypeNode *type_node_fundamental_new_W(XType ftype, const xchar *name, XTy
         static_fundamental_next++;
     }
 
-    type_flags = (XTypeFundamentalFlags)(type_flags & TYPE_FUNDAMENTAL_FLAG_MASK);
     node = type_node_any_new_W(NULL, ftype, name, NULL, type_flags);
     finfo = type_node_fundamental_info_I(node);
-    finfo->type_flags = type_flags;
+    finfo->type_flags = type_flags & TYPE_FUNDAMENTAL_FLAG_MASK;
 
     return node;
 }
@@ -2676,6 +2686,8 @@ static void type_add_flags_W(TypeNode *node, XTypeFlags flags)
     dflags |= flags;
     type_set_qdata_W(node, static_quark_type_flags, XUINT_TO_POINTER (dflags));
 
+    node->is_abstract = (flags & X_TYPE_FLAG_ABSTRACT) != 0;
+    node->is_deprecated |= (flags & X_TYPE_FLAG_DEPRECATED) != 0;
     node->is_final = (flags & X_TYPE_FLAG_FINAL) != 0;
 }
 
@@ -2704,27 +2716,35 @@ int x_type_get_instance_count(XType type)
     return 0;
 }
 
-xboolean x_type_test_flags(XType type, xuint flags)
+static inline xboolean _x_type_test_flags(XType type, xuint flags)
 {
     TypeNode *node;
     xboolean result = FALSE;
 
     node = lookup_type_node_I(type);
     if (node) {
-        if ((flags & NODE_FLAG_MASK) == 0) {
-            if (flags & X_TYPE_FLAG_CLASSED) {
-                result |= node->is_classed;
+        if ((flags & ~NODE_FLAG_MASK) == 0) {
+            if ((flags & X_TYPE_FLAG_CLASSED) && !node->is_classed) {
+                return FALSE;
             }
 
-            if (flags & X_TYPE_FLAG_INSTANTIATABLE) {
-                result |= node->is_instantiatable;
+            if ((flags & X_TYPE_FLAG_INSTANTIATABLE) && !node->is_instantiatable) {
+                return FALSE;
             }
 
-            if (flags & X_TYPE_FLAG_FINAL) {
-                result |= node->is_final;
+            if ((flags & X_TYPE_FLAG_FINAL) && !node->is_final) {
+                return FALSE;
             }
 
-            return result;
+            if ((flags & X_TYPE_FLAG_ABSTRACT) && !node->is_abstract) {
+                return FALSE;
+            }
+
+            if ((flags & X_TYPE_FLAG_DEPRECATED) && !node->is_deprecated) {
+                return FALSE;
+            }
+
+            return TRUE;
         }
 
         xuint fflags = flags & TYPE_FUNDAMENTAL_FLAG_MASK;
@@ -2749,6 +2769,11 @@ xboolean x_type_test_flags(XType type, xuint flags)
     }
 
     return result;
+}
+
+xboolean (x_type_test_flags)(XType type, xuint flags)
+{
+    return _x_type_test_flags(type, flags);
 }
 
 XTypePlugin *x_type_get_plugin(XType type)

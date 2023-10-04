@@ -99,6 +99,7 @@ static XQuark quark_notify_queue;
 static XQuark quark_weak_refs = 0;
 static XQuark quark_toggle_refs = 0;
 static XQuark quark_closure_array = 0;
+static XQuark quark_weak_notifies = 0;
 #ifndef HAVE_OPTIONAL_FLAGS
 static XQuark quark_in_construction;
 #endif
@@ -281,6 +282,7 @@ static void x_object_do_class_init(XObjectClass *classt)
     quark_closure_array = x_quark_from_static_string("XObject-closure-array");
 
     quark_weak_refs = x_quark_from_static_string("XObject-weak-references");
+    quark_weak_notifies = x_quark_from_static_string("XObject-weak-notifies");
     quark_weak_locations = x_quark_from_static_string("XObject-weak-locations");
     quark_toggle_refs = x_quark_from_static_string("XObject-toggle-references");
     quark_notify_queue = x_quark_from_static_string("XObject-notify-queue");
@@ -745,9 +747,12 @@ static void x_object_do_get_property(XObject *object, xuint property_id, XValue 
 static void x_object_real_dispose(XObject *object)
 {
     x_signal_handlers_destroy(object);
-    x_datalist_id_set_data(&object->qdata, quark_closure_array, NULL);
+
     x_datalist_id_set_data(&object->qdata, quark_weak_refs, NULL);
     x_datalist_id_set_data(&object->qdata, quark_weak_locations, NULL);
+
+    x_datalist_id_set_data(&object->qdata, quark_weak_notifies, NULL);
+    x_datalist_id_set_data(&object->qdata, quark_closure_array, NULL);
 }
 
 static void x_object_finalize(XObject *object)
@@ -1904,7 +1909,7 @@ void x_object_weak_ref(XObject *object, XWeakNotify notify, xpointer data)
     x_return_if_fail(x_atomic_int_get(&object->ref_count) >= 1);
 
     X_LOCK(weak_refs_mutex);
-    wstack = (WeakRefStack *)x_datalist_id_remove_no_notify(&object->qdata, quark_weak_refs);
+    wstack = (WeakRefStack *)x_datalist_id_remove_no_notify(&object->qdata, quark_weak_notifies);
     if (wstack) {
         i = wstack->n_weak_refs++;
         wstack = (WeakRefStack *)x_realloc(wstack, sizeof(*wstack) + sizeof(wstack->weak_refs[0]) * i);
@@ -1917,7 +1922,7 @@ void x_object_weak_ref(XObject *object, XWeakNotify notify, xpointer data)
 
     wstack->weak_refs[i].notify = notify;
     wstack->weak_refs[i].data = data;
-    x_datalist_id_set_data_full(&object->qdata, quark_weak_refs, wstack, weak_refs_notify);
+    x_datalist_id_set_data_full(&object->qdata, quark_weak_notifies, wstack, weak_refs_notify);
     X_UNLOCK(weak_refs_mutex);
 }
 
@@ -1930,7 +1935,7 @@ void x_object_weak_unref(XObject *object, XWeakNotify notify, xpointer data)
     x_return_if_fail(notify != NULL);
 
     X_LOCK (weak_refs_mutex);
-    wstack = (WeakRefStack *)x_datalist_id_get_data(&object->qdata, quark_weak_refs);
+    wstack = (WeakRefStack *)x_datalist_id_get_data(&object->qdata, quark_weak_notifies);
     if (wstack) {
         xuint i;
 
@@ -2221,6 +2226,7 @@ retry_atomic_decrement1:
         x_signal_handlers_destroy(object);
         x_datalist_id_set_data(&object->qdata, quark_weak_refs, NULL);
         x_datalist_id_set_data(&object->qdata, quark_weak_locations, NULL);
+        x_datalist_id_set_data(&object->qdata, quark_weak_notifies, NULL);
 
         old_ref = x_atomic_int_add(&object->ref_count, -1);
         x_return_if_fail(old_ref > 0);

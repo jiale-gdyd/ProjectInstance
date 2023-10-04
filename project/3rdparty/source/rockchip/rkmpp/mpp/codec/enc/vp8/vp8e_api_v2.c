@@ -17,6 +17,7 @@
 
 #include <string.h>
 #include "../../../common/vp8e_syntax.h"
+#include <limits.h>
 
 #include "../../../../osal/inc/mpp_env.h"
 #include "../../../../osal/inc/mpp_mem.h"
@@ -103,6 +104,10 @@ static MPP_RET vp8e_init(void *ctx, EncImplCfg *ctrl_cfg)
     rc_cfg->fps_out_denorm = 1;
     rc_cfg->gop = 60;
     rc_cfg->max_reenc_times = 1;
+    rc_cfg->fqp_min_i = INT_MAX;
+    rc_cfg->fqp_min_p = INT_MAX;
+    rc_cfg->fqp_max_i = INT_MAX;
+    rc_cfg->fqp_max_p = INT_MAX;
 
     p->rc = mpp_calloc(Vp8eRc, 1);
     memset(p->rc, 0, sizeof(Vp8eRc));

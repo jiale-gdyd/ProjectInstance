@@ -17,6 +17,7 @@
 #define MODULE_TAG "h265e_api"
 
 #include <string.h>
+#include <limits.h>
 
 #include "../../../../osal/inc/mpp_env.h"
 #include "../../../../osal/inc/mpp_mem.h"
@@ -110,6 +111,7 @@ static MPP_RET h265e_init(void *ctx, EncImplCfg *ctrlCfg)
     h265->merge_cfg.max_mrg_cnd = 2;
     h265->merge_cfg.merge_left_flag = 1;
     h265->merge_cfg.merge_up_flag = 1;
+    p->cfg->tune.scene_mode = MPP_ENC_SCENE_MODE_DEFAULT;
 
     /*
      * default prep:
@@ -163,6 +165,10 @@ static MPP_RET h265e_init(void *ctx, EncImplCfg *ctrlCfg)
     rc_cfg->qp_min_i = 15;
     rc_cfg->qp_delta_ip = 4;
     rc_cfg->qp_delta_vi = 2;
+    rc_cfg->fqp_min_i = INT_MAX;
+    rc_cfg->fqp_min_p = INT_MAX;
+    rc_cfg->fqp_max_i = INT_MAX;
+    rc_cfg->fqp_max_p = INT_MAX;
 
     INIT_LIST_HEAD(&p->rc_list);
 
@@ -207,10 +213,11 @@ static MPP_RET h265e_gen_hdr(void *ctx, MppPacket pkt)
         h265e_dpb_init(&p->dpb);
 
     /*
-     * After gen_hdr, the change of codec must be cleared to 0,
+     * After gen_hdr, the change of codec/prep must be cleared to 0,
      * otherwise the change will affect the next idr frame
      */
     p->cfg->codec.h265.change = 0;
+    p->cfg->prep.change = 0;
 
     h265e_dbg_func("leave ctx %p\n", ctx);
 
