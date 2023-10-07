@@ -36,7 +36,7 @@ typedef void (*XTestFixtureFunc)(xpointer fixture, xconstpointer user_data);
         if (__n1 cmp __n2) {                                                                                                                                    \
             ;                                                                                                                                                   \
         } else {                                                                                                                                                \
-            x_assertion_message_cmpint(X_LOG_DOMAIN, __FILE__, __LINE__, X_STRFUNC, #n1 " " #cmp " " #n2, __n1, #cmp, __n2, 'i');                               \
+            x_assertion_message_cmpint(X_LOG_DOMAIN, __FILE__, __LINE__, X_STRFUNC, #n1 " " #cmp " " #n2, (xuint64)__n1, #cmp, (xuint64)__n2, 'i');             \
         }                                                                                                                                                       \
     } X_STMT_END
 

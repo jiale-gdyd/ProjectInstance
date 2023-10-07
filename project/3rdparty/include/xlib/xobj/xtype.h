@@ -452,6 +452,16 @@ xuint x_type_get_type_registration_serial(void);
     }
 #endif
 
+#if XLIB_VERSION_MAX_ALLOWED >= XLIB_VERSION_2_80
+#define _x_type_once_init_type      XType
+#define _x_type_once_init_enter     x_once_init_enter_pointer
+#define _x_type_once_init_leave     x_once_init_leave_pointer
+#else
+#define _x_type_once_init_type      xsize
+#define _x_type_once_init_enter     x_once_init_enter
+#define _x_type_once_init_leave     x_once_init_leave
+#endif
+
 #define _X_DEFINE_TYPE_EXTENDED_BEGIN_PRE(TypeName, type_name, TYPE_PARENT)             \
                                                                                         \
     static void type_name##_init(TypeName *self);                                       \
@@ -470,12 +480,12 @@ xuint x_type_get_type_registration_serial(void);
                                                                                         \
     XType type_name##_get_type(void)                                                    \
     {                                                                                   \
-        static xsize static_x_define_type_id = 0;
+        static _x_type_once_init_type static_x_define_type_id = 0;
 
 #define _X_DEFINE_TYPE_EXTENDED_BEGIN_REGISTER(TypeName, type_name, TYPE_PARENT, flags)             \
-    if (x_once_init_enter(&static_x_define_type_id)) {                                              \
+    if (_x_type_once_init_enter(&static_x_define_type_id)) {                                        \
         XType x_define_type_id = type_name##_get_type_once();                                       \
-        x_once_init_leave(&static_x_define_type_id, x_define_type_id);                              \
+        _x_type_once_init_leave(&static_x_define_type_id, x_define_type_id);                        \
     }                                                                                               \
     return static_x_define_type_id;                                                                 \
     }                                                                                               \
@@ -508,8 +518,8 @@ xuint x_type_get_type_registration_serial(void);
                                                                                                         \
     XType type_name##_get_type(void)                                                                    \
     {                                                                                                   \
-        static xsize static_x_define_type_id = 0;                                                       \
-        if (x_once_init_enter(&static_x_define_type_id)) {                                              \
+        static _x_type_once_init_type static_x_define_type_id = 0;                                      \
+        if (_x_type_once_init_enter(&static_x_define_type_id)) {                                        \
             XType x_define_type_id =                                                                    \
                 x_type_register_static_simple(X_TYPE_INTERFACE,                                         \
                                             x_intern_static_string(#TypeName),                          \
@@ -524,7 +534,7 @@ xuint x_type_get_type_registration_serial(void);
 
 #define _X_DEFINE_INTERFACE_EXTENDED_END()                              \
     }                                                                   \
-      x_once_init_leave(&static_x_define_type_id, x_define_type_id);    \
+      _x_type_once_init_leave(&static_x_define_type_id, x_define_type_id);    \
     }                                                                   \
     return static_x_define_type_id;                                     \
 }
@@ -538,10 +548,10 @@ xuint x_type_get_type_registration_serial(void);
                                                                                                                                                         \
     XType type_name##_get_type(void)                                                                                                                    \
     {                                                                                                                                                   \
-        static xsize static_x_define_type_id = 0;                                                                                                       \
-        if (x_once_init_enter(&static_x_define_type_id)) {                                                                                              \
+        static _x_type_once_init_type static_x_define_type_id = 0;                                                                                      \
+        if (_x_type_once_init_enter(&static_x_define_type_id)) {                                                                                        \
             XType x_define_type_id = type_name##_get_type_once ();                                                                                      \
-            x_once_init_leave(&static_x_define_type_id, x_define_type_id);                                                                              \
+            _x_type_once_init_leave(&static_x_define_type_id, x_define_type_id);                                                                        \
         }                                                                                                                                               \
         return static_x_define_type_id;                                                                                                                 \
     }                                                                                                                                                   \
@@ -572,10 +582,10 @@ xuint x_type_get_type_registration_serial(void);
                                                                                                                                                         \
     XType type_name##_get_type(void)                                                                                                                    \
     {                                                                                                                                                   \
-        static xsize static_x_define_type_id = 0;                                                                                                       \
-        if (x_once_init_enter(&static_x_define_type_id)) {                                                                                              \
+        static _x_type_once_init_type static_x_define_type_id = 0;                                                                                      \
+        if (_x_type_once_init_enter(&static_x_define_type_id)) {                                                                                        \
             XType x_define_type_id = type_name##_get_type_once();                                                                                       \
-            x_once_init_leave(&static_x_define_type_id, x_define_type_id);                                                                              \
+            _x_type_once_init_leave(&static_x_define_type_id, x_define_type_id);                                                                        \
         }                                                                                                                                               \
         return static_x_define_type_id;                                                                                                                 \
     }                                                                                                                                                   \
@@ -591,10 +601,10 @@ xuint x_type_get_type_registration_serial(void);
                                                                                                                 \
     XType type_name##_get_type(void)                                                                            \
     {                                                                                                           \
-        static xsize static_x_define_type_id = 0;                                                               \
-        if (x_once_init_enter(&static_x_define_type_id)) {                                                      \
+        static _x_type_once_init_type static_x_define_type_id = 0;                                              \
+        if (_x_type_once_init_enter(&static_x_define_type_id)) {                                                \
             XType x_define_type_id = type_name##_get_type_once();                                               \
-            x_once_init_leave(&static_x_define_type_id, x_define_type_id);                                      \
+            _x_type_once_init_leave(&static_x_define_type_id, x_define_type_id);                                \
         }                                                                                                       \
         return static_x_define_type_id;                                                                         \
     }                                                                                                           \

@@ -87,6 +87,27 @@ xboolean (x_once_init_enter)(volatile void *location)
     return need_init;
 }
 
+xboolean (x_once_init_enter_pointer)(xpointer location)
+{
+    xboolean need_init = FALSE;
+    xpointer *value_location = (xpointer *)location;
+
+    x_mutex_lock(&x_once_mutex);
+    if (x_atomic_pointer_get(value_location) == 0) {
+        if (!x_slist_find(x_once_init_list, (void *)value_location)) {
+            need_init = TRUE;
+            x_once_init_list = x_slist_prepend(x_once_init_list, (void *)value_location);
+        } else {
+            do {
+                x_cond_wait(&x_once_cond, &x_once_mutex);
+            } while (x_slist_find(x_once_init_list, (void *)value_location));
+        }
+    }
+    x_mutex_unlock(&x_once_mutex);
+
+    return need_init;
+}
+
 void (x_once_init_leave)(volatile void *location, xsize result)
 {
     xsize old_value;
@@ -100,6 +121,23 @@ void (x_once_init_leave)(volatile void *location, xsize result)
     x_mutex_lock(&x_once_mutex);
     x_return_if_fail(x_once_init_list != NULL);
     x_once_init_list = x_slist_remove(x_once_init_list, (void*) value_location);
+    x_cond_broadcast(&x_once_cond);
+    x_mutex_unlock(&x_once_mutex);
+}
+
+void (x_once_init_leave_pointer)(xpointer location, xpointer result)
+{
+    xpointer old_value;
+    xpointer *value_location = (xpointer *)location;
+
+    x_return_if_fail(result != 0);
+
+    old_value = x_atomic_pointer_exchange(value_location, result);
+    x_return_if_fail(old_value == 0);
+
+    x_mutex_lock(&x_once_mutex);
+    x_return_if_fail(x_once_init_list != NULL);
+    x_once_init_list = x_slist_remove(x_once_init_list, (void *)value_location);
     x_cond_broadcast(&x_once_cond);
     x_mutex_unlock(&x_once_mutex);
 }

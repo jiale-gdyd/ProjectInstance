@@ -278,8 +278,8 @@ static void x_test_log(XTestLogType lbit, const xchar *string1, const xchar *str
     unsigned subtest_level;
     xchar *astrings[3] = { NULL, NULL, NULL };
 
-    if (x_once_init_enter(&x_default_print_func)) {
-        x_once_init_leave(&x_default_print_func, x_set_print_handler(x_test_print_handler));
+    if (x_once_init_enter_pointer(&x_default_print_func)) {
+        x_once_init_leave_pointer(&x_default_print_func, x_set_print_handler(x_test_print_handler));
         x_assert_nonnull(x_default_print_func);
     }
 

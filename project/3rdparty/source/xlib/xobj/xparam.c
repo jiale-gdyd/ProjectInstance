@@ -968,7 +968,7 @@ const XValue *x_param_spec_get_default_value(XParamSpec *pspec)
 {
     XParamSpecPrivate *priv = x_param_spec_get_private(pspec);
 
-    if (x_once_init_enter(&priv->default_value.x_type)) {
+    if (x_once_init_enter_pointer(&priv->default_value.x_type)) {
         XValue default_value = X_VALUE_INIT;
 
         x_value_init(&default_value, pspec->value_type);
@@ -976,7 +976,7 @@ const XValue *x_param_spec_get_default_value(XParamSpec *pspec)
 
         memcpy(priv->default_value.data, default_value.data, sizeof(default_value.data));
 
-        x_once_init_leave(&priv->default_value.x_type, pspec->value_type);
+        x_once_init_leave_pointer(&priv->default_value.x_type, pspec->value_type);
     }
 
     return &priv->default_value;

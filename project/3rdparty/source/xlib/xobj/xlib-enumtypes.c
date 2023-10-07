@@ -6,9 +6,9 @@ X_GNUC_BEGIN_IGNORE_DEPRECATIONS
 
 XType x_unicode_type_get_type(void)
 {
-    static xsize static_x_define_type_id = 0;
+    static XType static_x_define_type_id = 0;
 
-    if (x_once_init_enter(&static_x_define_type_id)) {
+    if (x_once_init_enter_pointer(&static_x_define_type_id)) {
         static const XEnumValue values[] = {
             { X_UNICODE_CONTROL, "X_UNICODE_CONTROL", "control" },
             { X_UNICODE_FORMAT, "X_UNICODE_FORMAT", "format" },
@@ -44,7 +44,7 @@ XType x_unicode_type_get_type(void)
         };
 
         XType x_define_type_id = x_enum_register_static(x_intern_static_string("XUnicodeType"), values);
-        x_once_init_leave (&static_x_define_type_id, x_define_type_id);
+        x_once_init_leave_pointer (&static_x_define_type_id, x_define_type_id);
     }
 
     return static_x_define_type_id;
@@ -52,9 +52,9 @@ XType x_unicode_type_get_type(void)
 
 XType x_unicode_break_type_get_type(void)
 {
-    static xsize static_x_define_type_id = 0;
+    static XType static_x_define_type_id = 0;
 
-    if (x_once_init_enter(&static_x_define_type_id)) {
+    if (x_once_init_enter_pointer(&static_x_define_type_id)) {
         static const XEnumValue values[] = {
             { X_UNICODE_BREAK_MANDATORY, "X_UNICODE_BREAK_MANDATORY", "mandatory" },
             { X_UNICODE_BREAK_CARRIAGE_RETURN, "X_UNICODE_BREAK_CARRIAGE_RETURN", "carriage-return" },
@@ -104,7 +104,7 @@ XType x_unicode_break_type_get_type(void)
         };
     
         XType x_define_type_id = x_enum_register_static(x_intern_static_string("XUnicodeBreakType"), values);
-        x_once_init_leave(&static_x_define_type_id, x_define_type_id);
+        x_once_init_leave_pointer(&static_x_define_type_id, x_define_type_id);
     }
 
     return static_x_define_type_id;
@@ -112,9 +112,9 @@ XType x_unicode_break_type_get_type(void)
 
 XType x_unicode_script_get_type(void)
 {
-    static xsize static_x_define_type_id = 0;
+    static XType static_x_define_type_id = 0;
 
-    if (x_once_init_enter(&static_x_define_type_id)) {
+    if (x_once_init_enter_pointer(&static_x_define_type_id)) {
         static const XEnumValue values[] = {
             { X_UNICODE_SCRIPT_INVALID_CODE, "X_UNICODE_SCRIPT_INVALID_CODE", "invalid-code" },
             { X_UNICODE_SCRIPT_COMMON, "X_UNICODE_SCRIPT_COMMON", "common" },
@@ -284,7 +284,7 @@ XType x_unicode_script_get_type(void)
         };
 
         XType x_define_type_id = x_enum_register_static(x_intern_static_string("XUnicodeScript"), values);
-        x_once_init_leave(&static_x_define_type_id, x_define_type_id);
+        x_once_init_leave_pointer(&static_x_define_type_id, x_define_type_id);
     }
 
     return static_x_define_type_id;
@@ -292,9 +292,9 @@ XType x_unicode_script_get_type(void)
 
 XType x_normalize_mode_get_type(void)
 {
-    static xsize static_x_define_type_id = 0;
+    static XType static_x_define_type_id = 0;
 
-    if (x_once_init_enter(&static_x_define_type_id)) {
+    if (x_once_init_enter_pointer(&static_x_define_type_id)) {
         static const XEnumValue values[] = {
             { X_NORMALIZE_DEFAULT, "X_NORMALIZE_DEFAULT", "default" },
             { X_NORMALIZE_NFD, "X_NORMALIZE_NFD", "nfd" },
@@ -308,7 +308,7 @@ XType x_normalize_mode_get_type(void)
         };
 
         XType x_define_type_id = x_enum_register_static(x_intern_static_string("XNormalizeMode"), values);
-        x_once_init_leave(&static_x_define_type_id, x_define_type_id);
+        x_once_init_leave_pointer(&static_x_define_type_id, x_define_type_id);
     }
 
     return static_x_define_type_id;

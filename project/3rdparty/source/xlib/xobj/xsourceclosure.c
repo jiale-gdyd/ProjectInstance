@@ -13,7 +13,7 @@ XType x_io_condition_get_type(void)
 {
     static XType etype = 0;
 
-    if (x_once_init_enter(&etype)) {
+    if (x_once_init_enter_pointer(&etype)) {
         static const XFlagsValue values[] = {
             { X_IO_IN,   "X_IO_IN",   "in" },
             { X_IO_OUT,  "X_IO_OUT",  "out" },
@@ -25,7 +25,7 @@ XType x_io_condition_get_type(void)
         };
 
         XType type_id = x_flags_register_static("XIOCondition", values);
-        x_once_init_leave(&etype, type_id);
+        x_once_init_leave_pointer(&etype, type_id);
     }
 
     return etype;

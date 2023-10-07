@@ -281,10 +281,10 @@ static char *unalias_lang(char *lang)
     char *p;
     static XHashTable *alias_table = NULL;
 
-    if (x_once_init_enter(&alias_table)) {
+    if (x_once_init_enter_pointer(&alias_table)) {
         XHashTable *table = x_hash_table_new(x_str_hash, x_str_equal);
         read_aliases("/usr/share/locale/locale.alias", table);
-        x_once_init_leave(&alias_table, table);
+        x_once_init_leave_pointer(&alias_table, table);
     }
 
     i = 0;

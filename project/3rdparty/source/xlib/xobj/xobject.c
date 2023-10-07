@@ -912,13 +912,13 @@ static void maybe_issue_property_deprecation_warning(const XParamSpec *pspec)
     static const xchar *enable_diagnostic;
     static XHashTable *already_warned_table;
 
-    if (x_once_init_enter(&enable_diagnostic)) {
+    if (x_once_init_enter_pointer(&enable_diagnostic)) {
         const xchar *value = x_getenv("X_ENABLE_DIAGNOSTIC");
         if (!value) {
             value = "0";
         }
 
-        x_once_init_leave(&enable_diagnostic, value);
+        x_once_init_leave_pointer(&enable_diagnostic, value);
     }
 
     if (enable_diagnostic[0] == '0') {

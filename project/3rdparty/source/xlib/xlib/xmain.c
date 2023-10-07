@@ -63,6 +63,7 @@ typedef enum {
 typedef struct _XSourceList XSourceList;
 
 struct _XSourceList {
+    XList   link;
     XSource *head, *tail;
     xint    priority;
 };
@@ -93,7 +94,7 @@ struct _XMainContext {
     XPtrArray         *pending_dispatches;
     xint              timeout;
     xuint             next_id;
-    XList             *source_lists;
+    XQueue            source_lists;
     xint              in_check_or_prepare;
     XPollRec          *poll_records;
     xuint             n_poll_records;
@@ -321,11 +322,12 @@ void x_main_context_unref(XMainContext *context)
         x_source_destroy_internal(source, context, TRUE);
     }
 
-    for (sl_iter = context->source_lists; sl_iter; sl_iter = sl_iter->next) {
+    sl_iter = context->source_lists.head;
+    while (sl_iter != NULL) {
         list = (XSourceList *)sl_iter->data;
+        sl_iter = sl_iter->next;
         x_slice_free(XSourceList, list);
     }
-    x_list_free(context->source_lists);
 
     x_hash_table_destroy(context->sources);
 
@@ -384,7 +386,6 @@ XMainContext *x_main_context_new_with_flags(XMainContextFlags flags)
     context->waiters = NULL;
     context->ref_count = 1;
     context->next_id = 1;
-    context->source_lists = NULL;
     context->poll_func = x_poll;
     context->cached_poll_array = NULL;
     context->cached_poll_array_size = 0;
@@ -405,12 +406,12 @@ XMainContext *x_main_context_default(void)
 {
     static XMainContext *default_main_context = NULL;
 
-    if (x_once_init_enter(&default_main_context)) {
+    if (x_once_init_enter_pointer(&default_main_context)) {
         XMainContext *context;
 
         context = x_main_context_new();
         TRACE(XLIB_MAIN_CONTEXT_DEFAULT(context));
-        x_once_init_leave(&default_main_context, context);
+        x_once_init_leave_pointer(&default_main_context, context);
     }
 
     return default_main_context;
@@ -555,7 +556,7 @@ static xboolean x_source_iter_next(XSourceIter *iter, XSource **source)
         if (iter->current_list) {
             iter->current_list = iter->current_list->next;
         } else {
-            iter->current_list = iter->context->source_lists;
+            iter->current_list = iter->context->source_lists.head;
         }
 
         if (iter->current_list) {
@@ -587,11 +588,10 @@ static void x_source_iter_clear(XSourceIter *iter)
 
 static XSourceList *find_source_list_for_priority(XMainContext *context, xint priority, xboolean create)
 {
-    XList *iter, *last;
+    XList *iter;
     XSourceList *source_list;
 
-    last = NULL;
-    for (iter = context->source_lists; iter != NULL; last = iter, iter = iter->next) {
+    for (iter = context->source_lists.head; iter; iter = iter->next) {
         source_list = (XSourceList *)iter->data;
 
         if (source_list->priority == priority) {
@@ -604,8 +604,9 @@ static XSourceList *find_source_list_for_priority(XMainContext *context, xint pr
             }
 
             source_list = x_slice_new0(XSourceList);
+            source_list->link.data = source_list;
             source_list->priority = priority;
-            context->source_lists = x_list_insert_before(context->source_lists, iter, source_list);
+            x_queue_insert_before_link(&context->source_lists, iter, &source_list->link);
             return source_list;
         }
     }
@@ -615,14 +616,9 @@ static XSourceList *find_source_list_for_priority(XMainContext *context, xint pr
     }
 
     source_list = x_slice_new0(XSourceList);
+    source_list->link.data = source_list;
     source_list->priority = priority;
-
-    if (!last) {
-        context->source_lists = x_list_append(NULL, source_list);
-    } else {
-        last = x_list_append(last, source_list);
-        (void)last;
-    }
+    x_queue_push_tail_link(&context->source_lists, &source_list->link);
 
     return source_list;
 }
@@ -682,7 +678,7 @@ static void source_remove_from_context(XSource *source, XMainContext *context)
     source->next = NULL;
 
     if (source_list->head == NULL) {
-        context->source_lists = x_list_remove(context->source_lists, source_list);
+        x_queue_unlink(&context->source_lists, &source_list->link);
         x_slice_free(XSourceList, source_list);
     }
 }
@@ -1310,7 +1306,7 @@ static void x_source_unref_internal(XSource *source, XMainContext *context, xboo
                 x_warning(X_STRLOC ": ref_count == 0, but source was still attached to a context!");
             }
 
-            source_remove_from_context (source, context);
+            source_remove_from_context(source, context);
             x_hash_table_remove(context->sources, XUINT_TO_POINTER (source->source_id));
         }
 

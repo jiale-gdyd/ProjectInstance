@@ -12,9 +12,9 @@
 
 XType x_binding_flags_get_type(void)
 {
-    static xsize static_x_define_type_id = 0;
+    static XType static_x_define_type_id = 0;
 
-    if (x_once_init_enter(&static_x_define_type_id)) {
+    if (x_once_init_enter_pointer(&static_x_define_type_id)) {
         static const XFlagsValue values[] = {
             { X_BINDING_DEFAULT, "X_BINDING_DEFAULT", "default" },
             { X_BINDING_BIDIRECTIONAL, "X_BINDING_BIDIRECTIONAL", "bidirectional" },
@@ -24,7 +24,7 @@ XType x_binding_flags_get_type(void)
         };
 
         XType x_define_type_id = x_flags_register_static(x_intern_static_string("XBindingFlags"), values);
-        x_once_init_leave(&static_x_define_type_id, x_define_type_id);
+        x_once_init_leave_pointer(&static_x_define_type_id, x_define_type_id);
     }
 
     return static_x_define_type_id;

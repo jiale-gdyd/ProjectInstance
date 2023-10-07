@@ -125,11 +125,11 @@ X_DEFINE_BOXED_TYPE(XPatternSpec, x_pattern_spec, x_pattern_spec_copy, x_pattern
 
 XType x_strv_get_type(void)
 {
-    static xsize static_x_define_type_id = 0;
+    static XType static_x_define_type_id = 0;
 
-    if (x_once_init_enter(&static_x_define_type_id)) {
+    if (x_once_init_enter_pointer(&static_x_define_type_id)) {
         XType x_define_type_id = x_boxed_type_register_static(x_intern_static_string("GStrv"), (XBoxedCopyFunc)x_strdupv, (XBoxedFreeFunc)x_strfreev);
-        x_once_init_leave(&static_x_define_type_id, x_define_type_id);
+        x_once_init_leave_pointer(&static_x_define_type_id, x_define_type_id);
     }
 
     return static_x_define_type_id;

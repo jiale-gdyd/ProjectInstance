@@ -204,7 +204,7 @@ static UserDatabaseEntry *x_get_user_database_entry (void)
 {
     static UserDatabaseEntry *entry;
 
-    if (x_once_init_enter(&entry)) {
+    if (x_once_init_enter_pointer(&entry)) {
         static UserDatabaseEntry e;
 
         {
@@ -292,7 +292,7 @@ static UserDatabaseEntry *x_get_user_database_entry (void)
             e.real_name = x_strdup("Unknown");
         }
 
-        x_once_init_leave(&entry, &e);
+        x_once_init_leave_pointer(&entry, &e);
     }
 
     return entry;
@@ -397,7 +397,7 @@ const xchar *x_get_host_name(void)
 {
     static xchar *hostname;
 
-    if (x_once_init_enter(&hostname)) {
+    if (x_once_init_enter_pointer(&hostname)) {
         xsize size;
         xchar *tmp;
         xboolean failed;
@@ -434,7 +434,7 @@ const xchar *x_get_host_name(void)
         }
         utmp = tmp;
 
-        x_once_init_leave(&hostname, failed ? x_strdup("localhost") : utmp);
+        x_once_init_leave_pointer(&hostname, failed ? x_strdup("localhost") : utmp);
     }
 
     return hostname;

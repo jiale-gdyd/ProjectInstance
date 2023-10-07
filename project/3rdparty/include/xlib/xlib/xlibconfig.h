@@ -137,7 +137,7 @@ typedef unsigned int xuintptr;
 #endif
 
 #define XLIB_MAJOR_VERSION                      2
-#define XLIB_MINOR_VERSION                      78
+#define XLIB_MINOR_VERSION                      79
 #define XLIB_MICRO_VERSION                      0
 
 #define X_OS_UNIX

@@ -189,6 +189,12 @@ xboolean x_once_init_enter(volatile void *location);
 XLIB_AVAILABLE_IN_ALL
 void x_once_init_leave(volatile void *location, xsize result);
 
+XLIB_AVAILABLE_IN_2_80
+xboolean x_once_init_enter_pointer(void *location);
+
+XLIB_AVAILABLE_IN_2_80
+void x_once_init_leave_pointer(void *location, xpointer result);
+
 #if defined(X_ATOMIC_LOCK_FREE) && defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4) && defined(__ATOMIC_SEQ_CST)
 #define x_once(once, func, arg)                 ((__atomic_load_n(&(once)->status, __ATOMIC_ACQUIRE) == X_ONCE_STATUS_READY) ? (once)->retval : x_once_impl((once), (func), (arg)))
 #else
@@ -209,9 +215,26 @@ void x_once_init_leave(volatile void *location, xsize result);
         0 ? (void)(*(location) = (result)) : (void) 0;                      \
         x_once_init_leave((location), (xsize)(result));                     \
     }))
+
+#define x_once_init_enter_pointer(location)                                 \
+    (X_GNUC_EXTENSION ({                                                    \
+        X_STATIC_ASSERT(sizeof *(location) == sizeof(xpointer));            \
+        (void) (0 ? (xpointer) * (location) : NULL);                        \
+        (!x_atomic_pointer_get(location) &&                                 \
+        x_once_init_enter_pointer(location));                               \
+    })) XLIB_AVAILABLE_MACRO_IN_2_80
+
+#define x_once_init_leave_pointer(location, result)                         \
+    (X_GNUC_EXTENSION ({                                                    \
+        X_STATIC_ASSERT (sizeof *(location) == sizeof(xpointer));           \
+        0 ? (void) (*(location) = (result)) : (void) 0;                     \
+        x_once_init_leave_pointer((location), (xpointer)(xuintptr) (result)); \
+    })) XLIB_AVAILABLE_MACRO_IN_2_80
 #else
-#define x_once_init_enter(location)             (x_once_init_enter((location)))
-#define x_once_init_leave(location, result)     (x_once_init_leave((location), (xsize) (result)))
+#define x_once_init_enter(location)                  (x_once_init_enter((location)))
+#define x_once_init_leave(location, result)          (x_once_init_leave((location), (xsize) (result)))
+#define x_once_init_enter_pointer(location)          (x_once_init_enter_pointer((location))) XLIB_AVAILABLE_MACRO_IN_2_80
+#define x_once_init_leave_pointer(location, result)  (x_once_init_leave_pointer((location), (xpointer)(xuintptr)(result))) XLIB_AVAILABLE_MACRO_IN_2_80
 #endif
 
 XLIB_AVAILABLE_IN_2_36

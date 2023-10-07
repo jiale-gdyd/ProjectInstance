@@ -43,12 +43,20 @@ void x_wakeup_get_pollfd(XWakeup *wakeup, XPollFD *poll_fd)
 
 void x_wakeup_acknowledge(XWakeup *wakeup)
 {
+    int res;
+
     if (wakeup->fds[1] == -1) {
         uint64_t value;
-        while (read(wakeup->fds[0], &value, sizeof(value)) == sizeof(value));
+
+        do {
+            res = read(wakeup->fds[0], &value, sizeof(value));
+        } while (X_UNLIKELY(res == -1 && errno == EINTR));
     } else {
         uint8_t value;
-        while (read(wakeup->fds[0], &value, sizeof(value)) == sizeof(value));
+
+        do {
+            res = read(wakeup->fds[0], &value, sizeof(value));
+        } while (res == sizeof(value) || X_UNLIKELY(res == -1 && errno == EINTR));
     }
 }
 
