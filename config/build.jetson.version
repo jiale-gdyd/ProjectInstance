@@ -1,4 +1,4 @@
-ifeq ($(APP_NAME),jetsonApp)
+ifeq ($(APP_NAME),xavier_dsl)
 VERSION = 0
 PATCHLEVEL = 0
 SUBLEVEL = 0

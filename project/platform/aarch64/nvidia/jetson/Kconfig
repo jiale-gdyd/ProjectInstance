@@ -9,8 +9,8 @@ prompt "Nvidia jetson Application Implementation"
 depends on NVIDIA && JETSON
 default JETSON_UNKNOWN
 
-config JETSON_EMS
-    bool "Electronic rearview mirror system"
+config JETSON_XAVIER_DSL
+    bool "Nvidia Jetson Xavier NX deepstream-services-library"
 
 config JETSON_UNKNOWN
     bool "Unknown Application"
