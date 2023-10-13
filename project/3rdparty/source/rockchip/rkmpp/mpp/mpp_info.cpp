@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2023-09-28 fix[camera_source]: enumerate device and format";
+static const char *mpp_last_commit_message = "2023-10-12 feat[mpp_thread]: Add simple thread";
 
 void show_mpp_version(void)
 {

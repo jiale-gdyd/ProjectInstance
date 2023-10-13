@@ -40,8 +40,8 @@ MPP_RET os_allocator_get(os_allocator *api, MppBufferType type)
         *api = allocator_std;
     } break;
     case MPP_BUFFER_TYPE_ION : {
-        *api = (mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_ION)) ? allocator_ion :
-               (mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_DMA_HEAP)) ? allocator_dma_heap :
+        *api = (mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_DMA_HEAP)) ? allocator_dma_heap :
+               (mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_ION)) ? allocator_ion :
 #if defined(CONFIG_LIBDRM)
                (mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_DRM)) ? allocator_drm :
 #endif

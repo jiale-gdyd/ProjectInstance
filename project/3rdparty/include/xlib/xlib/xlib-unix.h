@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 
 #include "../xlib.h"
+#include "xstdio.h"
 
 X_BEGIN_DECLS
 
@@ -44,6 +45,65 @@ xuint x_unix_fd_add(xint fd, XIOCondition condition, XUnixFDSourceFunc function,
 
 XLIB_AVAILABLE_IN_2_64
 struct passwd *x_unix_get_passwd_entry(const xchar *user_name, XError **error);
+
+XLIB_AVAILABLE_TYPE_IN_2_80
+typedef struct {
+    int fds[2];
+} XUnixPipe;
+
+XLIB_AVAILABLE_TYPE_IN_2_80
+typedef enum {
+    X_UNIX_PIPE_END_READ = 0,
+    X_UNIX_PIPE_END_WRITE = 1
+} XUnixPipeEnd;
+
+#define X_UNIX_PIPE_INIT        { { -1, -1 } } XLIB_AVAILABLE_MACRO_IN_2_80
+
+X_GNUC_BEGIN_IGNORE_DEPRECATIONS
+
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_80
+static inline xboolean x_unix_pipe_open(XUnixPipe *self, int flags, XError **error)
+{
+    return x_unix_open_pipe(self->fds, flags, error);
+}
+
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_80
+static inline int x_unix_pipe_get(XUnixPipe *self, XUnixPipeEnd end)
+{
+    return self->fds[end];
+}
+
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_80
+static inline int x_unix_pipe_steal(XUnixPipe *self, XUnixPipeEnd end)
+{
+    return x_steal_fd(&self->fds[end]);
+}
+
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_80
+static inline xboolean x_unix_pipe_close(XUnixPipe *self, XUnixPipeEnd end, XError **error)
+{
+    return x_clear_fd(&self->fds[end], error);
+}
+
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_80
+static inline void x_unix_pipe_clear(XUnixPipe *self)
+{
+    int errsv = errno;
+
+    if (!x_unix_pipe_close(self, X_UNIX_PIPE_END_READ, NULL)) {
+
+    }
+
+    if (!x_unix_pipe_close(self, X_UNIX_PIPE_END_WRITE, NULL)) {
+
+    }
+
+    errno = errsv;
+}
+
+X_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(XUnixPipe, x_unix_pipe_clear)
+
+X_GNUC_END_IGNORE_DEPRECATIONS
 
 X_END_DECLS
 

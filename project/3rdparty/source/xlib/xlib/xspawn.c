@@ -67,16 +67,6 @@ xboolean x_spawn_async(const xchar *working_directory, xchar **argv, xchar **env
     return x_spawn_async_with_pipes(working_directory, argv, envp, flags, child_setup, user_data, child_pid, NULL, NULL, NULL, error);
 }
 
-static void close_and_invalidate(xint *fd)
-{
-    if (*fd < 0) {
-        return;
-    }
-
-    x_close(*fd, NULL);
-    *fd = -1;
-}
-
 #undef READ_OK
 
 typedef enum {
@@ -192,8 +182,7 @@ xboolean x_spawn_sync(const xchar *working_directory, xchar **argv, xchar **envp
                     break;
 
                 case READ_EOF:
-                    close_and_invalidate(&outpipe);
-                    outpipe = -1;
+                    x_clear_fd(&outpipe, NULL);
                     break;
 
                 default:
@@ -212,8 +201,7 @@ xboolean x_spawn_sync(const xchar *working_directory, xchar **argv, xchar **envp
                     break;
 
                 case READ_EOF:
-                    close_and_invalidate(&errpipe);
-                    errpipe = -1;
+                    x_clear_fd(&errpipe, NULL);
                     break;
 
                 default:
@@ -226,13 +214,8 @@ xboolean x_spawn_sync(const xchar *working_directory, xchar **argv, xchar **envp
         }
     }
 
-    if (outpipe >= 0) {
-        close_and_invalidate(&outpipe);
-    }
-
-    if (errpipe >= 0) {
-        close_and_invalidate(&errpipe);
-    }
+    x_clear_fd(&outpipe, NULL);
+    x_clear_fd(&errpipe, NULL);
 
 again:
     ret = waitpid(pid, &status, 0);
@@ -722,7 +705,7 @@ static void do_exec(xint child_err_report_fd, xint stdin_fd, xint stdout_fd, xin
             write_err_and_exit(child_err_report_fd, CHILD_DUPFD_FAILED);
         }
 
-        close_and_invalidate(&read_null);
+        x_clear_fd(&read_null, NULL);
     }
 
     if (IS_STD_FILENO(stdout_fd) && (stdout_fd != STDOUT_FILENO)) {
@@ -753,7 +736,7 @@ static void do_exec(xint child_err_report_fd, xint stdin_fd, xint stdout_fd, xin
             write_err_and_exit(child_err_report_fd, CHILD_DUPFD_FAILED);
         }
 
-        close_and_invalidate(&write_null);
+        x_clear_fd(&write_null, NULL);
     }
 
     if (IS_STD_FILENO(stderr_fd) && (stderr_fd != STDERR_FILENO)) {
@@ -778,7 +761,7 @@ static void do_exec(xint child_err_report_fd, xint stdin_fd, xint stdout_fd, xin
             write_err_and_exit(child_err_report_fd, CHILD_DUPFD_FAILED);
         }
 
-        close_and_invalidate(&write_null);
+        x_clear_fd(&write_null, NULL);
     }
 
     if (close_descriptors) {
@@ -836,7 +819,7 @@ static void do_exec(xint child_err_report_fd, xint stdin_fd, xint stdout_fd, xin
                     write_err_and_exit(child_err_report_fd, CHILD_DUPFD_FAILED);
                 }
 
-                close_and_invalidate(&source_fds[i]);
+                x_clear_fd(&source_fds[i], NULL);
             }
         }
     }
@@ -1055,12 +1038,12 @@ static xboolean do_posix_spawn(const xchar *const *argv, const xchar *const *env
 
 out_close_fds:
     for (i = 0; i < num_parent_close_fds; i++) {
-        close_and_invalidate(&parent_close_fds [i]);
+        x_clear_fd(&parent_close_fds[i], NULL);
     }
 
     if (duped_source_fds != NULL) {
         for (i = 0; i < n_fds; i++) {
-            close_and_invalidate(&duped_source_fds[i]);
+            x_clear_fd(&duped_source_fds[i], NULL);
         }
 
         x_free(duped_source_fds);
@@ -1076,6 +1059,11 @@ out_free_spawnattr:
 }
 #endif
 
+static xboolean source_fds_collide_with_pipe(const XUnixPipe *pipefd, const int *source_fds, xsize n_fds, XError **error)
+{
+    return (_x_spawn_invalid_source_fd(pipefd->fds[X_UNIX_PIPE_END_READ], source_fds, n_fds, error) || _x_spawn_invalid_source_fd(pipefd->fds[X_UNIX_PIPE_END_WRITE], source_fds, n_fds, error));
+}
+
 static xboolean fork_exec(xboolean intermediate_child, const xchar *working_directory, const xchar *const *argv, const xchar *const *envp, xboolean close_descriptors, xboolean search_path, xboolean search_path_from_envp, xboolean stdout_to_null, xboolean stderr_to_null, xboolean child_inherits_stdin, xboolean file_and_argv_zero, xboolean cloexec_pipes, XSpawnChildSetupFunc child_setup, xpointer user_data, XPid *child_pid, xint *stdin_pipe_out, xint *stdout_pipe_out, xint *stderr_pipe_out, xint stdin_fd, xint stdout_fd, xint stderr_fd, const xint *source_fds, const xint *target_fds, xsize n_fds, XError **error)
 {
     xint status;
@@ -1086,14 +1074,14 @@ static xboolean fork_exec(xboolean intermediate_child, const xchar *working_dire
     xint *source_fds_copy = NULL;
     const xchar *chosen_search_path;
     xchar **argv_buffer_heap = NULL;
-    xint stdin_pipe[2] = { -1, -1 };
-    xint stdout_pipe[2] = { -1, -1 };
-    xint stderr_pipe[2] = { -1, -1 };
+    XUnixPipe stdin_pipe = X_UNIX_PIPE_INIT;
+    XUnixPipe stdout_pipe = X_UNIX_PIPE_INIT;
+    XUnixPipe stderr_pipe = X_UNIX_PIPE_INIT;
     xchar *search_path_buffer = NULL;
     xsize search_path_buffer_len = 0;
     xchar *search_path_buffer_heap = NULL;
-    xint child_err_report_pipe[2] = { -1, -1 };
-    xint child_pid_report_pipe[2] = { -1, -1 };
+    XUnixPipe child_err_report_pipe = X_UNIX_PIPE_INIT;
+    XUnixPipe child_pid_report_pipe = X_UNIX_PIPE_INIT;
     xint child_close_fds[4] = { -1, -1, -1, -1 };
     xuint pipe_flags = cloexec_pipes ? FD_CLOEXEC : 0;
 
@@ -1103,48 +1091,42 @@ static xboolean fork_exec(xboolean intermediate_child, const xchar *working_dire
     x_assert(stderr_pipe_out == NULL || stderr_fd < 0);
 
     if (stdin_pipe_out != NULL) {
-        if (!x_unix_open_pipe(stdin_pipe, pipe_flags, error)) {
+        if (!x_unix_pipe_open(&stdin_pipe, pipe_flags, error)) {
             goto cleanup_and_fail;
         }
 
-        if (_x_spawn_invalid_source_fd(stdin_pipe[0], source_fds, n_fds, error)
-          || _x_spawn_invalid_source_fd(stdin_pipe[1], source_fds, n_fds, error))
-        {
+        if (source_fds_collide_with_pipe(&stdin_pipe, source_fds, n_fds, error)) {
             goto cleanup_and_fail;
         }
 
-        child_close_fds[n_child_close_fds++] = stdin_pipe[1];
-        stdin_fd = stdin_pipe[0];
+        child_close_fds[n_child_close_fds++] = x_unix_pipe_get(&stdin_pipe, X_UNIX_PIPE_END_WRITE);
+        stdin_fd = x_unix_pipe_get(&stdin_pipe, X_UNIX_PIPE_END_READ);
     }
 
     if (stdout_pipe_out != NULL) {
-        if (!x_unix_open_pipe(stdout_pipe, pipe_flags, error)) {
+        if (!x_unix_pipe_open(&stdout_pipe, pipe_flags, error)) {
             goto cleanup_and_fail;
         }
 
-        if (_x_spawn_invalid_source_fd(stdout_pipe[0], source_fds, n_fds, error)
-            || _x_spawn_invalid_source_fd(stdout_pipe[1], source_fds, n_fds, error))
-        {
+        if (source_fds_collide_with_pipe(&stdout_pipe, source_fds, n_fds, error)) {
             goto cleanup_and_fail;
         }
 
-        child_close_fds[n_child_close_fds++] = stdout_pipe[0];
-        stdout_fd = stdout_pipe[1];
+        child_close_fds[n_child_close_fds++] = x_unix_pipe_get(&stdout_pipe, X_UNIX_PIPE_END_READ);
+        stdout_fd = x_unix_pipe_get(&stdout_pipe, X_UNIX_PIPE_END_WRITE);
     }
 
     if (stderr_pipe_out != NULL) {
-        if (!x_unix_open_pipe(stderr_pipe, pipe_flags, error)) {
+        if (!x_unix_pipe_open(&stderr_pipe, pipe_flags, error)) {
             goto cleanup_and_fail;
         }
 
-        if (_x_spawn_invalid_source_fd(stderr_pipe[0], source_fds, n_fds, error)
-            || _x_spawn_invalid_source_fd(stderr_pipe[1], source_fds, n_fds, error))
-        {
+        if (source_fds_collide_with_pipe(&stderr_pipe, source_fds, n_fds, error)) {
             goto cleanup_and_fail;
         }
 
-        child_close_fds[n_child_close_fds++] = stderr_pipe[0];
-        stderr_fd = stderr_pipe[1];
+        child_close_fds[n_child_close_fds++] = x_unix_pipe_get(&stderr_pipe, X_UNIX_PIPE_END_READ);
+        stderr_fd = x_unix_pipe_get(&stderr_pipe, X_UNIX_PIPE_END_WRITE);
     }
 
     child_close_fds[n_child_close_fds++] = -1;
@@ -1217,24 +1199,20 @@ static xboolean fork_exec(xboolean intermediate_child, const xchar *working_dire
         memcpy(source_fds_copy, source_fds, sizeof(*source_fds) * n_fds);
     }
 
-    if (!x_unix_open_pipe(child_err_report_pipe, pipe_flags, error)) {
+    if (!x_unix_pipe_open(&child_err_report_pipe, pipe_flags, error)) {
         goto cleanup_and_fail;
     }
 
-    if (_x_spawn_invalid_source_fd(child_err_report_pipe[0], source_fds, n_fds, error)
-        || _x_spawn_invalid_source_fd(child_err_report_pipe[1], source_fds, n_fds, error))
-    {
+    if (source_fds_collide_with_pipe(&child_err_report_pipe, source_fds, n_fds, error)) {
         goto cleanup_and_fail;
     }
 
     if (intermediate_child) {
-        if (!x_unix_open_pipe(child_pid_report_pipe, pipe_flags, error)) {
+        if (!x_unix_pipe_open(&child_pid_report_pipe, pipe_flags, error)) {
             goto cleanup_and_fail;
         }
 
-        if (_x_spawn_invalid_source_fd(child_pid_report_pipe[0], source_fds, n_fds, error)
-            || _x_spawn_invalid_source_fd(child_pid_report_pipe[1], source_fds, n_fds, error))
-        {
+        if (source_fds_collide_with_pipe(&child_pid_report_pipe, source_fds, n_fds, error)) {
             goto cleanup_and_fail;
         }
     }
@@ -1252,12 +1230,13 @@ static xboolean fork_exec(xboolean intermediate_child, const xchar *working_dire
         signal(SIGHUP, SIG_DFL);
         signal(SIGPIPE, SIG_DFL);
 
-        close_and_invalidate(&child_err_report_pipe[0]);
-        close_and_invalidate(&child_pid_report_pipe[0]);
+        x_unix_pipe_close(&child_err_report_pipe, X_UNIX_PIPE_END_READ, NULL);
+        x_unix_pipe_close(&child_pid_report_pipe, X_UNIX_PIPE_END_READ, NULL);
+
         if (child_close_fds[0] != -1) {
             int i = -1;
             while (child_close_fds[++i] != -1) {
-                close_and_invalidate(&child_close_fds[i]);
+                x_clear_fd(&child_close_fds[i], NULL);
             }
         }
 
@@ -1266,26 +1245,26 @@ static xboolean fork_exec(xboolean intermediate_child, const xchar *working_dire
             grandchild_pid = fork();
 
             if (grandchild_pid < 0) {
-                write_all(child_pid_report_pipe[1], &grandchild_pid, sizeof(grandchild_pid));
-                write_err_and_exit(child_err_report_pipe[1], CHILD_FORK_FAILED);
+                write_all(x_unix_pipe_get(&child_pid_report_pipe, X_UNIX_PIPE_END_WRITE), &grandchild_pid, sizeof(grandchild_pid));
+                write_err_and_exit(x_unix_pipe_get(&child_err_report_pipe, X_UNIX_PIPE_END_WRITE), CHILD_FORK_FAILED);  
             } else if (grandchild_pid == 0) {
-                close_and_invalidate(&child_pid_report_pipe[1]);
-                do_exec(child_err_report_pipe[1], stdin_fd, stdout_fd, stderr_fd, source_fds_copy, target_fds, n_fds, working_directory, argv, argv_buffer, argv_buffer_len, envp, close_descriptors, chosen_search_path, search_path_buffer, search_path_buffer_len, stdout_to_null, stderr_to_null, child_inherits_stdin, file_and_argv_zero, child_setup, user_data);
+                x_unix_pipe_close(&child_pid_report_pipe, X_UNIX_PIPE_END_WRITE, NULL);
+                do_exec(x_unix_pipe_get(&child_err_report_pipe, X_UNIX_PIPE_END_WRITE), stdin_fd, stdout_fd, stderr_fd, source_fds_copy, target_fds, n_fds, working_directory, argv, argv_buffer, argv_buffer_len, envp, close_descriptors, chosen_search_path, search_path_buffer, search_path_buffer_len, stdout_to_null, stderr_to_null, child_inherits_stdin, file_and_argv_zero, child_setup, user_data);
             } else {
-                write_all(child_pid_report_pipe[1], &grandchild_pid, sizeof(grandchild_pid));
-                close_and_invalidate(&child_pid_report_pipe[1]);
+                write_all(x_unix_pipe_get(&child_pid_report_pipe, X_UNIX_PIPE_END_WRITE), &grandchild_pid, sizeof(grandchild_pid));
+                x_unix_pipe_close(&child_pid_report_pipe, X_UNIX_PIPE_END_WRITE, NULL);
 
                 _exit(0);
             }
         } else {
-            do_exec(child_err_report_pipe[1], stdin_fd, stdout_fd, stderr_fd, source_fds_copy, target_fds, n_fds, working_directory, argv, argv_buffer, argv_buffer_len, envp, close_descriptors, chosen_search_path, search_path_buffer, search_path_buffer_len, stdout_to_null, stderr_to_null, child_inherits_stdin, file_and_argv_zero, child_setup, user_data);
+            do_exec(x_unix_pipe_get(&child_err_report_pipe, X_UNIX_PIPE_END_WRITE), stdin_fd, stdout_fd, stderr_fd, source_fds_copy, target_fds, n_fds, working_directory, argv, argv_buffer, argv_buffer_len, envp, close_descriptors, chosen_search_path, search_path_buffer, search_path_buffer_len, stdout_to_null, stderr_to_null, child_inherits_stdin, file_and_argv_zero, child_setup, user_data);
         }
     } else {
         xint buf[2];
         xint n_ints = 0;
 
-        close_and_invalidate(&child_err_report_pipe[1]);
-        close_and_invalidate(&child_pid_report_pipe[1]);
+        x_unix_pipe_close(&child_err_report_pipe, X_UNIX_PIPE_END_WRITE, NULL);
+        x_unix_pipe_close(&child_pid_report_pipe, X_UNIX_PIPE_END_WRITE, NULL);
 
         if (intermediate_child) {
             wait_again:
@@ -1300,7 +1279,7 @@ static xboolean fork_exec(xboolean intermediate_child, const xchar *working_dire
             }
         }
 
-        if (!read_ints(child_err_report_pipe[0], buf, 2, &n_ints, error)) {
+        if (!read_ints(x_unix_pipe_get(&child_err_report_pipe, X_UNIX_PIPE_END_READ), buf, 2, &n_ints, error)) {
             goto cleanup_and_fail;
         }
 
@@ -1341,7 +1320,7 @@ static xboolean fork_exec(xboolean intermediate_child, const xchar *working_dire
         if (intermediate_child) {
             n_ints = 0;
 
-            if (!read_ints(child_pid_report_pipe[0], buf, 1, &n_ints, error)) {
+            if (!read_ints(x_unix_pipe_get(&child_pid_report_pipe, X_UNIX_PIPE_END_READ), buf, 1, &n_ints, error)) {
                 goto cleanup_and_fail;
             }
 
@@ -1354,8 +1333,8 @@ static xboolean fork_exec(xboolean intermediate_child, const xchar *working_dire
             }
         }
 
-        close_and_invalidate(&child_err_report_pipe[0]);
-        close_and_invalidate(&child_pid_report_pipe[0]);
+        x_unix_pipe_close(&child_err_report_pipe, X_UNIX_PIPE_END_READ, NULL);
+        x_unix_pipe_close(&child_pid_report_pipe, X_UNIX_PIPE_END_READ, NULL);
 
         x_free(search_path_buffer_heap);
         x_free(argv_buffer_heap);
@@ -1369,20 +1348,20 @@ static xboolean fork_exec(xboolean intermediate_child, const xchar *working_dire
     }
 
 success:
-    close_and_invalidate(&stdin_pipe[0]);
-    close_and_invalidate(&stdout_pipe[1]);
-    close_and_invalidate(&stderr_pipe[1]);
+    x_unix_pipe_close(&stdin_pipe, X_UNIX_PIPE_END_READ, NULL);
+    x_unix_pipe_close(&stdout_pipe, X_UNIX_PIPE_END_WRITE, NULL);
+    x_unix_pipe_close(&stderr_pipe, X_UNIX_PIPE_END_WRITE, NULL);
 
     if (stdin_pipe_out != NULL) {
-        *stdin_pipe_out = x_steal_fd(&stdin_pipe[1]);
+        *stdin_pipe_out = x_unix_pipe_steal(&stdin_pipe, X_UNIX_PIPE_END_WRITE);
     }
 
     if (stdout_pipe_out != NULL) {
-        *stdout_pipe_out = x_steal_fd(&stdout_pipe[0]);
+        *stdout_pipe_out = x_unix_pipe_steal(&stdout_pipe, X_UNIX_PIPE_END_READ);
     }
 
     if (stderr_pipe_out != NULL) {
-        *stderr_pipe_out = x_steal_fd(&stderr_pipe[0]);
+        *stderr_pipe_out = x_unix_pipe_steal(&stderr_pipe, X_UNIX_PIPE_END_READ);
     }
 
     return TRUE;
@@ -1401,17 +1380,11 @@ wait_failed:
         }
     }
 
-    close_and_invalidate(&stdin_pipe[0]);
-    close_and_invalidate(&stdin_pipe[1]);
-    close_and_invalidate(&stdout_pipe[0]);
-    close_and_invalidate(&stdout_pipe[1]);
-    close_and_invalidate(&stderr_pipe[0]);
-    close_and_invalidate(&stderr_pipe[1]);
-
-    close_and_invalidate(&child_err_report_pipe[0]);
-    close_and_invalidate(&child_err_report_pipe[1]);
-    close_and_invalidate(&child_pid_report_pipe[0]);
-    close_and_invalidate(&child_pid_report_pipe[1]);
+    x_unix_pipe_clear(&stdin_pipe);
+    x_unix_pipe_clear(&stdout_pipe);
+    x_unix_pipe_clear(&stderr_pipe);
+    x_unix_pipe_clear(&child_err_report_pipe);
+    x_unix_pipe_clear(&child_pid_report_pipe);
 
     x_clear_pointer(&search_path_buffer_heap, x_free);
     x_clear_pointer(&argv_buffer_heap, x_free);
