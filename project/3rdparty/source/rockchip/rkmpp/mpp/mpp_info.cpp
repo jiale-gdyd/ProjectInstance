@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2023-10-12 feat[mpp_thread]: Add simple thread";
+static const char *mpp_last_commit_message = "2023-10-19 docs: Add mpp developer guide markdown";
 
 void show_mpp_version(void)
 {
