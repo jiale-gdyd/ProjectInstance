@@ -1,5 +1,11 @@
 # 变更日志
 
+## 2023-10-20:
+  * asio2 : Fix some minor issues of mqtt
+  * libdrm: v2.4.117
+  * rkmpp : docs: Add mpp developer guide markdown
+  * libv4l: v4l2-compliance: pass media_fd when walking topology 
+
 ## 2023-09-28
   * live555: update to 2023-07-24
 
