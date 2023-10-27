@@ -706,13 +706,13 @@ X_DEFINE_POINTER_TYPE(XType, x_gtype)
 void x_value_set_gtype(XValue *value, XType v_gtype)
 {
     x_return_if_fail(X_VALUE_HOLDS_GTYPE(value));
-    value->data[0].v_pointer = XSIZE_TO_POINTER(v_gtype);
+    value->data[0].v_pointer = XTYPE_TO_POINTER(v_gtype);
 }
 
 XType x_value_get_gtype(const XValue *value)
 {
     x_return_val_if_fail(X_VALUE_HOLDS_GTYPE(value), 0);
-    return XPOINTER_TO_SIZE(value->data[0].v_pointer);
+    return XPOINTER_TO_TYPE(value->data[0].v_pointer);
 }
 
 void x_value_set_variant(XValue *value, XVariant *variant)

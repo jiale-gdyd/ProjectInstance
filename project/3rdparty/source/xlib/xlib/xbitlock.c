@@ -162,7 +162,7 @@ contended:
         {
             xsize v;
             xsize mask = 1u << lock_bit;
-            xsize *pointer_address = (xsize *)address_nonvolatile;
+            xpointer *pointer_address = (xpointer *)address_nonvolatile;
 
             v = (xsize)x_atomic_pointer_get(pointer_address);
             if (v & mask) {
@@ -176,10 +176,9 @@ contended:
 
         goto retry;
 #else
-        xsize v;
+        xuintptr v;
         xsize mask = 1u << lock_bit;
-        xsize *pointer_address = address_nonvolatile;
-
+        xpointer *pointer_address = address_nonvolatile;
 retry:
         v = x_atomic_pointer_or(pointer_address, mask);
         if (v & mask) {
@@ -212,15 +211,15 @@ xboolean (x_pointer_bit_trylock)(volatile void *address, xint lock_bit)
 
         return result;
 #else
-        xsize v;
+        xuintptr v;
         xsize mask = 1u << lock_bit;
         void *address_nonvolatile = (void *)address;
-        xsize *pointer_address = address_nonvolatile;
+        xpointer *pointer_address = address_nonvolatile;
 
         x_return_val_if_fail(lock_bit < 32, FALSE);
         v = x_atomic_pointer_or(pointer_address, mask);
 
-        return ~v & mask;
+        return (~(xsize) v & mask) != 0;
 #endif
     }
 }
@@ -238,7 +237,7 @@ void (x_pointer_bit_unlock)(volatile void *address, xint lock_bit)
                         : "r" (address), "r" ((xsize) lock_bit)
                         : "cc", "memory");
 #else
-        xsize *pointer_address = address_nonvolatile;
+        xpointer *pointer_address = address_nonvolatile;
         xsize mask = 1u << lock_bit;
 
         x_atomic_pointer_and(pointer_address, ~mask);

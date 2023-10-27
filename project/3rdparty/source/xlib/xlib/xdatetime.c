@@ -10,6 +10,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <locale.h>
 #include "langinfo.h"
 #include <sys/time.h>
 
@@ -1374,12 +1375,17 @@ static xboolean x_date_time_format_locale(XDateTime *datetime, const xchar *loca
     return success;
 }
 
-static inline xboolean string_append(XString *string, const xchar *s, xboolean s_is_utf8)
+static inline xboolean string_append(XString *string, const xchar *s, xboolean do_strup, xboolean s_is_utf8)
 {
     xchar *utf8;
     xsize utf8_len;
+    char *tmp = NULL;
 
     if (s_is_utf8) {
+        if (do_strup) {
+            s = tmp = x_utf8_strup(s, -1);
+        }
+
         x_string_append(string, s);
     } else {
         utf8 = _x_time_locale_to_utf8(s, -1, NULL, &utf8_len, NULL);
@@ -1387,10 +1393,17 @@ static inline xboolean string_append(XString *string, const xchar *s, xboolean s
             return FALSE;
         }
 
+        if (do_strup) {
+            tmp = x_utf8_strup(utf8, utf8_len);
+            x_free(utf8);
+            utf8 = x_steal_pointer(&tmp);
+        }
+
         x_string_append_len(string, utf8, utf8_len);
         x_free(utf8);
     }
 
+    x_free(tmp);
     return TRUE;
 }
 
@@ -1400,6 +1413,7 @@ static xboolean x_date_time_format_utf8(XDateTime *datetime, const xchar *utf8_f
     xunichar c;
     xuint colons;
     const xchar *tz;
+    char *tmp = NULL;
     const xchar *name;
     xboolean name_is_utf8;
     const xchar *pad = "";
@@ -1435,25 +1449,25 @@ static xboolean x_date_time_format_utf8(XDateTime *datetime, const xchar *utf8_f
         utf8_format = x_utf8_next_char(utf8_format);
         switch (c) {
             case 'a':
-                name = mod_case ? x_utf8_strup(WEEKDAY_ABBR(datetime), -1) : WEEKDAY_ABBR(datetime);
+                name = WEEKDAY_ABBR(datetime);
                 if (x_strcmp0(name, "") == 0) {
                     return FALSE;
                 }
 
                 name_is_utf8 = locale_is_utf8 || !WEEKDAY_ABBR_IS_LOCALE;
-                if (!string_append(outstr, name, name_is_utf8)) {
+                if (!string_append(outstr, name, mod_case, name_is_utf8)) {
                     return FALSE;
                 }
                 break;
 
             case 'A':
-                name = mod_case ? x_utf8_strup(WEEKDAY_FULL(datetime), -1) : WEEKDAY_FULL(datetime);
+                name = WEEKDAY_FULL(datetime);
                 if (x_strcmp0(name, "") == 0) {
                     return FALSE;
                 }
 
                 name_is_utf8 = locale_is_utf8 || !WEEKDAY_FULL_IS_LOCALE;
-                if (!string_append(outstr, name, name_is_utf8)) {
+                if (!string_append(outstr, name, mod_case, name_is_utf8)) {
                     return FALSE;
                 }
                 break;
@@ -1464,12 +1478,8 @@ static xboolean x_date_time_format_utf8(XDateTime *datetime, const xchar *utf8_f
                     return FALSE;
                 }
 
-                if (mod_case) {
-                    name = x_utf8_strup(name, -1);
-                }
-
                 name_is_utf8 = locale_is_utf8 || ((alt_digits && !MONTH_ABBR_STANDALONE_IS_LOCALE) || (!alt_digits && !MONTH_ABBR_WITH_DAY_IS_LOCALE));
-                if (!string_append(outstr, name, name_is_utf8)) {
+                if (!string_append(outstr, name, mod_case, name_is_utf8)) {
                     return FALSE;
                 }
                 break;
@@ -1480,12 +1490,8 @@ static xboolean x_date_time_format_utf8(XDateTime *datetime, const xchar *utf8_f
                     return FALSE;
                 }
 
-                if (mod_case) {
-                    name = x_utf8_strup(name, -1);
-                }
-
                 name_is_utf8 = locale_is_utf8 || ((alt_digits && !MONTH_FULL_STANDALONE_IS_LOCALE) || (!alt_digits && !MONTH_FULL_WITH_DAY_IS_LOCALE));
-                if (!string_append(outstr, name, name_is_utf8)) {
+                if (!string_append(outstr, name, mod_case, name_is_utf8)) {
                     return FALSE;
                 }
                 break;
@@ -1535,12 +1541,8 @@ static xboolean x_date_time_format_utf8(XDateTime *datetime, const xchar *utf8_f
                     return FALSE;
                 }
 
-                if (mod_case) {
-                    name = x_utf8_strup(name, -1);
-                }
-
                 name_is_utf8 = locale_is_utf8 || ((alt_digits && !MONTH_ABBR_STANDALONE_IS_LOCALE) || (!alt_digits && !MONTH_ABBR_WITH_DAY_IS_LOCALE));
-                if (!string_append(outstr, name, name_is_utf8)) {
+                if (!string_append(outstr, name, mod_case, name_is_utf8)) {
                     return FALSE;
                 }
                 break;
@@ -1676,7 +1678,12 @@ static xboolean x_date_time_format_utf8(XDateTime *datetime, const xchar *utf8_f
             break;
 
             case 'Z':
-                tz = mod_case && x_strcmp0(mod, "#") == 0 ? x_utf8_strdown(x_date_time_get_timezone_abbreviation(datetime), -1) : x_date_time_get_timezone_abbreviation(datetime);
+                tz = x_date_time_get_timezone_abbreviation(datetime);
+                if (mod_case && x_strcmp0(mod, "#") == 0) {
+                    tz = tmp = x_utf8_strdown(tz, -1);
+                }
+                x_string_append(outstr, tz);
+                x_free(tmp);
                 break;
 
             case '%':

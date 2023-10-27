@@ -53,10 +53,12 @@ X_BEGIN_DECLS
 #define X_TYPE_IS_FINAL(type)                           (x_type_test_flags((type), X_TYPE_FLAG_FINAL)) XLIB_AVAILABLE_MACRO_IN_2_70
 #define X_TYPE_IS_DEPRECATED(type)                      (x_type_test_flags((type), X_TYPE_FLAG_DEPRECATED)) XLIB_AVAILABLE_MACRO_IN_2_76
 
-#if XLIB_SIZEOF_SIZE_T != XLIB_SIZEOF_LONG || !defined(X_CXX_STD_VERSION)
-typedef xsize                           XType;
+#if XLIB_SIZEOF_VOID_P > XLIB_SIZEOF_SIZE_T
+typedef xuintptr XType;
+#elif XLIB_SIZEOF_SIZE_T != XLIB_SIZEOF_LONG || !defined(X_CXX_STD_VERSION)
+typedef xsize XType;
 #else
-typedef xulong                          XType;
+typedef xulong XType;
 #endif
 
 typedef struct _XValue XValue;
@@ -758,6 +760,9 @@ const xchar *x_type_name_from_class(XTypeClass *x_class);
 
 #define X_TYPE_INSTANCE_GET_PRIVATE(instance, x_type, c_type)       ((c_type *)x_type_instance_get_private((XTypeInstance *)(instance), (x_type))) XLIB_DEPRECATED_MACRO_IN_2_58_FOR(X_ADD_PRIVATE)
 #define X_TYPE_CLASS_GET_PRIVATE(klass, x_type, c_type)             ((c_type *)x_type_class_get_private((XTypeClass *)(klass), (x_type)))
+
+#define XPOINTER_TO_TYPE(p)                                         ((XType)(xuintptr)(p)) XLIB_AVAILABLE_MACRO_IN_2_80
+#define XTYPE_TO_POINTER(t)                                         ((xpointer)(xuintptr)(t)) XLIB_AVAILABLE_MACRO_IN_2_80
 
 X_END_DECLS
 

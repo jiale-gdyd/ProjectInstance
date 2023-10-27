@@ -932,7 +932,7 @@ xuint x_signal_lookup(const xchar *name, XType itype)
 
     if (!signal_id) {
         if (!x_type_name(itype)) {
-            x_critical(X_STRLOC ": unable to look up signal \"%s\" for invalid type id '%" X_XSIZE_FORMAT "'", name, itype);
+            x_critical(X_STRLOC ": unable to look up signal \"%s\" for invalid type id '%" X_XUINTPTR_FORMAT "'", name, (xuintptr)itype);
         } else if (!x_signal_is_valid_name(name)) {
             x_critical(X_STRLOC ": unable to look up invalid signal name \"%s\" on type '%s'", name, x_type_name(itype));
         }
@@ -967,7 +967,7 @@ xuint *x_signal_list_ids(XType itype, xuint *n_ids)
     SIGNAL_UNLOCK();
     if (!n_nodes) {
         if (!x_type_name(itype)) {
-            x_critical(X_STRLOC ": unable to list signals for invalid type id '%" X_XSIZE_FORMAT "'", itype);
+            x_critical(X_STRLOC ": unable to list signals for invalid type id '%" X_XUINTPTR_FORMAT "'", (xuintptr)itype);
         } else if (!X_TYPE_IS_INSTANTIATABLE(itype) && !X_TYPE_IS_INTERFACE(itype)) {
             x_critical(X_STRLOC ": unable to list signals of non instantiatable type '%s'", x_type_name(itype));
         } else if (!x_type_class_peek(itype) && !X_TYPE_IS_INTERFACE(itype)) {
@@ -1384,7 +1384,7 @@ void x_signal_override_class_handler(const xchar *signal_name, XType instance_ty
     if (signal_id) {
         x_signal_override_class_closure (signal_id, instance_type, x_cclosure_new(class_handler, NULL, NULL));
     } else {
-        x_critical("%s: signal name '%s' is invalid for type id '%" X_XSIZE_FORMAT "'", X_STRLOC, signal_name, instance_type);
+        x_critical("%s: signal name '%s' is invalid for type id '%" X_XUINTPTR_FORMAT "'", X_STRLOC, signal_name, (xuintptr)instance_type);
     }
 }
 

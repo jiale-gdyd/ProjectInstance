@@ -55,16 +55,16 @@ XLIB_AVAILABLE_IN_2_74
 xpointer x_atomic_pointer_exchange(void *atomic, xpointer newval);
 
 XLIB_AVAILABLE_IN_ALL
-xssize x_atomic_pointer_add(volatile void *atomic, xssize val);
+xintptr x_atomic_pointer_add(volatile void *atomic, xssize val);
 
 XLIB_AVAILABLE_IN_2_30
-xsize x_atomic_pointer_and(volatile void *atomic, xsize val);
+xuintptr x_atomic_pointer_and(volatile void *atomic, xsize val);
 
 XLIB_AVAILABLE_IN_2_30
-xsize x_atomic_pointer_or(volatile void *atomic, xsize val);
+xuintptr x_atomic_pointer_or(volatile void *atomic, xsize val);
 
 XLIB_AVAILABLE_IN_ALL
-xsize x_atomic_pointer_xor(volatile void *atomic, xsize val);
+xuintptr x_atomic_pointer_xor(volatile void *atomic, xsize val);
 
 XLIB_DEPRECATED_IN_2_30_FOR(x_atomic_int_add)
 xint x_atomic_int_exchange_and_add(volatile xint *atomic, xint val);
@@ -254,37 +254,37 @@ X_END_DECLS
         X_STATIC_ASSERT(sizeof *(atomic) == sizeof(xpointer));                                  \
         (void)(0 ? (xpointer) *(atomic) : NULL);                                                \
         (void)(0 ? (val) ^ (val) : 1);                                                          \
-        (xssize)__atomic_fetch_add((atomic), (val), __ATOMIC_SEQ_CST);                          \
+        (xintptr)__atomic_fetch_add((atomic), (val), __ATOMIC_SEQ_CST);                         \
     }))
 
 #define x_atomic_pointer_and(atomic, val)                                                       \
     (X_GNUC_EXTENSION ({                                                                        \
-        xsize *gapa_atomic = (xsize *)(atomic);                                                 \
+        xuintptr *gapa_atomic = (xuintptr *)(atomic);                                           \
         X_STATIC_ASSERT(sizeof *(atomic) == sizeof(xpointer));                                  \
-        X_STATIC_ASSERT(sizeof *(atomic) == sizeof(xsize));                                     \
+        X_STATIC_ASSERT(sizeof *(atomic) == sizeof(xuintptr));                                  \
         (void)(0 ? (xpointer) *(atomic) : NULL);                                                \
         (void)(0 ? (val) ^ (val) : 1);                                                          \
-        (xsize)__atomic_fetch_and(gapa_atomic, (val), __ATOMIC_SEQ_CST);                        \
+        (xuintptr)__atomic_fetch_and(gapa_atomic, (val), __ATOMIC_SEQ_CST);                     \
     }))
 
 #define x_atomic_pointer_or(atomic, val)                                                        \
     (X_GNUC_EXTENSION ({                                                                        \
-        xsize *gapo_atomic = (xsize *)(atomic);                                                 \
+        xuintptr *gapo_atomic = (xuintptr *)(atomic);                                           \
         X_STATIC_ASSERT(sizeof *(atomic) == sizeof(xpointer));                                  \
-        X_STATIC_ASSERT(sizeof *(atomic) == sizeof(xsize));                                     \
+        X_STATIC_ASSERT(sizeof *(atomic) == sizeof(xuintptr));                                  \
         (void)(0 ? (xpointer) *(atomic) : NULL);                                                \
         (void)(0 ? (val) ^ (val) : 1);                                                          \
-        (xsize)__atomic_fetch_or(gapo_atomic, (val), __ATOMIC_SEQ_CST);                         \
+        (xuintptr)__atomic_fetch_or(gapo_atomic, (val), __ATOMIC_SEQ_CST);                      \
     }))
 
 #define x_atomic_pointer_xor(atomic, val)                                                       \
     (X_GNUC_EXTENSION ({                                                                        \
-        xsize *gapx_atomic = (xsize *)(atomic);                                                 \
+        xuintptr *gapx_atomic = (xuintptr *)(atomic);                                           \
         X_STATIC_ASSERT(sizeof *(atomic) == sizeof(xpointer));                                  \
-        X_STATIC_ASSERT(sizeof *(atomic) == sizeof(xsize));                                     \
+        X_STATIC_ASSERT(sizeof *(atomic) == sizeof(xuintptr));                                  \
         (void)(0 ? (xpointer) *(atomic) : NULL);                                                \
         (void)(0 ? (val) ^ (val) : 1);                                                          \
-        (xsize)__atomic_fetch_xor(gapx_atomic, (val), __ATOMIC_SEQ_CST);                        \
+        (xuintptr)__atomic_fetch_xor(gapx_atomic, (val), __ATOMIC_SEQ_CST);                     \
     }))
 
 #else
@@ -326,7 +326,7 @@ X_END_DECLS
         (void)(0 ? (xpointer) *(atomic) : NULL);                                                \
         __sync_synchronize();                                                                   \
         __asm__ __volatile__ ("" : : : "memory");                                               \
-        *(atomic) = (xlib_typeof(*(atomic)))(xsize) (newval);                                   \
+        *(atomic) = (xlib_typeof(*(atomic)))(xuintptr)(newval);                                 \
     }))
 
 #else
@@ -337,7 +337,7 @@ X_END_DECLS
         (void)(0 ? (xpointer) *(atomic) : NULL);                                                \
         __sync_synchronize();                                                                   \
         __asm__ __volatile__ ("" : : : "memory");                                               \
-        *(atomic) = (xpointer)(xsize)(newval);                                                  \
+        *(atomic) = (xpointer)(xuintptr)(newval);                                               \
     }))
 #endif
 
@@ -465,7 +465,7 @@ X_END_DECLS
         X_STATIC_ASSERT(sizeof *(atomic) == sizeof(xpointer));                                  \
         (void)(0 ? (xpointer) *(atomic) : NULL);                                                \
         (void)(0 ? (val) ^ (val) : 1);                                                          \
-        (xssize)__sync_fetch_and_add((atomic), (val));                                          \
+        (xintptr)__sync_fetch_and_add((atomic), (val));                                         \
     }))
 
 #define x_atomic_pointer_and(atomic, val)                                                       \
@@ -473,7 +473,7 @@ X_END_DECLS
         X_STATIC_ASSERT(sizeof *(atomic) == sizeof(xpointer));                                  \
         (void)(0 ? (xpointer) *(atomic) : NULL);                                                \
         (void)(0 ? (val) ^ (val) : 1);                                                          \
-        (xsize)__sync_fetch_and_and((atomic), (val));                                           \
+        (xuintptr)__sync_fetch_and_and((atomic), (val));                                        \
     }))
 
 #define x_atomic_pointer_or(atomic, val)                                                        \
@@ -481,7 +481,7 @@ X_END_DECLS
         X_STATIC_ASSERT(sizeof *(atomic) == sizeof(xpointer));                                  \
         (void)(0 ? (xpointer) *(atomic) : NULL);                                                \
         (void)(0 ? (val) ^ (val) : 1);                                                          \
-        (xsize)__sync_fetch_and_or((atomic), (val));                                            \
+        (xuintptr)__sync_fetch_and_or((atomic), (val));                                         \
     }))
 
 #define x_atomic_pointer_xor(atomic, val)                                                       \
@@ -489,7 +489,7 @@ X_END_DECLS
         X_STATIC_ASSERT(sizeof *(atomic) == sizeof(xpointer));                                  \
         (void)(0 ? (xpointer) *(atomic) : NULL);                                                \
         (void)(0 ? (val) ^ (val) : 1);                                                          \
-        (xsize)__sync_fetch_and_xor((atomic), (val));                                           \
+        (xuintptr)__sync_fetch_and_xor((atomic), (val));                                        \
     }))
 #endif
 

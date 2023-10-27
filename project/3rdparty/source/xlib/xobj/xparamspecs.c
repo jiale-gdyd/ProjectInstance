@@ -969,13 +969,13 @@ static void param_gtype_init(XParamSpec *pspec)
 static void param_gtype_set_default(XParamSpec *pspec, XValue *value)
 {
     XParamSpecGType *tspec = X_PARAM_SPEC_GTYPE(pspec);
-    value->data[0].v_pointer = XSIZE_TO_POINTER(tspec->is_a_type);
+    value->data[0].v_pointer = XTYPE_TO_POINTER(tspec->is_a_type);
 }
 
 static xboolean param_gtype_is_valid(XParamSpec *pspec, const XValue *value)
 {
     XParamSpecGType *tspec = X_PARAM_SPEC_GTYPE(pspec);
-    XType gtype = XPOINTER_TO_SIZE(value->data[0].v_pointer);
+    XType gtype = XPOINTER_TO_TYPE(value->data[0].v_pointer);
 
     return tspec->is_a_type == X_TYPE_NONE || x_type_is_a(gtype, tspec->is_a_type);
 }
@@ -984,10 +984,10 @@ static xboolean param_gtype_validate(XParamSpec *pspec, XValue *value)
 {
     xuint changed = 0;
     XParamSpecGType *tspec = X_PARAM_SPEC_GTYPE(pspec);
-    XType gtype = XPOINTER_TO_SIZE(value->data[0].v_pointer);
+    XType gtype = XPOINTER_TO_TYPE(value->data[0].v_pointer);
 
     if (tspec->is_a_type != X_TYPE_NONE && !x_type_is_a(gtype, tspec->is_a_type)) {
-        value->data[0].v_pointer = XSIZE_TO_POINTER(tspec->is_a_type);
+        value->data[0].v_pointer = XTYPE_TO_POINTER(tspec->is_a_type);
         changed++;
     }
 
@@ -996,8 +996,8 @@ static xboolean param_gtype_validate(XParamSpec *pspec, XValue *value)
 
 static xint param_gtype_values_cmp(XParamSpec *pspec, const XValue *value1, const XValue *value2)
 {
-    XType p1 = XPOINTER_TO_SIZE(value1->data[0].v_pointer);
-    XType p2 = XPOINTER_TO_SIZE(value2->data[0].v_pointer);
+    XType p1 = XPOINTER_TO_TYPE(value1->data[0].v_pointer);
+    XType p2 = XPOINTER_TO_TYPE(value2->data[0].v_pointer);
 
     return p1 < p2 ? -1 : p1 > p2;
 }

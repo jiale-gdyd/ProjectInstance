@@ -611,7 +611,7 @@ XClosure *x_signal_type_cclosure_new(XType itype, xuint struct_offset)
     x_return_val_if_fail(X_TYPE_IS_CLASSED(itype) || X_TYPE_IS_INTERFACE(itype), NULL);
     x_return_val_if_fail(struct_offset >= sizeof(XTypeClass), NULL);
 
-    closure = x_closure_new_simple(sizeof(XClosure), (xpointer)itype);
+    closure = x_closure_new_simple(sizeof(XClosure), XTYPE_TO_POINTER(itype));
     if (X_TYPE_IS_INTERFACE(itype)) {
         x_closure_set_meta_marshal(closure, XUINT_TO_POINTER(struct_offset), x_type_iface_meta_marshal);
         x_closure_set_meta_va_marshal(closure, x_type_iface_meta_marshalv);

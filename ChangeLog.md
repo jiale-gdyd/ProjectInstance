@@ -1,6 +1,9 @@
 # 变更日志
 
-## 2023-10-20:
+## 2023-10-27
+  * libdrm: meson: fix typo in libdrm_intel
+
+## 2023-10-20
   * asio2 : Fix some minor issues of mqtt
   * libdrm: v2.4.117
   * rkmpp : docs: Add mpp developer guide markdown

@@ -549,6 +549,24 @@ static xboolean fd_should_be_fsynced(int fd, const xchar *test_file, XFileSetCon
     }
 }
 
+static xboolean truncate_file(int fd, off_t length, const char  *dest_file, XError **error)
+{
+    while (ftruncate(fd, length) < 0) {
+        int saved_errno = errno;
+        if (saved_errno == EINTR) {
+            continue;
+        }
+
+        if (error != NULL) {
+            set_file_error(error, dest_file, _("Failed to write file “%s”: ftruncate() failed: %s"), saved_errno);
+        }
+
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 static xboolean write_to_file(const xchar *contents, xsize length, int fd, const xchar *dest_file, xboolean do_fsync, XError **err)
 {
     if (length > 0) {
@@ -688,6 +706,10 @@ consistent_out:
         }
 
         do_fsync = fd_should_be_fsynced(direct_fd, filename, flags);
+        if (!truncate_file(direct_fd, 0, filename, error)) {
+            return FALSE;
+        }
+
         if (!write_to_file(contents, length, x_steal_fd(&direct_fd), filename, do_fsync, error)) {
             return FALSE;
         }

@@ -54,6 +54,11 @@ void x_strv_builder_add_many(XStrvBuilder *builder, ...)
     va_end(var_args);
 }
 
+void x_strv_builder_take(XStrvBuilder *builder, char *value)
+{
+    x_ptr_array_add(&builder->array, value);
+}
+
 XStrv x_strv_builder_end(XStrvBuilder *builder)
 {
     x_ptr_array_add(&builder->array, NULL);

@@ -152,7 +152,7 @@ void x_param_spec_unref(XParamSpec *pspec)
 
 void x_param_spec_sink(XParamSpec *pspec)
 {
-    xsize oldvalue;
+    xuintptr oldvalue;
     x_return_if_fail(X_IS_PARAM_SPEC(pspec));
 
     oldvalue = x_atomic_pointer_and(&pspec->qdata, ~(xsize)PARAM_FLOATING_FLAG);
@@ -163,7 +163,7 @@ void x_param_spec_sink(XParamSpec *pspec)
 
 XParamSpec *x_param_spec_ref_sink(XParamSpec *pspec)
 {
-    xsize oldvalue;
+    xuintptr oldvalue;
     x_return_val_if_fail(X_IS_PARAM_SPEC(pspec), NULL);
 
     oldvalue = x_atomic_pointer_and(&pspec->qdata, ~(xsize)PARAM_FLOATING_FLAG);
@@ -724,7 +724,7 @@ XList *x_param_spec_pool_list_owned(XParamSpecPool *pool, XType owner_type)
 
     x_mutex_lock(&pool->mutex);
     data[0] = NULL;
-    data[1] = (xpointer)owner_type;
+    data[1] = XTYPE_TO_POINTER(owner_type);
     x_hash_table_foreach(pool->hash_table, pool_list, &data);
     x_mutex_unlock(&pool->mutex);
 
@@ -817,7 +817,7 @@ XParamSpec **x_param_spec_pool_list(XParamSpecPool *pool, XType owner_type, xuin
     d = x_type_depth(owner_type);
     slists = x_new0(XSList *, d);
     data[0] = slists;
-    data[1] = (xpointer) owner_type;
+    data[1] = XTYPE_TO_POINTER(owner_type);
     data[2] = pool->hash_table;
     data[3] = &n_pspecs;
 

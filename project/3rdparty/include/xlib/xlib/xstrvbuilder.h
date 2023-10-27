@@ -26,6 +26,9 @@ void x_strv_builder_addv(XStrvBuilder *builder, const char **value);
 XLIB_AVAILABLE_IN_2_70
 void x_strv_builder_add_many(XStrvBuilder *builder, ...) X_GNUC_NULL_TERMINATED;
 
+XLIB_AVAILABLE_IN_2_80
+void x_strv_builder_take(XStrvBuilder *builder, char *value);
+
 XLIB_AVAILABLE_IN_2_68
 XStrv x_strv_builder_end(XStrvBuilder *builder);
 

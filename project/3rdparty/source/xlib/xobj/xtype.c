@@ -266,7 +266,7 @@ static TypeNode *type_node_any_new_W(TypeNode *pnode, XType ftype, const xchar *
         static_fundamental_type_nodes[ftype >> X_TYPE_FUNDAMENTAL_SHIFT] = node;
         type = ftype;
     } else {
-        type = (XType)node;
+        type = XPOINTER_TO_TYPE(node);
     }
 
     x_assert((type & TYPE_ID_MASK) == 0);
@@ -329,7 +329,7 @@ static TypeNode *type_node_any_new_W(TypeNode *pnode, XType ftype, const xchar *
     node->data = NULL;
     node->qname = x_quark_from_string(name);
     node->global_gdata = NULL;
-    x_hash_table_insert(static_type_nodes_ht, (xpointer)x_quark_to_string(node->qname), (xpointer)type);
+    x_hash_table_insert(static_type_nodes_ht, (xpointer)x_quark_to_string(node->qname), XTYPE_TO_POINTER(type));
 
     x_atomic_int_inc((xint *)&type_registration_serial);
 
@@ -1987,7 +1987,7 @@ XType x_type_register_fundamental(XType type_id, const xchar *type_name, const X
     }
 
     if ((type_id & TYPE_ID_MASK) || type_id > X_TYPE_FUNDAMENTAL_MAX) {
-        x_critical("attempt to register fundamental type '%s' with invalid type id (%" X_XSIZE_FORMAT ")", type_name, type_id);
+        x_critical("attempt to register fundamental type '%s' with invalid type id (%" X_XUINTPTR_FORMAT ")", type_name, type_id);
         return 0;
     }
 
@@ -2389,7 +2389,7 @@ XType x_type_from_name(const xchar *name)
     x_return_val_if_fail(name != NULL, 0);
 
     X_READ_LOCK(&type_rw_lock);
-    type = (XType)x_hash_table_lookup(static_type_nodes_ht, name);
+    type = XPOINTER_TO_TYPE(x_hash_table_lookup(static_type_nodes_ht, name));
     X_READ_UNLOCK(&type_rw_lock);
 
     return type;
@@ -3047,7 +3047,7 @@ restart_table_peek:
     }
 
     if (!node) {
-        x_critical(X_STRLOC ": type id '%" X_XSIZE_FORMAT "' is invalid", type);
+        x_critical(X_STRLOC ": type id '%" X_XUINTPTR_FORMAT "' is invalid", (xuintptr)type);
     }
 
     if (!has_refed_data) {

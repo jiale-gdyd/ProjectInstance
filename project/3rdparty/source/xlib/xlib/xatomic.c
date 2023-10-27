@@ -85,22 +85,22 @@ xpointer (x_atomic_pointer_exchange)(void *atomic, xpointer newval)
     return x_atomic_pointer_exchange((xpointer *)atomic, newval);
 }
 
-xssize (x_atomic_pointer_add)(volatile void *atomic, xssize val)
+xintptr (x_atomic_pointer_add)(volatile void *atomic, xssize val)
 {
     return x_atomic_pointer_add((xpointer *)atomic, val);
 }
 
-xsize (x_atomic_pointer_and)(volatile void *atomic, xsize val)
+xuintptr (x_atomic_pointer_and)(volatile void *atomic, xsize val)
 {
     return x_atomic_pointer_and((xpointer *)atomic, val);
 }
 
-xsize (x_atomic_pointer_or)(volatile void *atomic, xsize val)
+xuintptr (x_atomic_pointer_or)(volatile void *atomic, xsize val)
 {
     return x_atomic_pointer_or((xpointer *)atomic, val);
 }
 
-xsize (x_atomic_pointer_xor)(volatile void *atomic, xsize val)
+xuintptr (x_atomic_pointer_xor)(volatile void *atomic, xsize val)
 {
     return x_atomic_pointer_xor((xpointer *)atomic, val);
 }
@@ -192,7 +192,7 @@ xint (x_atomic_int_exchange)(xint *atomic, xint newval)
     return oldval;
 }
 
-xint (x_atomic_int_add)(volatile xint *atomic, xint val)
+xintptr (x_atomic_int_add)(volatile xint *atomic, xint val)
 {
     xint oldval;
 
@@ -204,7 +204,7 @@ xint (x_atomic_int_add)(volatile xint *atomic, xint val)
     return oldval;
 }
 
-xuint (x_atomic_int_and)(volatile xuint *atomic, xuint val)
+xuintptr (x_atomic_int_and)(volatile xuint *atomic, xuint val)
 {
     xuint oldval;
 
@@ -216,7 +216,7 @@ xuint (x_atomic_int_and)(volatile xuint *atomic, xuint val)
     return oldval;
 }
 
-xuint (x_atomic_int_or)(volatile xuint *atomic, xuint val)
+xuintptr (x_atomic_int_or)(volatile xuint *atomic, xuint val)
 {
     xuint oldval;
 
@@ -228,7 +228,7 @@ xuint (x_atomic_int_or)(volatile xuint *atomic, xuint val)
     return oldval;
 }
 
-xuint (x_atomic_int_xor)(volatile xuint *atomic, xuint val)
+xuintptr (x_atomic_int_xor)(volatile xuint *atomic, xuint val)
 {
     xuint oldval;
 
@@ -239,7 +239,6 @@ xuint (x_atomic_int_xor)(volatile xuint *atomic, xuint val)
 
     return oldval;
 }
-
 
 xpointer (x_atomic_pointer_get)(const volatile void *atomic)
 {
@@ -305,10 +304,10 @@ xpointer (x_atomic_pointer_exchange)(void *atomic, xpointer newval)
     return oldval;
 }
 
-xssize (x_atomic_pointer_add)(volatile void *atomic, xssize val)
+xintptr (x_atomic_pointer_add)(volatile void *atomic, xssize val)
 {
-    xssize oldval;
-    xssize *ptr = atomic;
+    xintptr oldval;
+    xintptr *ptr = atomic;
 
     pthread_mutex_lock(&x_atomic_lock);
     oldval = *ptr;
@@ -318,10 +317,10 @@ xssize (x_atomic_pointer_add)(volatile void *atomic, xssize val)
     return oldval;
 }
 
-xsize (x_atomic_pointer_and)(volatile void *atomic, xsize val)
+xuintptr (x_atomic_pointer_and)(volatile void *atomic, xsize val)
 {
-    xsize oldval;
-    xsize *ptr = atomic;
+    xuintptr oldval;
+    xuintptr *ptr = atomic;
 
     pthread_mutex_lock(&x_atomic_lock);
     oldval = *ptr;
@@ -331,10 +330,10 @@ xsize (x_atomic_pointer_and)(volatile void *atomic, xsize val)
     return oldval;
 }
 
-xsize (x_atomic_pointer_or)(volatile void *atomic, xsize val)
+xuintptr (x_atomic_pointer_or)(volatile void *atomic, xsize val)
 {
-    xsize oldval;
-    xsize *ptr = atomic;
+    xuintptr oldval;
+    xuintptr *ptr = atomic;
 
     pthread_mutex_lock(&x_atomic_lock);
     oldval = *ptr;
@@ -344,10 +343,10 @@ xsize (x_atomic_pointer_or)(volatile void *atomic, xsize val)
     return oldval;
 }
 
-xsize (x_atomic_pointer_xor)(volatile void *atomic, xsize val)
+xuintptr (x_atomic_pointer_xor)(volatile void *atomic, xsize val)
 {
-    xsize oldval;
-    xsize *ptr = atomic;
+    xuintptr oldval;
+    xuintptr *ptr = atomic;
 
     pthread_mutex_lock(&x_atomic_lock);
     oldval = *ptr;
