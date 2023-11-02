@@ -447,8 +447,12 @@ static xboolean x_signal_group_connect_closure_(XSignalGroup *self, const xchar 
 
     x_return_val_if_fail(X_IS_SIGNAL_GROUP(self), FALSE);
     x_return_val_if_fail(detailed_signal != NULL, FALSE);
-    x_return_val_if_fail(x_signal_parse_name(detailed_signal, self->target_type, &signal_id, &signal_detail, TRUE) != 0, FALSE);
     x_return_val_if_fail(closure != NULL, FALSE);
+
+    if (!x_signal_parse_name(detailed_signal, self->target_type, &signal_id, &signal_detail, TRUE)) {
+        x_critical("Invalid signal name “%s”", detailed_signal);
+        return FALSE;
+    }
 
     x_rec_mutex_lock(&self->mutex);
 

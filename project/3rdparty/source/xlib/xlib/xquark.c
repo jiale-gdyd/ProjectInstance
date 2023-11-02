@@ -8,6 +8,7 @@
 #include <xlib/xlib/xlib-init.h>
 #include <xlib/xlib/xtestutils.h>
 #include <xlib/xlib/xlib_trace.h>
+#include <xlib/xlib/xlib-private.h>
 
 #define QUARK_BLOCK_SIZE                    2048
 #define QUARK_STRING_BLOCK_SIZE             (4096 - sizeof (xsize))
@@ -135,6 +136,7 @@ static inline XQuark quark_new(xchar *string)
         }
 
         memset(quarks_new + quark_seq_id, 0, sizeof (char *) * QUARK_BLOCK_SIZE);
+        x_ignore_leak(x_atomic_pointer_get(&quarks));
         x_atomic_pointer_set(&quarks, quarks_new);
     }
 

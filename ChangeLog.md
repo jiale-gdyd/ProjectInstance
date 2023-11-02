@@ -1,5 +1,9 @@
 # 变更日志
 
+## 2023-11-02
+  * libdrm: modetest: add support for big-endian XRGB1555/RGB565
+  * rkmpp : fix[hal_h265e_vepu541]: fix roi buffer variables incorrect use
+
 ## 2023-10-27
   * libdrm: meson: fix typo in libdrm_intel
 

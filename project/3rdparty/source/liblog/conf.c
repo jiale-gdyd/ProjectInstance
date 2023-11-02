@@ -192,7 +192,9 @@ static int liblog_conf_parse_line(struct liblog_conf * a_conf, char *line, int *
                 } else {
                     a_conf->strict_init = 1;
                 }
-            } else if (LOG_STRCMP(word_1, ==, "buffer") && LOG_STRCMP(word_2, ==, "min")) {
+            } else if (LOG_STRCMP(word_1, ==, "log") && LOG_STRCMP(word_2, ==, "level")) {
+                strcpy(a_conf->log_level, value);
+            }  else if (LOG_STRCMP(word_1, ==, "buffer") && LOG_STRCMP(word_2, ==, "min")) {
                 a_conf->buf_size_min = logc_parse_byte_size(value);
             } else if (LOG_STRCMP(word_1, ==, "buffer") && LOG_STRCMP(word_2, ==, "max")) {
                 a_conf->buf_size_max = logc_parse_byte_size(value);
@@ -417,6 +419,8 @@ static int liblog_conf_build_with_file(struct liblog_conf *a_conf)
         return -1;
     }
 
+    a_conf->log_level[0] = '\0';
+
     pline = line;
     memset(&line, 0x00, sizeof(line));
     while (fgets((char *)pline, sizeof(line) - (pline - line), fp) != NULL) {
@@ -487,6 +491,8 @@ static int liblog_conf_build_with_file(struct liblog_conf *a_conf)
             continue;
         }
     }
+
+    a_conf->level = liblog_level_list_atoi(a_conf->levels, a_conf->log_level);
 
 exit:
     fclose(fp);

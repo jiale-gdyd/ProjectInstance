@@ -1265,6 +1265,21 @@ static xboolean log_is_old_api(const XLogField *fields, xsize n_fields)
     return (n_fields >= 1 && x_strcmp0(fields[0].key, "XLIB_OLD_LOG_API") == 0 && x_strcmp0((const char *)fields[0].value, "1") == 0);
 }
 
+static xboolean domain_found(const xchar *domains, const char *log_domain)
+{
+    xuint len;
+    const xchar *found;
+
+    len = strlen(log_domain);
+    for (found = strstr(domains, log_domain); found; found = strstr(found + 1, log_domain)) {
+        if ((found == domains || found[-1] == ' ') && (found[len] == 0 || found[len] == ' ')) {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 static xboolean should_drop_message(XLogLevelFlags log_level, const char *log_domain, const XLogField *fields, xsize n_fields)
 {
     if (!(log_level & DEFAULT_LEVELS) && !(log_level >> X_LOG_LEVEL_USER_SHIFT) && !x_log_get_debug_enabled()) {
@@ -1286,7 +1301,7 @@ static xboolean should_drop_message(XLogLevelFlags log_level, const char *log_do
             }
         }
 
-        if (strcmp(domains, "all") != 0 && (log_domain == NULL || !strstr(domains, log_domain))) {
+        if (strcmp(domains, "all") != 0 && (log_domain == NULL || !domain_found(domains, log_domain))) {
             return TRUE;
         }
     }

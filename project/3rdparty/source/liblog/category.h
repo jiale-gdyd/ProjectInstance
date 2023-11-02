@@ -23,6 +23,7 @@ void liblog_category_rollback_rules(struct liblog_category *a_category);
 int liblog_category_output(struct liblog_category *a_category, struct liblog_thread *a_thread);
 int liblog_category_update_rules(struct liblog_category *a_category, struct logc_arraylist *new_rules);
 
-#define liblog_category_needless_level(a_category, lv)      (a_category && !((a_category->level_bitmap[lv / 8] >> (7 - lv % 8)) & 0x01))
+//#define liblog_category_needless_level(a_category, lv)      (a_category && !((a_category->level_bitmap[lv / 8] >> (7 - lv % 8)) & 0x01))
+#define liblog_category_needless_level(a_category, lv)      a_category && (liblog_env_conf->level > lv || !((a_category->level_bitmap[lv/8] >> (7 - lv % 8)) & 0x01))
 
 #endif

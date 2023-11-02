@@ -28,6 +28,8 @@ struct liblog_conf {
     struct logc_arraylist *formats;
     struct logc_arraylist *rules;
     int                   time_cache_count;
+    char                  log_level[LOG_MAXLEN_CFG_LINE + 1];
+    int                   level;
 };
 
 extern struct liblog_conf *liblog_env_conf;

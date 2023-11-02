@@ -155,6 +155,9 @@ extern "C" {
 #define DRM_FORMAT_NV24                                 fourcc_code('N', 'V', '2', '4') /* non-subsampled Cr:Cb plane */
 #define DRM_FORMAT_NV42                                 fourcc_code('N', 'V', '4', '2') /* non-subsampled Cb:Cr plane */
 #define DRM_FORMAT_NV15                                 fourcc_code('N', 'V', '1', '5') /* 2x2 subsampled Cr:Cb plane */
+#define DRM_FORMAT_NV20                                 fourcc_code('N', 'V', '2', '0') /* 2x1 subsampled Cr:Cb plane */
+#define DRM_FORMAT_NV30                                 fourcc_code('N', 'V', '3', '0') /* non-subsampled Cr:Cb plane */
+
 #define DRM_FORMAT_NV12_10                              fourcc_code('N', 'A', '1', '2')
 
 #define DRM_FORMAT_P210                                 fourcc_code('P', '2', '1', '0') /* 2x1 subsampled Cr:Cb plane, 10 bit per channel */

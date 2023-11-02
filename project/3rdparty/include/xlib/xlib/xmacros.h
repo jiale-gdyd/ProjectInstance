@@ -93,6 +93,7 @@
 #define x_macro__has_attribute___pure__                     X_GNUC_CHECK_VERSION(2, 96)
 #define x_macro__has_attribute___sentinel__                 X_GNUC_CHECK_VERSION(4, 0)
 #define x_macro__has_attribute___unused__                   X_GNUC_CHECK_VERSION(2, 4)
+#define x_macro__has_attribute___weak__                     X_GNUC_CHECK_VERSION(2, 8)
 #define x_macro__has_attribute_cleanup                      X_GNUC_CHECK_VERSION(3, 3)
 #define x_macro__has_attribute_fallthrough                  X_GNUC_CHECK_VERSION(6, 0)
 #define x_macro__has_attribute_may_alias                    X_GNUC_CHECK_VERSION(3, 3)
