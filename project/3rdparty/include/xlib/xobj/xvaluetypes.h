@@ -109,6 +109,9 @@ void x_value_set_interned_string(XValue *value, const xchar *v_string);
 XLIB_AVAILABLE_IN_ALL
 const xchar *x_value_get_string(const XValue *value);
 
+XLIB_AVAILABLE_IN_2_80
+xchar *g_value_steal_string(XValue *value);
+
 XLIB_AVAILABLE_IN_ALL
 xchar *x_value_dup_string(const XValue *value);
 

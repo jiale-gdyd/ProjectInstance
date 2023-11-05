@@ -689,6 +689,22 @@ xchar *x_value_dup_string(const XValue *value)
     return x_strdup((const xchar *)value->data[0].v_pointer);
 }
 
+xchar *x_value_steal_string(XValue *value)
+{
+    xchar *ret;
+
+    x_return_val_if_fail(X_VALUE_HOLDS_STRING(value), NULL);
+
+    ret = value->data[0].v_pointer;
+    value->data[0].v_pointer = NULL;
+
+    if (value->data[1].v_uint & X_VALUE_NOCOPY_CONTENTS) {
+        return x_strdup(ret);
+    }
+
+    return ret;
+}
+
 void x_value_set_pointer(XValue *value, xpointer v_pointer)
 {
     x_return_if_fail(X_VALUE_HOLDS_POINTER(value));

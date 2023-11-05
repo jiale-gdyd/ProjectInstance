@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2023-11-05
+  * asio2: If the object has not been started completed, postpone the asynchronous function calls until the start is completed
+
 ## 2023-11-02
   * libdrm: modetest: add support for big-endian XRGB1555/RGB565
   * rkmpp : fix[hal_h265e_vepu541]: fix roi buffer variables incorrect use
