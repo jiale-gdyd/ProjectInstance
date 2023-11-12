@@ -1221,6 +1221,16 @@ xuint x_int_hash(xconstpointer v)
     return *(const xint *)v;
 }
 
+xboolean x_uint_equal(xconstpointer v1, xconstpointer v2)
+{
+    return *((const xuint *) v1) == *((const xuint *) v2);
+}
+
+xuint x_uint_hash(xconstpointer v)
+{
+    return *(const xuint *)v;
+}
+
 xboolean x_int64_equal(xconstpointer v1, xconstpointer v2)
 {
     return *((const xint64 *)v1) == *((const xint64 *)v2);

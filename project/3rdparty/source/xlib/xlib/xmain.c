@@ -380,7 +380,7 @@ XMainContext *x_main_context_new_with_flags(XMainContextFlags flags)
     x_mutex_init(&context->mutex);
     x_cond_init(&context->cond);
 
-    context->sources = x_hash_table_new(NULL, NULL);
+    context->sources = x_hash_table_new(x_uint_hash, x_uint_equal);
     context->owner = NULL;
     context->flags = flags;
     context->waiters = NULL;
@@ -690,13 +690,13 @@ static xuint x_source_attach_unlocked(XSource *source, XMainContext *context, xb
 
     do {
         id = context->next_id++;
-    } while (id == 0 || x_hash_table_contains(context->sources, XUINT_TO_POINTER(id)));
+    } while (id == 0 || x_hash_table_contains(context->sources, &id));
 
     source->context = context;
     source->source_id = id;
     x_source_ref(source);
 
-    x_hash_table_insert(context->sources, XUINT_TO_POINTER(id), source);
+    x_hash_table_add(context->sources, &source->source_id);
 
     source_add_to_context(source, context);
 
@@ -1307,7 +1307,7 @@ static void x_source_unref_internal(XSource *source, XMainContext *context, xboo
             }
 
             source_remove_from_context(source, context);
-            x_hash_table_remove(context->sources, XUINT_TO_POINTER (source->source_id));
+            x_hash_table_remove(context->sources, &source->source_id);
         }
 
         if (source->source_funcs->finalize) {
@@ -1385,7 +1385,8 @@ void x_source_unref(XSource *source)
 
 XSource *x_main_context_find_source_by_id(XMainContext *context, xuint source_id)
 {
-    XSource *source;
+    xconstpointer ptr;
+    XSource *source = NULL;
 
     x_return_val_if_fail(source_id > 0, NULL);
 
@@ -1394,12 +1395,14 @@ XSource *x_main_context_find_source_by_id(XMainContext *context, xuint source_id
     }
 
     LOCK_CONTEXT(context);
-    source = (XSource *)x_hash_table_lookup(context->sources, XUINT_TO_POINTER(source_id));
-    UNLOCK_CONTEXT(context);
-
-    if (source && SOURCE_DESTROYED(source)) {
-        source = NULL;
+    ptr = x_hash_table_lookup(context->sources, &source_id);
+    if (ptr) {
+        source = X_CONTAINER_OF(ptr, XSource, source_id);
+        if (SOURCE_DESTROYED(source)) {
+            source = NULL;
+        }
     }
+    UNLOCK_CONTEXT(context);
 
     return source;
 }

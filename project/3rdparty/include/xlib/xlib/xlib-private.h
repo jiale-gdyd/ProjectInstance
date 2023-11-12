@@ -4,6 +4,8 @@
 #include "../xlib.h"
 #include "xwakeup.h"
 
+#define X_CONTAINER_OF(ptr, type, field)    ((type *)X_STRUCT_MEMBER_P(ptr, -X_STRUCT_OFFSET(type, field)))
+
 static inline void x_ignore_leak(xconstpointer p)
 {
 
@@ -62,5 +64,8 @@ typedef struct {
 
 XLIB_AVAILABLE_IN_ALL
 XLibPrivateVTable *xlib__private__(void);
+
+xboolean x_uint_equal(xconstpointer v1, xconstpointer v2);
+xuint x_uint_hash(xconstpointer v);
 
 #endif
