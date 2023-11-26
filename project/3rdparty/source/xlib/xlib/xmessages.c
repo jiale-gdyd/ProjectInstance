@@ -1280,15 +1280,36 @@ static xboolean domain_found(const xchar *domains, const char *log_domain)
     return FALSE;
 }
 
+static struct {
+    XRWLock  lock;
+    xchar    *domains;
+    xboolean domains_set;
+} x_log_global;
+
+void x_log_writer_default_set_debug_domains(const xchar *const *domains)
+{
+    x_rw_lock_writer_lock(&x_log_global.lock);
+
+    x_free(x_log_global.domains);
+    x_log_global.domains = domains ? x_strjoinv(" ", (xchar **)domains) : NULL;
+    x_log_global.domains_set = TRUE;
+
+    x_rw_lock_writer_unlock(&x_log_global.lock);
+}
+
 static xboolean should_drop_message(XLogLevelFlags log_level, const char *log_domain, const XLogField *fields, xsize n_fields)
 {
     if (!(log_level & DEFAULT_LEVELS) && !(log_level >> X_LOG_LEVEL_USER_SHIFT) && !x_log_get_debug_enabled()) {
         xsize i;
-        const xchar *domains;
 
-        domains = x_getenv("X_MESSAGES_DEBUG");
+        x_rw_lock_reader_lock(&x_log_global.lock);
+        if (X_UNLIKELY(!x_log_global.domains_set)) {
+            x_log_global.domains = x_strdup(x_getenv("X_MESSAGES_DEBUG"));
+            x_log_global.domains_set = TRUE;
+        }
 
-        if ((log_level & INFO_LEVELS) == 0 || domains == NULL) {
+        if ((log_level & INFO_LEVELS) == 0 || x_log_global.domains == NULL) {
+            x_rw_lock_reader_unlock(&x_log_global.lock);
             return TRUE;
         }
 
@@ -1301,9 +1322,12 @@ static xboolean should_drop_message(XLogLevelFlags log_level, const char *log_do
             }
         }
 
-        if (strcmp(domains, "all") != 0 && (log_domain == NULL || !domain_found(domains, log_domain))) {
+        if (strcmp(x_log_global.domains, "all") != 0 && (log_domain == NULL || !domain_found(x_log_global.domains, log_domain))) {
+            x_rw_lock_reader_unlock(&x_log_global.lock);
             return TRUE;
         }
+
+        x_rw_lock_reader_unlock(&x_log_global.lock);
     }
 
     return FALSE;

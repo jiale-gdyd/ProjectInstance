@@ -440,61 +440,49 @@ const xchar *x_get_host_name(void)
     return hostname;
 }
 
-X_LOCK_DEFINE_STATIC(x_prgname);
 static const xchar *x_prgname = NULL;
 
 const xchar *x_get_prgname(void)
 {
-    const xchar *retval;
-
-    X_LOCK(x_prgname);
-    retval = x_prgname;
-    X_UNLOCK(x_prgname);
-
-    return retval;
+    return x_atomic_pointer_get(&x_prgname);
 }
 
 void x_set_prgname(const xchar *prgname)
 {
-    XQuark qprgname = x_quark_from_string(prgname);
-
-    X_LOCK(x_prgname);
-    x_prgname = x_quark_to_string(qprgname);
-    X_UNLOCK(x_prgname);
+    prgname = x_intern_string(prgname);
+    x_atomic_pointer_set(&x_prgname, prgname);
 }
 
-X_LOCK_DEFINE_STATIC(x_application_name);
+xboolean x_set_prgname_once(const xchar *prgname)
+{
+    prgname = x_intern_string(prgname);
+    return x_atomic_pointer_compare_and_exchange(&x_prgname, NULL, prgname);
+}
+
 static xchar *x_application_name = NULL;
 
 const xchar *x_get_application_name(void)
 {
-    xchar *retval;
+    const char *retval;
 
-    X_LOCK(x_application_name);
-    retval = x_application_name;
-    X_UNLOCK(x_application_name);
-
-    if (retval == NULL) {
-        return x_get_prgname();
+    retval = x_atomic_pointer_get(&x_application_name);
+    if (retval) {
+        return retval;
     }
 
-    return retval;
+    return x_get_prgname();
 }
 
 void x_set_application_name(const xchar *application_name)
 {
-    xboolean already_set = FALSE;
+    char *name;
 
-    X_LOCK(x_application_name);
-    if (x_application_name) {
-        already_set = TRUE;
-    } else {
-        x_application_name = x_strdup(application_name);
-    }
-    X_UNLOCK(x_application_name);
+    x_return_if_fail(application_name);
+    name = x_strdup(application_name);
 
-    if (already_set) {
+    if (!x_atomic_pointer_compare_and_exchange(&x_application_name, NULL, name)) {
         x_warning("x_set_application_name() called multiple times");
+        x_free(name);
     }
 }
 
@@ -723,6 +711,7 @@ static xchar *x_build_user_data_dir(void)
 
     if (!data_dir || !data_dir[0]) {
         xchar *home_dir = x_build_home_dir();
+        x_free(data_dir);
         data_dir = x_build_filename(home_dir, ".local", "share", NULL);
         x_free(home_dir);
     }

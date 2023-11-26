@@ -32,9 +32,9 @@ extern "C" {
 
 #define LIBDRM_VERSION_MAJOR                                2
 #define LIBDRM_VERSION_MINOR                                4
-#define LIBDRM_VERSION_PATCH                                117
+#define LIBDRM_VERSION_PATCH                                118
 
-#define LIBDRM_VERSION_STRING                               "2.4.117"
+#define LIBDRM_VERSION_STRING                               "2.4.118"
 
 #define DRM_NAME                                            "drm"
 
@@ -697,6 +697,8 @@ extern "C" {
 
 #define DRM_IOCTL_MODE_GETFB2                                   DRM_IOWR(0xCE, struct drm_mode_fb_cmd2)
 #define DRM_IOCTL_SYNCOBJ_EVENTFD                               DRM_IOWR(0xCF, struct drm_syncobj_eventfd)
+
+#define DRM_IOCTL_MODE_CLOSEFB                                  DRM_IOWR(0xD0, struct drm_mode_closefb)
 
 #define DRM_COMMAND_BASE                                        0x40
 #define DRM_COMMAND_END                                         0xA0

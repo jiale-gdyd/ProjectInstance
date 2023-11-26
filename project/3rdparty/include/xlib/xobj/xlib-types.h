@@ -42,6 +42,8 @@ typedef xsize XType;
 #define X_TYPE_PATTERN_SPEC                 (x_pattern_spec_get_type())
 #define X_TYPE_BOOKMARK_FILE                (x_bookmark_file_get_type())
 
+#define X_TYPE_HMAC                         (x_hmac_get_type())
+
 XLIB_AVAILABLE_IN_ALL
 XType x_date_get_type(void) X_GNUC_CONST;
 
@@ -137,6 +139,9 @@ XType x_pattern_spec_get_type(void) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_2_76
 XType x_bookmark_file_get_type(void) X_GNUC_CONST;
+
+XLIB_AVAILABLE_IN_2_80
+XType x_hmac_get_type(void) X_GNUC_CONST;
 
 XLIB_DEPRECATED_FOR('X_TYPE_VARIANT')
 XType x_variant_get_gtype(void) X_GNUC_CONST;

@@ -815,7 +815,7 @@ void (x_test_init)(int *argc, char ***argv, ...)
     }
 
     if (!x_get_prgname() && !no_g_set_prgname) {
-        x_set_prgname((*argv)[0]);
+        x_set_prgname_once((*argv)[0]);
     }
 
     if (x_getenv("X_TEST_ROOT_PROCESS")) {

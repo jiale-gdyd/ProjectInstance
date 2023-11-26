@@ -109,6 +109,7 @@ X_DEFINE_BOXED_TYPE(XTimeZone, x_time_zone, x_time_zone_ref, x_time_zone_unref)
 X_DEFINE_BOXED_TYPE(XKeyFile, x_key_file, x_key_file_ref, x_key_file_unref)
 X_DEFINE_BOXED_TYPE(XMappedFile, x_mapped_file, x_mapped_file_ref, x_mapped_file_unref)
 X_DEFINE_BOXED_TYPE(XBookmarkFile, x_bookmark_file, x_bookmark_file_copy, x_bookmark_file_free)
+X_DEFINE_BOXED_TYPE(XHmac, x_hmac, x_hmac_ref, x_hmac_unref)
 
 X_DEFINE_BOXED_TYPE(XMainLoop, x_main_loop, x_main_loop_ref, x_main_loop_unref)
 X_DEFINE_BOXED_TYPE(XMainContext, x_main_context, x_main_context_ref, x_main_context_unref)

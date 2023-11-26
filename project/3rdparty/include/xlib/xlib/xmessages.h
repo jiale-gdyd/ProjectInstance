@@ -109,6 +109,9 @@ void x_log_writer_default_set_use_stderr(xboolean use_stderr);
 XLIB_AVAILABLE_IN_2_68
 xboolean x_log_writer_default_would_drop(XLogLevelFlags log_level, const char *log_domain);
 
+XLIB_AVAILABLE_IN_2_80
+void x_log_writer_default_set_debug_domains(const xchar *const *domains);
+
 XLIB_AVAILABLE_IN_2_72
 xboolean x_log_get_debug_enabled(void);
 

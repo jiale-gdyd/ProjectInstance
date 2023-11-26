@@ -1,5 +1,9 @@
 # 变更日志
 
+## 2023-11-26
+  * asio2 : If the default username or password of socks5 auth is empty, the auth callback function will be called.
+  * libdrm: build: bump version to 2.4.118
+
 ## 2023-11-05
   * asio2: If the object has not been started completed, postpone the asynchronous function calls until the start is completed
 

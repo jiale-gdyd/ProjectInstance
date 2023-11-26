@@ -33,6 +33,8 @@ void _x_unset_cached_tmp_dir(void);
 
 xboolean _x_localtime(time_t timet, struct tm *tm);
 
+xboolean x_set_prgname_once(const xchar *prgname);
+
 X_END_DECLS
 
 #endif

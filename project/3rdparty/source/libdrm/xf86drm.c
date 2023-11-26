@@ -3723,6 +3723,25 @@ drm_public int drmGetDeviceFromDevId(dev_t find_rdev, uint32_t flags, drmDeviceP
     return 0;
 }
 
+drm_public int drmGetNodeTypeFromDevId(dev_t devid)
+{
+    int maj, min, node_type;
+
+    maj = major(devid);
+    min = minor(devid);
+
+    if (!drmNodeIsDRM(maj, min)) {
+        return -EINVAL;
+    }
+
+    node_type = drmGetMinorType(maj, min);
+    if (node_type == -1) {
+        return -ENODEV;
+    }
+
+    return node_type;
+}
+
 drm_public int drmGetDevice2(int fd, uint32_t flags, drmDevicePtr *device)
 {
     struct stat sbuf;

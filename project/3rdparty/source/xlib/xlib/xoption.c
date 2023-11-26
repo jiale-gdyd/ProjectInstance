@@ -9,6 +9,7 @@
 #include <xlib/xlib/xoption.h>
 #include <xlib/xlib/xprintf.h>
 #include <xlib/xlib/xlibintl.h>
+#include <xlib/xlib/xutilsprivate.h>
 
 #define TRANSLATE(group, str)       (((group)->translate_func ? (* (group)->translate_func)((str), (group)->translate_data) : (str)))
 #define NO_ARG(entry)               ((entry)->arg == X_OPTION_ARG_NONE || ((entry)->arg == X_OPTION_ARG_CALLBACK && ((entry)->flags & X_OPTION_FLAG_NO_ARG)))
@@ -1136,12 +1137,7 @@ xboolean x_option_context_parse(XOptionContext *context, xint *argc, xchar ***ar
             prgname = platform_get_argv0();
         }
 
-        if (prgname) {
-            x_set_prgname(prgname);
-        } else {
-            x_set_prgname("<unknown>");
-        }
-
+        x_set_prgname_once(prgname ? prgname : "<unknown>");
         x_free(prgname);
     }
 

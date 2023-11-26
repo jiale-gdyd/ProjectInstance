@@ -1,6 +1,7 @@
 #include <xlib/xlib/config.h>
 #include <xlib/xlib/xlib-init.h>
 #include <xlib/xlib/xlib-private.h>
+#include <xlib/xlib/xutilsprivate.h>
 
 XLibPrivateVTable *xlib__private__(void)
 {
@@ -24,6 +25,8 @@ XLibPrivateVTable *xlib__private__(void)
         x_find_program_for_path,
 
         x_uri_get_default_scheme_port,
+
+        x_set_prgname_once,
     };
 
     return &table;

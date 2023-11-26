@@ -333,7 +333,8 @@ static xboolean get_contents_stdio(const xchar *filename, FILE *f, xchar **conte
             tmp = (xchar *)x_try_realloc(str, total_allocated);
             if (tmp == NULL) {
                 display_filename = x_filename_display_name(filename);
-                x_set_error(error, X_FILE_ERROR, X_FILE_ERROR_NOMEM, x_dngettext(GETTEXT_PACKAGE, "Could not allocate %lu byte to read file “%s”", "Could not allocate %lu bytes to read file “%s”", (xulong)total_allocated), (xulong)total_allocated, display_filename);
+                x_set_error(error, X_FILE_ERROR, X_FILE_ERROR_NOMEM,
+                    x_dngettext(GETTEXT_PACKAGE, "Could not allocate %" X_XSIZE_MODIFIER "u byte to read file “%s”", "Could not allocate %" X_XSIZE_MODIFIER "u bytes to read file “%s”", total_allocated), total_allocated, display_filename);
                 x_free(display_filename);
 
                 goto error;
@@ -389,7 +390,14 @@ static xboolean get_contents_regfile(const xchar *filename, struct stat *stat_bu
     xsize bytes_read;
     xsize alloc_size;
     xchar *display_filename;
-    
+
+    if ((X_MAXOFFSET >= X_MAXSIZE) && (stat_buf->st_size >(xoffset)(X_MAXSIZE - 1))) {
+        display_filename = x_filename_display_name(filename);
+        x_set_error(error, X_FILE_ERROR, X_FILE_ERROR_FAILED, _("File “%s” is too large"), display_filename);
+        x_free(display_filename);
+        goto error;
+    }
+
     size = stat_buf->st_size;
 
     alloc_size = size + 1;
@@ -397,7 +405,8 @@ static xboolean get_contents_regfile(const xchar *filename, struct stat *stat_bu
 
     if (buf == NULL) {
         display_filename = x_filename_display_name(filename);
-        x_set_error(error, X_FILE_ERROR, X_FILE_ERROR_NOMEM, x_dngettext(GETTEXT_PACKAGE, "Could not allocate %lu byte to read file “%s”", "Could not allocate %lu bytes to read file “%s”", (xulong)alloc_size), (xulong)alloc_size,  display_filename);
+        x_set_error(error, X_FILE_ERROR, X_FILE_ERROR_NOMEM,
+            x_dngettext(GETTEXT_PACKAGE, "Could not allocate %" X_XSIZE_MODIFIER "u byte to read file “%s”", "Could not allocate %" X_XSIZE_MODIFIER "u bytes to read file “%s”", alloc_size), alloc_size, display_filename);
         x_free(display_filename);
         goto error;
     }

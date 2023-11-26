@@ -201,6 +201,8 @@ extern int drmModeAddFB2(int fd, uint32_t width, uint32_t height, uint32_t pixel
 int drmModeAddFB2WithModifiers(int fd, uint32_t width, uint32_t height, uint32_t pixel_format, const uint32_t bo_handles[4], const uint32_t pitches[4], const uint32_t offsets[4], const uint64_t modifier[4], uint32_t *buf_id, uint32_t flags);
 
 extern int drmModeRmFB(int fd, uint32_t bufferId);
+extern int drmModeCloseFB(int fd, uint32_t buffer_id);
+
 extern int drmModeDirtyFB(int fd, uint32_t bufferId, drmModeClipPtr clips, uint32_t num_clips);
 
 extern drmModeCrtcPtr drmModeGetCrtc(int fd, uint32_t crtcId);

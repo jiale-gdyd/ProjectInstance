@@ -60,6 +60,8 @@ typedef struct {
     char *(*x_find_program_for_path)(const char *program, const char *path, const char *working_dir);
 
     int (*x_uri_get_default_scheme_port)(const char *scheme);
+
+    xboolean (*x_set_prgname_once)(const xchar *prgname);
 } XLibPrivateVTable;
 
 XLIB_AVAILABLE_IN_ALL
