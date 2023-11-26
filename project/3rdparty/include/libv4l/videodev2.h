@@ -706,6 +706,7 @@ struct v4l2_requestbuffers {
 #define V4L2_BUF_CAP_SUPPORTS_ORPHANED_BUFS                         (1 << 4)
 #define V4L2_BUF_CAP_SUPPORTS_M2M_HOLD_CAPTURE_BUF                  (1 << 5)
 #define V4L2_BUF_CAP_SUPPORTS_MMAP_CACHE_HINTS                      (1 << 6)
+#define V4L2_BUF_CAP_SUPPORTS_MAX_NUM_BUFFERS                       (1 << 7)
 
 struct v4l2_plane {
     __u32             bytesused;
@@ -1097,42 +1098,44 @@ struct v4l2_control {
 };
 
 struct v4l2_ext_control {
-    __u32                                    id;
-    __u32                                    size;
-    __u32                                    reserved2[1];
+    __u32                                        id;
+    __u32                                        size;
+    __u32                                        reserved2[1];
     union {
-        __s32                                value;
-        __s64                                value64;
-        char                                 *string;
-        __u8                                 *p_u8;
-        __u16                                *p_u16;
-        __u32                                *p_u32;
-        __s32                                *p_s32;
-        __s64                                *p_s64;
-        struct v4l2_area                     *p_area;
-        struct v4l2_ctrl_h264_sps            *p_h264_sps;
-        struct v4l2_ctrl_h264_pps            *p_h264_pps;
-        struct v4l2_ctrl_h264_scaling_matrix *p_h264_scaling_matrix;
-        struct v4l2_ctrl_h264_pred_weights   *p_h264_pred_weights;
-        struct v4l2_ctrl_h264_slice_params   *p_h264_slice_params;
-        struct v4l2_ctrl_h264_decode_params  *p_h264_decode_params;
-        struct v4l2_ctrl_fwht_params         *p_fwht_params;
-        struct v4l2_ctrl_vp8_frame           *p_vp8_frame;
-        struct v4l2_ctrl_mpeg2_sequence      *p_mpeg2_sequence;
-        struct v4l2_ctrl_mpeg2_picture       *p_mpeg2_picture;
-        struct v4l2_ctrl_mpeg2_quantisation  *p_mpeg2_quantisation;
-        struct v4l2_ctrl_vp9_compressed_hdr  *p_vp9_compressed_hdr_probs;
-        struct v4l2_ctrl_vp9_frame           *p_vp9_frame;
-        struct v4l2_ctrl_hevc_sps            *p_hevc_sps;
-        struct v4l2_ctrl_hevc_pps            *p_hevc_pps;
-        struct v4l2_ctrl_hevc_slice_params   *p_hevc_slice_params;
-        struct v4l2_ctrl_hevc_scaling_matrix *p_hevc_scaling_matrix;
-        struct v4l2_ctrl_hevc_decode_params  *p_hevc_decode_params;
-        struct v4l2_ctrl_av1_sequence        *p_av1_sequence;
-        struct v4l2_ctrl_av1_tile_group_entry *p_av1_tile_group_entry;
-        struct v4l2_ctrl_av1_frame           *p_av1_frame;
-        struct v4l2_ctrl_av1_film_grain      *p_av1_film_grain;
-        void                                 *ptr;
+        __s32                                    value;
+        __s64                                    value64;
+        char                                     *string;
+        __u8                                     *p_u8;
+        __u16                                    *p_u16;
+        __u32                                    *p_u32;
+        __s32                                    *p_s32;
+        __s64                                    *p_s64;
+        struct v4l2_area                         *p_area;
+        struct v4l2_ctrl_h264_sps                *p_h264_sps;
+        struct v4l2_ctrl_h264_pps                *p_h264_pps;
+        struct v4l2_ctrl_h264_scaling_matrix     *p_h264_scaling_matrix;
+        struct v4l2_ctrl_h264_pred_weights       *p_h264_pred_weights;
+        struct v4l2_ctrl_h264_slice_params       *p_h264_slice_params;
+        struct v4l2_ctrl_h264_decode_params      *p_h264_decode_params;
+        struct v4l2_ctrl_fwht_params             *p_fwht_params;
+        struct v4l2_ctrl_vp8_frame               *p_vp8_frame;
+        struct v4l2_ctrl_mpeg2_sequence          *p_mpeg2_sequence;
+        struct v4l2_ctrl_mpeg2_picture           *p_mpeg2_picture;
+        struct v4l2_ctrl_mpeg2_quantisation      *p_mpeg2_quantisation;
+        struct v4l2_ctrl_vp9_compressed_hdr      *p_vp9_compressed_hdr_probs;
+        struct v4l2_ctrl_vp9_frame               *p_vp9_frame;
+        struct v4l2_ctrl_hevc_sps                *p_hevc_sps;
+        struct v4l2_ctrl_hevc_pps                *p_hevc_pps;
+        struct v4l2_ctrl_hevc_slice_params       *p_hevc_slice_params;
+        struct v4l2_ctrl_hevc_scaling_matrix     *p_hevc_scaling_matrix;
+        struct v4l2_ctrl_hevc_decode_params      *p_hevc_decode_params;
+        struct v4l2_ctrl_av1_sequence            *p_av1_sequence;
+        struct v4l2_ctrl_av1_tile_group_entry    *p_av1_tile_group_entry;
+        struct v4l2_ctrl_av1_frame               *p_av1_frame;
+        struct v4l2_ctrl_av1_film_grain          *p_av1_film_grain;
+        struct v4l2_ctrl_hdr10_cll_info          *p_hdr10_cll_info;
+		struct v4l2_ctrl_hdr10_mastering_display *p_hdr10_mastering_display;
+        void                                     *ptr;
     };
 } __attribute__ ((packed));
 
@@ -1720,7 +1723,8 @@ struct v4l2_create_buffers {
     struct v4l2_format format;
     __u32              capabilities;
     __u32              flags;
-    __u32              reserved[6];
+    __u32              max_num_buffers;
+    __u32              reserved[5];
 };
 
 #define VIDIOC_QUERYCAP                                             _IOR('V',  0, struct v4l2_capability)
