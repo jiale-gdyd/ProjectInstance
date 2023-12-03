@@ -416,8 +416,8 @@ static void x_signal_group_class_init(XSignalGroupClass *klass)
     object_class->get_property = x_signal_group_get_property;
     object_class->set_property = x_signal_group_set_property;
 
-    properties[PROP_TARGET] = x_param_spec_object("target", "Target", "The target instance used when connecting signals.", X_TYPE_OBJECT, (XParamFlags)(X_PARAM_READWRITE | X_PARAM_EXPLICIT_NOTIFY | X_PARAM_STATIC_STRINGS));
-    properties[PROP_TARGET_TYPE] = x_param_spec_gtype("target-type", "Target Type", "The XType of the target property.", X_TYPE_OBJECT, (XParamFlags)(X_PARAM_READWRITE | X_PARAM_CONSTRUCT_ONLY | X_PARAM_STATIC_STRINGS));
+    properties[PROP_TARGET] = x_param_spec_object("target", NULL, NULL, X_TYPE_OBJECT, (XParamFlags)(X_PARAM_READWRITE | X_PARAM_EXPLICIT_NOTIFY | X_PARAM_STATIC_STRINGS));
+    properties[PROP_TARGET_TYPE] = x_param_spec_gtype("target-type", NULL, NULL, X_TYPE_OBJECT, (XParamFlags)(X_PARAM_READWRITE | X_PARAM_CONSTRUCT_ONLY | X_PARAM_STATIC_STRINGS));
 
     x_object_class_install_properties(object_class, LAST_PROP, properties);
 

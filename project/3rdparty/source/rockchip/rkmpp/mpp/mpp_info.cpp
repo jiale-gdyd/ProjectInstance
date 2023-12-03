@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2023-11-01 fix[hal_h265e_vepu541]: fix roi buffer variables incorrect use";
+static const char *mpp_last_commit_message = "2023-11-30 fix[cmake]: Remove HAVE_DRM option";
 
 void show_mpp_version(void)
 {

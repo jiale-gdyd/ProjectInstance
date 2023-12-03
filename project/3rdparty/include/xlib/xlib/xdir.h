@@ -20,6 +20,12 @@ void x_dir_rewind(XDir *dir);
 XLIB_AVAILABLE_IN_ALL
 void x_dir_close(XDir *dir);
 
+XLIB_AVAILABLE_IN_2_80
+XDir *x_dir_ref(XDir *dir);
+
+XLIB_AVAILABLE_IN_2_80
+void x_dir_unref(XDir *dir);
+
 X_END_DECLS
 
 #endif

@@ -7,7 +7,7 @@ X_BEGIN_DECLS
 
 typedef struct _XCompletion XCompletion;
 
-typedef xchar *(*XCompletionFunc)(xpointer);
+typedef xchar *(*XCompletionFunc)(xpointer item);
 typedef xint (*XCompletionStrncmpFunc)(const xchar *s1, const xchar *s2, xsize n);
 
 struct _XCompletion {

@@ -129,7 +129,7 @@ XLIB_AVAILABLE_IN_ALL
 XVariantType *x_variant_type_new_dict_entry(const XVariantType *key, const XVariantType *value);
 
 XLIB_AVAILABLE_IN_ALL
-const XVariantType *x_variant_type_checked_(const xchar *);
+const XVariantType *x_variant_type_checked_(const xchar *type_string);
 
 XLIB_AVAILABLE_IN_2_60
 xsize x_variant_type_string_get_depth_(const xchar *type_string);

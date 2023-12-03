@@ -445,6 +445,9 @@ typedef enum {
 XLIB_AVAILABLE_IN_2_38
 void x_test_trap_subprocess(const char *test_path, xuint64 usec_timeout, XTestSubprocessFlags test_flags);
 
+XLIB_AVAILABLE_IN_2_80
+void x_test_trap_subprocess_with_envp(const char *test_path, const char *const *envp, xuint64 usec_timeout, XTestSubprocessFlags test_flags);
+
 XLIB_AVAILABLE_IN_ALL
 xboolean x_test_trap_has_passed(void);
 

@@ -2151,6 +2151,11 @@ X_GNUC_END_IGNORE_DEPRECATIONS
 
 void x_test_trap_subprocess(const char *test_path, xuint64 usec_timeout, XTestSubprocessFlags test_flags)
 {
+    x_test_trap_subprocess_with_envp(test_path, NULL, usec_timeout, test_flags);
+}
+
+void x_test_trap_subprocess_with_envp(const char *test_path, const char *const *envp, xuint64 usec_timeout, XTestSubprocessFlags test_flags)
+{
     XPid pid;
     XPtrArray *argv;
     XSpawnFlags flags;
@@ -2207,7 +2212,7 @@ void x_test_trap_subprocess(const char *test_path, xuint64 usec_timeout, XTestSu
         flags = (XSpawnFlags)(flags | X_SPAWN_CHILD_INHERITS_STDIN);
     }
 
-    if (!x_spawn_async_with_pipes(test_initial_cwd, (char **)argv->pdata, NULL, flags, NULL, NULL, &pid, NULL, &stdout_fd, &stderr_fd, &error)) {
+    if (!x_spawn_async_with_pipes(test_initial_cwd, (char **)argv->pdata, (char **)envp, flags, NULL, NULL, &pid, NULL, &stdout_fd, &stderr_fd, &error)) {
         x_error("x_test_trap_subprocess() failed: %s", error->message);
     }
 

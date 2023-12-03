@@ -90,4 +90,5 @@ obj-y += xlocalcharset.o
 obj-y += xvariant-parser.o
 obj-y += xvarianttypeinfo.o
 obj-y += xjournal-private.o
+obj-y += xdatetime-private.o
 obj-y += xvariant-serialiser.o

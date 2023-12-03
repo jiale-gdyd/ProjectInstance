@@ -1083,7 +1083,7 @@ static xboolean fork_exec(xboolean intermediate_child, const xchar *working_dire
     XUnixPipe child_err_report_pipe = X_UNIX_PIPE_INIT;
     XUnixPipe child_pid_report_pipe = X_UNIX_PIPE_INIT;
     xint child_close_fds[4] = { -1, -1, -1, -1 };
-    xuint pipe_flags = cloexec_pipes ? FD_CLOEXEC : 0;
+    xuint pipe_flags = cloexec_pipes ? O_CLOEXEC : 0;
 
     x_assert(argv != NULL && argv[0] != NULL);
     x_assert(stdin_pipe_out == NULL || stdin_fd < 0);

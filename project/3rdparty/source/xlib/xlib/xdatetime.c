@@ -32,6 +32,7 @@
 #include <xlib/xlib/xmappedfile.h>
 #include <xlib/xlib/xconvertprivate.h>
 #include <xlib/xlib/xcharsetprivate.h>
+#include <xlib/xlib/xdatetime-private.h>
 
 struct _XDateTime {
     xuint64   usec;
@@ -130,6 +131,26 @@ static const xint ab_alt_month_item[12] = {
 
 #define MONTH_ABBR_STANDALONE(d)                        nl_langinfo(ab_alt_month_item[x_date_time_get_month(d) - 1])
 #define MONTH_ABBR_STANDALONE_IS_LOCALE                 TRUE
+
+#ifdef HAVE_LANGINFO_ERA
+#define PREFERRED_ERA_DATE_TIME_FMT                     nl_langinfo(ERA_D_T_FMT)
+#define PREFERRED_ERA_DATE_FMT                          nl_langinfo(ERA_D_FMT)
+#define PREFERRED_ERA_TIME_FMT                          nl_langinfo(ERA_T_FMT)
+
+#define ERA_DESCRIPTION                                 nl_langinfo(ERA)
+#define ERA_DESCRIPTION_IS_LOCALE                       TRUE
+#define ERA_DESCRIPTION_N_SEGMENTS                      (int)(xintptr)nl_langinfo(_NL_TIME_ERA_NUM_ENTRIES)
+
+#else
+
+#define PREFERRED_ERA_DATE_TIME_FMT                     PREFERRED_DATE_TIME_FMT
+#define PREFERRED_ERA_DATE_FMT                          PREFERRED_DATE_FMT
+#define PREFERRED_ERA_TIME_FMT                          PREFERRED_TIME_FMT
+
+#define ERA_DESCRIPTION                                 NULL
+#define ERA_DESCRIPTION_IS_LOCALE                       FALSE
+#define ERA_DESCRIPTION_N_SEGMENTS                      0
+#endif 
 
 static const xchar *get_fallback_ampm(xint hour)
 {
@@ -1281,6 +1302,109 @@ static const xchar *const *initialize_alt_digits(void)
     return alt_digits;
 }
 
+static XEraDescriptionSegment *date_time_lookup_era(XDateTime *datetime, xboolean locale_is_utf8)
+{
+    XEraDate datetime_date;
+    static XMutex era_mutex;
+    XPtrArray *local_era_description;
+    static XPtrArray *static_era_description = NULL;
+    static const char *static_era_description_locale = NULL;
+    const char *current_lc_time = setlocale(LC_TIME, NULL);
+
+    x_mutex_lock(&era_mutex);
+
+    if (static_era_description_locale != current_lc_time) {
+        char *tmp = NULL;
+        size_t era_description_str_len;
+        const char *era_description_str;
+
+        era_description_str = ERA_DESCRIPTION;
+        if (era_description_str != NULL) {
+            {
+                const char *s = era_description_str;
+                int n_entries = ERA_DESCRIPTION_N_SEGMENTS;
+
+                for (int i = 1; i < n_entries; i++) {
+                    const char *next_semicolon = strchr(s, ';');
+                    const char *next_nul = strchr(s, '\0');
+
+                    if (next_semicolon != NULL && next_semicolon < next_nul) {
+                        s = next_semicolon + 1;
+                    } else {
+                        s = next_nul + 1;
+                    }
+                }
+
+                era_description_str_len = strlen(s) + (s - era_description_str);
+                era_description_str = tmp = x_memdup2(era_description_str, era_description_str_len + 1);
+                s = era_description_str;
+
+                for (int i = 1; i < n_entries; i++) {
+                    char *next_nul = strchr(s, '\0');
+
+                    if ((size_t)(next_nul - era_description_str) >= era_description_str_len) {
+                        break;
+                    }
+
+                    *next_nul = ';';
+                    s = next_nul + 1;
+                }
+            }
+
+            if (!locale_is_utf8 && ERA_DESCRIPTION_IS_LOCALE) {
+                char *tmp2 = NULL;
+                era_description_str = tmp2 = x_locale_to_utf8(era_description_str, -1, NULL, NULL, NULL);
+                x_free(tmp);
+                tmp = x_steal_pointer(&tmp2);
+            }
+
+            x_clear_pointer(&static_era_description, x_ptr_array_unref);
+
+            if (era_description_str != NULL) {
+                static_era_description = _x_era_description_parse(era_description_str);
+            }
+
+            if (static_era_description == NULL) {
+                x_warning("Could not parse ERA description: %s", era_description_str);
+            }
+        } else {
+            x_clear_pointer(&static_era_description, x_ptr_array_unref);
+        }
+
+        x_free(tmp);
+        static_era_description_locale = current_lc_time;
+    }
+
+    if (static_era_description == NULL) {
+        x_mutex_unlock(&era_mutex);
+        return NULL;
+    }
+
+    local_era_description = x_ptr_array_ref(static_era_description);
+    x_mutex_unlock(&era_mutex);
+
+    datetime_date.type = X_ERA_DATE_SET;
+    datetime_date.year = x_date_time_get_year(datetime);
+    datetime_date.month = x_date_time_get_month(datetime);
+    datetime_date.day = x_date_time_get_day_of_month(datetime);
+
+    for (unsigned int i = 0; i < local_era_description->len; i++) {
+        XEraDescriptionSegment *segment = x_ptr_array_index(local_era_description, i);
+
+        if ((_x_era_date_compare(&segment->start_date, &datetime_date) <= 0 &&
+           _x_era_date_compare(&datetime_date, &segment->end_date) <= 0) ||
+          (_x_era_date_compare(&segment->end_date, &datetime_date) <= 0 &&
+           _x_era_date_compare(&datetime_date, &segment->start_date) <= 0))
+        {
+            x_ptr_array_unref(local_era_description);
+            return _x_era_description_segment_ref(segment);
+        }
+    }
+
+    x_ptr_array_unref(local_era_description);
+    return NULL;
+}
+
 static void format_number(XString *str, xboolean use_alt_digits, const xchar *pad, xint width, xuint32 number)
 {
     const xchar *ascii_digits[10] = {
@@ -1418,6 +1542,7 @@ static xboolean x_date_time_format_utf8(XDateTime *datetime, const xchar *utf8_f
     xboolean name_is_utf8;
     const xchar *pad = "";
     const xchar *mod = "";
+    xboolean alt_era = FALSE;
     xboolean pad_set = FALSE;
     xboolean mod_case = FALSE;
     xboolean alt_digits = FALSE;
@@ -1440,6 +1565,7 @@ static xboolean x_date_time_format_utf8(XDateTime *datetime, const xchar *utf8_f
         }
 
         colons = 0;
+        alt_era = FALSE;
         alt_digits = FALSE;
         pad_set = FALSE;
         mod_case = FALSE;
@@ -1497,17 +1623,30 @@ static xboolean x_date_time_format_utf8(XDateTime *datetime, const xchar *utf8_f
                 break;
 
             case 'c': {
-                if (x_strcmp0(PREFERRED_DATE_TIME_FMT, "") == 0) {
+                const char *subformat = alt_era ? PREFERRED_ERA_DATE_TIME_FMT : PREFERRED_DATE_TIME_FMT;
+                if (alt_era && x_strcmp0(subformat, "") == 0) {
+                    subformat = PREFERRED_DATE_TIME_FMT;
+                }
+
+                if (x_strcmp0(subformat, "") == 0) {
                     return FALSE;
                 }
 
-                if (!x_date_time_format_locale(datetime, PREFERRED_DATE_TIME_FMT, outstr, locale_is_utf8)) {
+                if (!x_date_time_format_locale(datetime, subformat, outstr, locale_is_utf8)) {
                     return FALSE;
                 }
             }
             break;
 
             case 'C':
+                if (alt_era) {
+                    XEraDescriptionSegment *era = date_time_lookup_era(datetime, locale_is_utf8);
+                    if (era != NULL) {
+                        x_string_append(outstr, era->era_name);
+                        _x_era_description_segment_unref(era);
+                        break;
+                    }
+                }
                 format_number(outstr, alt_digits, pad_set ? pad : "0", 2, x_date_time_get_year(datetime) / 100);
                 break;
 
@@ -1583,6 +1722,10 @@ static xboolean x_date_time_format_utf8(XDateTime *datetime, const xchar *utf8_f
                 alt_digits = TRUE;
                 goto next_mod;
 
+            case 'E':
+                alt_era = TRUE;
+                goto next_mod;
+
             case 'p':
                 if (!format_ampm(datetime, outstr, locale_is_utf8, mod_case && x_strcmp0(mod, "#") == 0 ? FALSE : TRUE)) {
                     return FALSE;
@@ -1639,32 +1782,69 @@ static xboolean x_date_time_format_utf8(XDateTime *datetime, const xchar *utf8_f
                 break;
 
             case 'x': {
-                if (x_strcmp0(PREFERRED_DATE_FMT, "") == 0) {
+                const char *subformat = alt_era ? PREFERRED_ERA_DATE_FMT : PREFERRED_DATE_FMT;
+                if (alt_era && x_strcmp0(subformat, "") == 0) {
+                    subformat = PREFERRED_DATE_FMT;
+                }
+
+                if (x_strcmp0(subformat, "") == 0) {
                     return FALSE;
                 }
 
-                if (!x_date_time_format_locale(datetime, PREFERRED_DATE_FMT, outstr, locale_is_utf8)) {
+                if (!x_date_time_format_locale(datetime, subformat, outstr, locale_is_utf8)) {
                 return FALSE;
                 }
             }
             break;
 
             case 'X': {
-                if (x_strcmp0(PREFERRED_TIME_FMT, "") == 0) {
+                const char *subformat = alt_era ? PREFERRED_ERA_TIME_FMT : PREFERRED_TIME_FMT;
+                if (alt_era && x_strcmp0(subformat, "") == 0) {
+                    subformat = PREFERRED_TIME_FMT;
+                }
+
+                if (x_strcmp0(subformat, "") == 0) {
                     return FALSE;
                 }
 
-                if (!x_date_time_format_locale (datetime, PREFERRED_TIME_FMT, outstr, locale_is_utf8)) {
+                if (!x_date_time_format_locale (datetime, subformat, outstr, locale_is_utf8)) {
                     return FALSE;
                 }
             }
             break;
 
             case 'y':
+                if (alt_era) {
+                    XEraDescriptionSegment *era = date_time_lookup_era(datetime, locale_is_utf8);
+                    if (era != NULL) {
+                        int delta = x_date_time_get_year(datetime) - era->start_date.year;
+                        if ((x_date_time_get_year(datetime) < 0) != (era->start_date.year < 0)) {
+                            delta -= 1;
+                        }
+
+                        format_number(outstr, alt_digits, pad_set ? pad : "0", 2, era->offset + delta * era->direction_multiplier);
+                        _x_era_description_segment_unref(era);
+                        break;
+                    }
+                }
+
                 format_number(outstr, alt_digits, pad_set ? pad : "0", 2, x_date_time_get_year(datetime) % 100);
                 break;
 
             case 'Y':
+                if (alt_era) {
+                    XEraDescriptionSegment *era = date_time_lookup_era(datetime, locale_is_utf8);
+                    if (era != NULL) {
+                        if (!x_date_time_format_utf8(datetime, era->era_format, outstr, locale_is_utf8)) {
+                            _x_era_description_segment_unref(era);
+                            return FALSE;
+                        }
+
+                        _x_era_description_segment_unref(era);
+                        break;
+                    }
+                }
+
                 format_number(outstr, alt_digits, 0, 0, x_date_time_get_year(datetime));
                 break;
 

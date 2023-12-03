@@ -19,12 +19,17 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+
+#include "../../../../osal/inc/mpp_mem.h"
 #include "../../../../osal/inc/mpp_common.h"
+#include "../../../../osal/inc/mpp_dmabuf.h"
+#include "../../../base/inc/mpp_packet_impl.h"
 #include "../../../inc/mpp_enc_cfg.h"
 #include "../../../base/inc/mpp_enc_refs.h"
-#include "../../../../osal/inc/mpp_mem.h"
+
 #include "hal_h264e_debug.h"
 #include "hal_h264e_stream_amend.h"
+
 #include "../../../codec/enc/h264/h264e_sps.h"
 #include "../../../codec/enc/h264/h264e_pps.h"
 #include "../../../codec/enc/h264/h264e_slice.h"
@@ -150,10 +155,18 @@ MPP_RET h264e_vepu_stream_amend_proc(HalH264eVepuStreamAmend *ctx, MppEncH264HwC
     RK_S32 final_len = 0;
     RK_S32 last_slice = 0;
     const MppPktSeg *seg = mpp_packet_get_segment_info(pkt);
+
     if (seg) {
         while (seg && seg->type != 1 && seg->type != 5) {
             seg = seg->next;
         }
+    }
+
+    {
+        MppBuffer buf = mpp_packet_get_buffer(pkt);
+        RK_S32 fd = mpp_buffer_get_fd(buf);
+
+        mpp_dmabuf_sync_partial_begin(fd, 1, base, len, __FUNCTION__);
     }
 
     {
@@ -318,9 +331,20 @@ MPP_RET h264e_vepu_stream_amend_sync_ref_idc(HalH264eVepuStreamAmend *ctx)
     RK_S32 base = ctx->buf_base;
     RK_S32 len = ctx->old_length;
     RK_U8 *p = mpp_packet_get_pos(pkt) + base;
-    RK_U8 val = p[4];
-    RK_S32 hw_nal_ref_idc = (val >> 5) & 0x3;
-    RK_S32 sw_nal_ref_idc = slice->nal_reference_idc;
+    RK_U8 val = 0;
+    RK_S32 hw_nal_ref_idc = 0;
+    RK_S32 sw_nal_ref_idc = 0;
+
+    {
+        MppBuffer buf = mpp_packet_get_buffer(pkt);
+        RK_S32 fd = mpp_buffer_get_fd(buf);
+
+        mpp_dmabuf_sync_partial_begin(fd, 1, base, len, __FUNCTION__);
+    }
+
+    val = p[4];
+    hw_nal_ref_idc = (val >> 5) & 0x3;
+    sw_nal_ref_idc = slice->nal_reference_idc;
 
     if (hw_nal_ref_idc == sw_nal_ref_idc)
         return MPP_OK;

@@ -15,21 +15,22 @@
 #include <xlib/xlib/xlib-private.h>
 
 struct _XDir {
-    DIR *dirp;
+    xatomicrefcount ref_count;
+    DIR             *dirp;
 };
 
 XDir *x_dir_open_with_errno(const xchar *path, xuint flags)
 {
-    XDir dir;
+    DIR *dirp;
 
     x_return_val_if_fail(path != NULL, NULL);
 
-    dir.dirp = opendir(path);
-    if (dir.dirp == NULL) {
+    dirp = opendir(path);
+    if (dirp == NULL) {
         return NULL;
     }
 
-    return (XDir *)x_memdup2(&dir, sizeof dir);
+    return x_dir_new_from_dirp(dirp);
 }
 
 XDir *x_dir_open(const xchar *path, xuint flags, XError **error)
@@ -57,7 +58,8 @@ XDir *x_dir_new_from_dirp(xpointer dirp)
 
     x_return_val_if_fail(dirp != NULL, NULL);
 
-    dir = x_new(XDir, 1);
+    dir = x_new0(XDir, 1);
+    x_atomic_ref_count_init(&dir->ref_count);
     dir->dirp = (DIR *)dirp;
 
     return dir;
@@ -87,9 +89,32 @@ void x_dir_rewind(XDir *dir)
     rewinddir(dir->dirp);
 }
 
+static void x_dir_actually_close(XDir *dir)
+{
+    x_clear_pointer(&dir->dirp, closedir);
+}
+
 void x_dir_close(XDir *dir)
 {
     x_return_if_fail(dir != NULL);
-    closedir(dir->dirp);
-    x_free(dir);
+    x_dir_actually_close(dir);
+    x_dir_unref(dir);
+}
+
+XDir *x_dir_ref(XDir *dir)
+{
+    x_return_val_if_fail(dir != NULL, NULL);
+
+    x_atomic_ref_count_inc(&dir->ref_count);
+    return dir;
+}
+
+void x_dir_unref(XDir *dir)
+{
+    x_return_if_fail(dir != NULL);
+
+    if (x_atomic_ref_count_dec(&dir->ref_count)) {
+        x_dir_actually_close(dir);
+        x_free(dir);
+    }
 }

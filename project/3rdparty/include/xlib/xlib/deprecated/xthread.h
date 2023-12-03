@@ -213,7 +213,7 @@ XLIB_DEPRECATED_IN_2_32
 void x_cond_free(XCond *cond);
 
 XLIB_DEPRECATED_IN_2_32
-xboolean x_cond_timed_wait(XCond *cond, XMutex *mutex, XTimeVal *timeval);
+xboolean x_cond_timed_wait(XCond *cond, XMutex *mutex, XTimeVal *abs_time);
 
 X_GNUC_END_IGNORE_DEPRECATIONS
 

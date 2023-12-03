@@ -220,7 +220,7 @@ static void x_binding_group_class_init(XBindingGroupClass *klass)
     object_class->get_property = x_binding_group_get_property;
     object_class->set_property = x_binding_group_set_property;
 
-    properties[PROP_SOURCE] = x_param_spec_object("source", "Source", "The source XObject used for binding properties.", X_TYPE_OBJECT, (XParamFlags)(X_PARAM_READWRITE | X_PARAM_EXPLICIT_NOTIFY | X_PARAM_STATIC_STRINGS));
+    properties[PROP_SOURCE] = x_param_spec_object("source", NULL, NULL, X_TYPE_OBJECT, (XParamFlags)(X_PARAM_READWRITE | X_PARAM_EXPLICIT_NOTIFY | X_PARAM_STATIC_STRINGS));
     x_object_class_install_properties(object_class, N_PROPS, properties);
 }
 

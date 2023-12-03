@@ -599,6 +599,8 @@ void x_string_append_vprintf(XString *string, const xchar *format, va_list args)
         memcpy(string->str + string->len, buf, len + 1);
         string->len += len;
         x_free(buf);
+    } else {
+        x_critical("Failed to append to string: invalid format/args passed to x_vasprintf()");
     }
 }
 

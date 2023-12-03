@@ -565,11 +565,11 @@ static void x_binding_class_init(XBindingClass *klass)
     xobject_class->get_property = x_binding_get_property;
     xobject_class->finalize = x_binding_finalize;
 
-    x_object_class_install_property(xobject_class, PROP_SOURCE, x_param_spec_object("source", P_("Source"), P_("The source of the binding"), X_TYPE_OBJECT, (XParamFlags)(X_PARAM_CONSTRUCT_ONLY | X_PARAM_READWRITE | X_PARAM_STATIC_STRINGS)));
-    x_object_class_install_property(xobject_class, PROP_TARGET, x_param_spec_object("target", P_("Target"), P_("The target of the binding"), X_TYPE_OBJECT, (XParamFlags)(X_PARAM_CONSTRUCT_ONLY | X_PARAM_READWRITE | X_PARAM_STATIC_STRINGS)));
-    x_object_class_install_property(xobject_class, PROP_SOURCE_PROPERTY, x_param_spec_string("source-property", P_("Source Property"), P_("The property on the source to bind"), NULL, (XParamFlags)(X_PARAM_CONSTRUCT_ONLY | X_PARAM_READWRITE | X_PARAM_STATIC_STRINGS)));
-    x_object_class_install_property(xobject_class, PROP_TARGET_PROPERTY, x_param_spec_string("target-property", P_("Target Property"), P_("The property on the target to bind"), NULL, (XParamFlags)(X_PARAM_CONSTRUCT_ONLY | X_PARAM_READWRITE | X_PARAM_STATIC_STRINGS)));
-    x_object_class_install_property(xobject_class, PROP_FLAGS, x_param_spec_flags("flags", P_("Flags"), P_("The binding flags"), X_TYPE_BINDING_FLAGS, X_BINDING_DEFAULT, (XParamFlags)(X_PARAM_CONSTRUCT_ONLY | X_PARAM_READWRITE | X_PARAM_STATIC_STRINGS)));
+    x_object_class_install_property(xobject_class, PROP_SOURCE, x_param_spec_object("source", NULL, NULL, X_TYPE_OBJECT, (XParamFlags)(X_PARAM_CONSTRUCT_ONLY | X_PARAM_READWRITE | X_PARAM_STATIC_STRINGS)));
+    x_object_class_install_property(xobject_class, PROP_TARGET, x_param_spec_object("target", NULL, NULL, X_TYPE_OBJECT, (XParamFlags)(X_PARAM_CONSTRUCT_ONLY | X_PARAM_READWRITE | X_PARAM_STATIC_STRINGS)));
+    x_object_class_install_property(xobject_class, PROP_SOURCE_PROPERTY, x_param_spec_string("source-property", NULL, NULL, NULL, (XParamFlags)(X_PARAM_CONSTRUCT_ONLY | X_PARAM_READWRITE | X_PARAM_STATIC_STRINGS)));
+    x_object_class_install_property(xobject_class, PROP_TARGET_PROPERTY, x_param_spec_string("target-property", NULL, NULL, NULL, (XParamFlags)(X_PARAM_CONSTRUCT_ONLY | X_PARAM_READWRITE | X_PARAM_STATIC_STRINGS)));
+    x_object_class_install_property(xobject_class, PROP_FLAGS, x_param_spec_flags("flags", NULL, NULL, X_TYPE_BINDING_FLAGS, X_BINDING_DEFAULT, (XParamFlags)(X_PARAM_CONSTRUCT_ONLY | X_PARAM_READWRITE | X_PARAM_STATIC_STRINGS)));
 }
 
 static void x_binding_init(XBinding *binding)

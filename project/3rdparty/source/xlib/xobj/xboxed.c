@@ -110,6 +110,7 @@ X_DEFINE_BOXED_TYPE(XKeyFile, x_key_file, x_key_file_ref, x_key_file_unref)
 X_DEFINE_BOXED_TYPE(XMappedFile, x_mapped_file, x_mapped_file_ref, x_mapped_file_unref)
 X_DEFINE_BOXED_TYPE(XBookmarkFile, x_bookmark_file, x_bookmark_file_copy, x_bookmark_file_free)
 X_DEFINE_BOXED_TYPE(XHmac, x_hmac, x_hmac_ref, x_hmac_unref)
+X_DEFINE_BOXED_TYPE(XDir, x_dir, x_dir_ref, x_dir_unref)
 
 X_DEFINE_BOXED_TYPE(XMainLoop, x_main_loop, x_main_loop_ref, x_main_loop_unref)
 X_DEFINE_BOXED_TYPE(XMainContext, x_main_context, x_main_context_ref, x_main_context_unref)
@@ -123,6 +124,8 @@ X_DEFINE_BOXED_TYPE(XUri, x_uri, x_uri_ref, x_uri_unref)
 
 X_DEFINE_BOXED_TYPE(XOptionGroup, x_option_group, x_option_group_ref, x_option_group_unref)
 X_DEFINE_BOXED_TYPE(XPatternSpec, x_pattern_spec, x_pattern_spec_copy, x_pattern_spec_free);
+
+X_DEFINE_BOXED_TYPE(XStrvBuilder, x_strv_builder, x_strv_builder_ref, x_strv_builder_unref);
 
 XType x_strv_get_type(void)
 {

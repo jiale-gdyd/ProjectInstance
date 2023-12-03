@@ -21,3 +21,4 @@ obj-y += mpp_thread.o
 obj-y += mpp_time.o
 obj-y += mpp_trace.o
 obj-y += osal_2str.o
+obj-y += mpp_dmabuf.o

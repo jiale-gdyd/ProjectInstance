@@ -84,6 +84,7 @@ xchar *x_utf8_collate_key(const xchar *str, xssize len)
     x_return_val_if_fail(str != NULL, NULL);
 
     str_norm = _x_utf8_normalize_wc(str, len, X_NORMALIZE_ALL_COMPOSE);
+    x_return_val_if_fail(str_norm != NULL, NULL);
 
     xfrm_len = wcsxfrm(NULL, (wchar_t *)str_norm, 0);
     result_wc = x_new(wchar_t, xfrm_len + 1);

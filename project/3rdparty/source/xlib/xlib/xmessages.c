@@ -1707,5 +1707,11 @@ void x_printerr(const xchar *format, ...)
 xsize x_printf_string_upper_bound(const xchar *format, va_list args)
 {
     xchar c;
-    return vsnprintf(&c, 1, format, args) + 1;
+    int count = x_vsnprintf(&c, 1, format, args);
+
+    if (count < 0) {
+        return 0;
+    }
+
+    return count + 1;
 }
