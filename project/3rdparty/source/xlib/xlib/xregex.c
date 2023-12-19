@@ -899,36 +899,42 @@ static JITStatus enable_jit_with_match_options(XMatchInfo *match_info, uint32_t 
     }
 
     if (new_jit_options == old_jit_options) {
+        x_assert(match_info->regex->jit_status != JIT_STATUS_DEFAULT);
         return match_info->regex->jit_status;
     }
 
     retval = pcre2_jit_compile(match_info->regex->pcre_re, new_jit_options);
-    switch (retval) {
-        case 0:
-            match_info->regex->jit_options = new_jit_options;
-            match_info->jit_stack = pcre2_jit_stack_create(1 << 15, 1 << 19, NULL);
-            pcre2_jit_stack_assign(match_info->match_context, NULL, match_info->jit_stack);
-            return JIT_STATUS_ENABLED;
+    if (retval == 0) {
+        match_info->regex->jit_status = JIT_STATUS_ENABLED;
+        match_info->regex->jit_options = new_jit_options;
+        match_info->jit_stack = pcre2_jit_stack_create(1 << 15, 1 << 19, NULL);
+        pcre2_jit_stack_assign(match_info->match_context, NULL, match_info->jit_stack);
+    } else {
+        match_info->regex->jit_status = JIT_STATUS_DISABLED;
 
-        case PCRE2_ERROR_NOMEMORY:
-            x_debug("JIT compilation was requested with X_REGEX_OPTIMIZE, "
-                    "but JIT was unable to allocate executable memory for the "
-                    "compiler. Falling back to interpretive code.");
-            return JIT_STATUS_DISABLED;
+        switch (retval) {
+            case PCRE2_ERROR_NOMEMORY:
+                x_debug("JIT compilation was requested with X_REGEX_OPTIMIZE, "
+                   "but JIT was unable to allocate executable memory for the "
+                   "compiler. Falling back to interpretive code.");
+            break;
 
-        case PCRE2_ERROR_JIT_BADOPTION:
-            x_debug("JIT compilation was requested with X_REGEX_OPTIMIZE, "
-                    "but JIT support is not available. Falling back to "
-                    "interpretive code.");
-            return JIT_STATUS_DISABLED;
+            case PCRE2_ERROR_JIT_BADOPTION:
+                x_debug("JIT compilation was requested with X_REGEX_OPTIMIZE, "
+                   "but JIT support is not available. Falling back to "
+                   "interpretive code.");
+            break;
 
-        default:
-            x_debug("JIT compilation was requested with X_REGEX_OPTIMIZE, "
-                    "but request for JIT support had unexpectedly failed (error %d). "
-                    "Falling back to interpretive code.", retval);
-            return JIT_STATUS_DISABLED;
+            default:
+                x_debug("JIT compilation was requested with X_REGEX_OPTIMIZE, "
+                   "but request for JIT support had unexpectedly failed (error %d). "
+                   "Falling back to interpretive code.",
+                   retval);
+            break;
+        }
     }
 
+    return match_info->regex->jit_status;
     x_assert_not_reached();
 }
 
