@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2023-12-22
+  * rga: samples: utils: build: cmake: fix compile errors
+
 ## 2023-11-26
   * asio2 : If the default username or password of socks5 auth is empty, the auth callback function will be called.
   * libdrm: build: bump version to 2.4.118

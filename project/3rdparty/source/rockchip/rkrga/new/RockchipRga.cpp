@@ -6,7 +6,6 @@
 #endif
 
 #include <time.h>
-#include <math.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdint.h>

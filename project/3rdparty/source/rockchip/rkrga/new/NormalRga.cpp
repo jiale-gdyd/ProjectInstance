@@ -33,6 +33,13 @@ int get_int_property(void)
     return atoi(level);
 }
 
+static void rga_set_driver_feature(struct rgaContext *ctx)
+{
+    if (rga_version_compare(ctx->mDriverVersion, (struct rga_version_t){ 1, 3, 0, {0} }) >= 0) {
+        ctx->driver_feature |= RGA_DRIVER_FEATURE_USER_CLOSE_FENCE;
+    }
+}
+
 int NormalRgaOpen(void **context)
 {
     int fd = -1;
@@ -88,6 +95,7 @@ int NormalRgaOpen(void **context)
             rga_error("librga fail to get driver version! Compatibility mode will be enabled");
         }
 
+        rga_set_driver_feature(ctx);
         NormalRgaInitTables();
         rgaCtx = ctx;
     } else {
@@ -184,7 +192,6 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1)
     RECT clip;
     int ret = 0;
     int rotation;
-    int planeAlpha;
     int dstFd = -1;
     int srcFd = -1;
     int src1Fd = -1;
@@ -201,6 +208,7 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1)
     struct rgaContext *ctx = rgaCtx;
     struct rga_req rgaReg, tmprgaReg;
     rga_rect_t relSrc1Rect, tmpSrc1Rect;
+    int fg_global_alpha, bg_global_alpha;
     int scaleMode, rotateMode, orientation, ditherEn;
     int srcVirW, srcVirH, srcActW, srcActH, srcXPos, srcYPos;
     int dstVirW, dstVirH, dstActW, dstActH, dstXPos, dstYPos;
@@ -214,6 +222,9 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1)
     }
 
     memset(&rgaReg, 0, sizeof(struct rga_req));
+    if (rgaCtx->driver_feature & RGA_DRIVER_FEATURE_USER_CLOSE_FENCE) {
+        rgaReg.feature.user_close_fence = true;
+    }
 
     srcType = dstType = srcMmuFlag = dstMmuFlag = 0;
     src1Type = src1MmuFlag = 0;
@@ -385,67 +396,55 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1)
     }
 #endif
 
-    planeAlpha = (blend & 0xFF0000) >> 16;
     perpixelAlpha = NormalRgaFormatHasAlpha(RkRgaGetRgaFormat(relSrcRect.format));
 
     if (is_out_log()) {
         rga_error("blend:[%X], perpixelAlpha:[%d]", blend, perpixelAlpha);
     }
 
-    switch ((blend & 0xFFFF)) {
-        case 0x0001:
-            NormalRgaSetAlphaEnInfo(&rgaReg, 1, 2, planeAlpha , 1, 1, 0);
-            break;
+    if (blend & 0xfff) {
+        fg_global_alpha = (blend >> 16) & 0xff;
+        bg_global_alpha = (blend >> 24) & 0xff;
 
-        case 0x0002:
-            NormalRgaSetAlphaEnInfo(&rgaReg, 1, 2, planeAlpha , 1, 2, 0);
-            break;
+        switch (blend) {
+            case 0x405:
+                fg_global_alpha = (blend >> 16) & 0xff;
+                bg_global_alpha = 0xff;
+                blend = RGA_ALPHA_BLEND_SRC_OVER;
+                blend |= 0x1 << 12;
+                break;
 
-        case 0x0105:
-            if (perpixelAlpha && planeAlpha < 255) {
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 2, planeAlpha, 1, 9, 0);
-            } else if (perpixelAlpha) {
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 1, 0, 1, 3, 0);
-            } else {
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 0, planeAlpha, 0, 0, 0);
-            }
-            break;
+            case 0x504:
+                fg_global_alpha = 0xff;
+                bg_global_alpha = 0xff;
+                blend = RGA_ALPHA_BLEND_DST_OVER;
+                blend |= 0x1 << 12;
+                break;
 
-        case 0x0405:
-            if (perpixelAlpha && (planeAlpha < 255)) {
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 2, planeAlpha, 1, 9, 0);
-            } else if (perpixelAlpha) {
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 1, 0, 1, 3, 0);
-            } else {
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 0, planeAlpha, 0, 0, 0);
-            }
+            case 0x105:
+                fg_global_alpha = (blend >> 16) & 0xff;
+                bg_global_alpha = 0xff;
+                blend = RGA_ALPHA_BLEND_SRC_OVER;
+                break;
+
+            case 0x501:
+                fg_global_alpha = 0xff;
+                bg_global_alpha = 0xff;
+                blend = RGA_ALPHA_BLEND_DST_OVER;
+                break;
+
+            case 0x100:
+                fg_global_alpha = 0xff;
+                bg_global_alpha = 0xff;
+                blend = RGA_ALPHA_BLEND_SRC;
+                break;
+        }
+ 
+        rgaReg.feature.global_alpha_en = true;
+        NormalRgaSetAlphaEnInfo(&rgaReg, 1, 1, fg_global_alpha, bg_global_alpha, 1, blend & 0xfff, 0);
+        if ((blend >> 12) & 0x1) {
             rgaReg.alpha_rop_flag |= (1 << 9);
-            break;
-
-        case 0x0501:
-            if (perpixelAlpha && planeAlpha < 255) {
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 2, planeAlpha , 1, 4, 0);
-            } else if (perpixelAlpha) {
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 1, planeAlpha , 1, 4, 0);
-            } else {
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 3, planeAlpha , 1, 4, 0);
-            }
-            break;
-
-        case 0x0504:
-            if (perpixelAlpha && planeAlpha < 255) {
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 2, planeAlpha , 1, 4, 0);
-            } else if (perpixelAlpha) {
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 1, planeAlpha , 1, 4, 0);
-            } else {
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 3, planeAlpha , 1, 4, 0);
-            }
-            rgaReg.alpha_rop_flag |= (1 << 9);
-            break;
-
-        case 0x0100:
-        default:
-            break;
+        }
     }
 
     if (relSrcRect.hstride == 0) {
@@ -914,7 +913,15 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1)
     }
 
     if (dst->color_space_mode & full_csc_mask) {
-        NormalRgaFullColorSpaceConvert(&rgaReg, dst->color_space_mode);
+        ret = NormalRgaFullColorSpaceConvert(&rgaReg, dst->color_space_mode);
+        if (ret < 0) {
+            rga_error("Not support full csc mode:[%x]", dst->color_space_mode);
+            return -EINVAL;
+        }
+
+        if (dst->color_space_mode == rgb2yuv_709_limit) {
+            yuvToRgbMode |= 0x3 << 2;
+        }
     } else {
         if (src1) {
             if (NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relSrcRect.format))
@@ -1066,6 +1073,10 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1)
     }
 
     dst->out_fence_fd = rgaReg.out_fence_fd;
+    if ((rgaCtx->driver_feature & RGA_DRIVER_FEATURE_USER_CLOSE_FENCE) && (dst->in_fence_fd > 0) && (sync_mode == RGA_BLIT_ASYNC)) {
+        close(dst->in_fence_fd);
+    }
+
     return 0;
 }
 
@@ -1113,6 +1124,7 @@ int RgaCollorFill(rga_info *dst)
     }
 
     memset(&rgaReg, 0, sizeof(struct rga_req));
+    rgaReg.feature.user_close_fence = true;
     dstType = dstMmuFlag = 0;
 
     if (!dst) {
@@ -1307,6 +1319,10 @@ int RgaCollorFill(rga_info *dst)
     }
 
     dst->out_fence_fd = rgaReg.out_fence_fd;
+    if ((rgaCtx->driver_feature & RGA_DRIVER_FEATURE_USER_CLOSE_FENCE) && (dst->in_fence_fd > 0) && (sync_mode == RGA_BLIT_ASYNC)) {
+        close(dst->in_fence_fd);
+    }
+
     return 0;
 }
 
@@ -1336,6 +1352,7 @@ int RgaCollorPalette(rga_info *src, rga_info *dst, rga_info *lut)
     }
 
     memset(&rgaReg, 0, sizeof(struct rga_req));
+    rgaReg.feature.user_close_fence = true;
     srcType = dstType = lutType = srcMmuFlag = dstMmuFlag = lutMmuFlag = 0;
 
     is_debug_log();
@@ -1756,7 +1773,6 @@ int RgaCollorPalette(rga_info *src, rga_info *dst, rga_info *lut)
         return -errno;
     }
 
-    dst->out_fence_fd = rgaReg.out_fence_fd;
     return 0;
 }
 

@@ -73,7 +73,7 @@ int NormalRgaSetPatVirtualInfo(struct rga_req *msg, arch_type_t yrgb_addr, arch_
 
 int NormalRgaSetRopMaskInfo(struct rga_req *msg, arch_type_t rop_mask_addr, unsigned int rop_mask_endian_mode);
 
-int NormalRgaSetAlphaEnInfo(struct rga_req *msg, unsigned int alpha_cal_mode, unsigned int alpha_mode, unsigned int global_a_value, unsigned int PD_en, unsigned int PD_mode, unsigned int dst_alpha_en );
+int NormalRgaSetAlphaEnInfo(struct rga_req *msg, unsigned int alpha_cal_mode, unsigned int alpha_mode, unsigned int fg_global_alpha, unsigned int bg_global_alpha, unsigned int PD_en, unsigned int PD_mode, unsigned int dst_alpha_en );
 
 int NormalRgaSetRopEnInfo(struct rga_req *msg, unsigned int ROP_mode, unsigned int ROP_code, unsigned int color_mode, unsigned int solid_color);
 int NormalRgaSetFadingEnInfo(struct rga_req *msg, unsigned char r, unsigned char g, unsigned char b);

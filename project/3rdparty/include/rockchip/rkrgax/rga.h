@@ -131,6 +131,12 @@ enum {
     yuv2yuv_601_full_2_709_full   = 0x8 << 8,
     yuv2yuv_709_full_2_601_limit  = 0x9 << 8,
     yuv2yuv_709_full_2_601_full   = 0xa << 8,
+    rgb2yuv_709_limit             = 0xb << 8,
+    yuv2rgb_709_full              = 0xc << 8,
+    yuv2yuv_601_limit_2_601_full  = 0xd << 8,
+    yuv2yuv_601_full_2_601_limit  = 0xe << 8,
+    yuv2yuv_709_limit_2_709_full  = 0xf << 8,
+    yuv2yuv_709_full_2_709_limit  = 0x10 << 8,
     full_csc_mask                 = 0xf00,
 };
 

@@ -5,7 +5,6 @@
 #define LOG_TAG "im2d_rga"
 #endif
 
-#include <math.h>
 #include <sstream>
 
 #include <rockchip/rkrgax/utils.h>
@@ -134,6 +133,19 @@ IM_API IM_STATUS releasebuffer_handle(rga_buffer_handle_t handle)
     return rga_release_buffer(handle);
 }
 
+static inline void set_default_rga_buffer(rga_buffer_t *buffer, int width, int height, int format, int wstride, int hstride)
+{
+    buffer->width = width;
+    buffer->height = height;
+    buffer->wstride = wstride;
+    buffer->hstride = hstride;
+    buffer->format = format;
+
+    buffer->global_alpha = 0xff;
+    buffer->color_space_mode = IM_COLOR_SPACE_DEFAULT;
+    buffer->rd_mode = IM_RASTER_MODE;
+}
+
 #undef wrapbuffer_virtualaddr
 static rga_buffer_t wrapbuffer_virtualaddr(void *vir_addr, int width, int height, int format, int wstride, int hstride)
 {
@@ -142,11 +154,7 @@ static rga_buffer_t wrapbuffer_virtualaddr(void *vir_addr, int width, int height
     memset(&buffer, 0, sizeof(rga_buffer_t));
 
     buffer.vir_addr = vir_addr;
-    buffer.width = width;
-    buffer.height = height;
-    buffer.format = format;
-    buffer.wstride = wstride ? wstride : width;
-    buffer.hstride = hstride ? hstride : height;
+    set_default_rga_buffer(&buffer, width, height, format, wstride ? wstride : width, hstride ? hstride : height);
 
     return buffer;
 }
@@ -159,11 +167,7 @@ static rga_buffer_t wrapbuffer_physicaladdr(void *phy_addr, int width, int heigh
     memset(&buffer, 0, sizeof(rga_buffer_t));
 
     buffer.phy_addr = phy_addr;
-    buffer.width = width;
-    buffer.height = height;
-    buffer.format = format;
-    buffer.wstride = wstride ? wstride : width;
-    buffer.hstride = hstride ? hstride : height;
+    set_default_rga_buffer(&buffer, width, height, format, wstride ? wstride : width, hstride ? hstride : height);
 
     return buffer;
 }
@@ -176,11 +180,7 @@ static rga_buffer_t wrapbuffer_fd(int fd, int width, int height, int format, int
     memset(&buffer, 0, sizeof(rga_buffer_t));
 
     buffer.fd = fd;
-    buffer.width = width;
-    buffer.height = height;
-    buffer.format = format;
-    buffer.wstride = wstride ? wstride : width;
-    buffer.hstride = hstride ? hstride : height;
+    set_default_rga_buffer(&buffer, width, height, format, wstride ? wstride : width, hstride ? hstride : height);
 
     return buffer;
 }
@@ -193,11 +193,7 @@ IM_API rga_buffer_t wrapbuffer_handle(rga_buffer_handle_t handle, int width, int
     memset(&buffer, 0, sizeof(rga_buffer_t));
 
     buffer.handle = handle;
-    buffer.width = width;
-    buffer.height = height;
-    buffer.format = format;
-    buffer.wstride = wstride ? wstride : width;
-    buffer.hstride = hstride ? hstride : height;
+    set_default_rga_buffer(&buffer, width, height, format, wstride ? wstride : width, hstride ? hstride : height);
 
     return buffer;
 }
@@ -205,6 +201,16 @@ IM_API rga_buffer_t wrapbuffer_handle(rga_buffer_handle_t handle, int width, int
 IM_API rga_buffer_t wrapbuffer_handle(rga_buffer_handle_t handle, int width, int height, int format)
 {
     return wrapbuffer_handle(handle, width, height, format, width, height);
+}
+
+void imsetOpacity(rga_buffer_t *buf, uint8_t alpha)
+{
+    buf->global_alpha = alpha;
+}
+
+void imsetColorSpace(rga_buffer_t *buf, IM_COLOR_SPACE_MODE mode)
+{
+    buf->color_space_mode = mode;
 }
 
 IM_API const char *querystring(int name)
@@ -773,7 +779,9 @@ IM_API IM_STATUS imcvtcolor(rga_buffer_t src, rga_buffer_t dst, int sfmt, int df
     src.format = sfmt;
     dst.format = dfmt;
 
-    dst.color_space_mode = mode;
+    if (dst.color_space_mode == 0) {
+        dst.color_space_mode = mode;
+    }
 
     if (sync == 0) {
         usage |= IM_ASYNC;
