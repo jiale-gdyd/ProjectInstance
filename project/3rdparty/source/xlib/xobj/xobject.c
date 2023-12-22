@@ -118,23 +118,31 @@ static void x_object_notify_queue_free(xpointer data)
     XObjectNotifyQueue *nqueue = (XObjectNotifyQueue *)data;
 
     x_slist_free(nqueue->pspecs);
-    x_slice_free(XObjectNotifyQueue, nqueue);
+    x_free_sized(nqueue, sizeof(XObjectNotifyQueue));
 }
 
-static XObjectNotifyQueue *x_object_notify_queue_freeze(XObject *object, xboolean conditional)
+static XObjectNotifyQueue *x_object_notify_queue_create_queue_frozen(XObject *object)
+{
+    XObjectNotifyQueue *nqueue;
+
+    nqueue = x_new0(XObjectNotifyQueue, 1);
+    *nqueue = (XObjectNotifyQueue){
+        .freeze_count = 1,
+    };
+
+    x_datalist_id_set_data_full(&object->qdata, quark_notify_queue, nqueue, x_object_notify_queue_free);
+    return nqueue;
+}
+
+static XObjectNotifyQueue *x_object_notify_queue_freeze(XObject *object)
 {
     XObjectNotifyQueue *nqueue;
 
     X_LOCK(notify_lock);
     nqueue = (XObjectNotifyQueue *)x_datalist_id_get_data(&object->qdata, quark_notify_queue);
     if (!nqueue) {
-        if (conditional) {
-            X_UNLOCK(notify_lock);
-            return NULL;
-        }
-
-        nqueue = x_slice_new0(XObjectNotifyQueue);
-        x_datalist_id_set_data_full(&object->qdata, quark_notify_queue, nqueue, x_object_notify_queue_free);
+        nqueue = x_object_notify_queue_create_queue_frozen(object);
+        goto out;
     }
 
     if (nqueue->freeze_count >= 65535) {
@@ -142,12 +150,13 @@ static XObjectNotifyQueue *x_object_notify_queue_freeze(XObject *object, xboolea
     } else {
         nqueue->freeze_count++;
     }
+out:
     X_UNLOCK(notify_lock);
 
     return nqueue;
 }
 
-static void x_object_notify_queue_thaw(XObject *object, XObjectNotifyQueue *nqueue)
+static void x_object_notify_queue_thaw(XObject *object, XObjectNotifyQueue *nqueue, xboolean take_ref)
 {
     XSList *slist;
     xuint n_pspecs = 0;
@@ -155,7 +164,11 @@ static void x_object_notify_queue_thaw(XObject *object, XObjectNotifyQueue *nque
 
     X_LOCK(notify_lock);
 
-    if (X_UNLIKELY(nqueue->freeze_count == 0)) {
+    if (!nqueue) {
+        nqueue = x_datalist_id_get_data(&object->qdata, quark_notify_queue);
+    }
+
+    if (X_UNLIKELY(!nqueue || nqueue->freeze_count == 0)) {
         X_UNLOCK(notify_lock);
         x_critical("%s: property-changed notification for %s(%p) is not frozen", X_STRFUNC, X_OBJECT_TYPE_NAME(object), object);
         return;
@@ -177,15 +190,34 @@ static void x_object_notify_queue_thaw(XObject *object, XObjectNotifyQueue *nque
     X_UNLOCK(notify_lock);
 
     if (n_pspecs) {
+        if (take_ref) {
+            x_object_ref(object);
+        }
+
         X_OBJECT_GET_CLASS(object)->dispatch_properties_changed(object, n_pspecs, pspecs);
+        if (take_ref) {
+            x_object_unref(object);
+        }
     }
 
     x_free(free_me);
 }
 
-static void x_object_notify_queue_add(XObject *object, XObjectNotifyQueue *nqueue, XParamSpec *pspec)
+static xboolean x_object_notify_queue_add(XObject *object, XObjectNotifyQueue *nqueue, XParamSpec *pspec, xboolean in_init)
 {
     X_LOCK(notify_lock);
+
+    if (!nqueue) {
+        nqueue = x_datalist_id_get_data(&object->qdata, quark_notify_queue);
+        if (!nqueue) {
+            if (!in_init) {
+                X_UNLOCK(notify_lock);
+                return FALSE;
+            }
+
+            nqueue = x_object_notify_queue_create_queue_frozen(object);
+        }
+    }
 
     x_assert(nqueue->n_pspecs < 65535);
 
@@ -195,6 +227,7 @@ static void x_object_notify_queue_add(XObject *object, XObjectNotifyQueue *nqueu
     }
 
     X_UNLOCK(notify_lock);
+    return TRUE;
 }
 
 void _x_object_type_init(void)
@@ -236,6 +269,16 @@ void _x_object_type_init(void)
     type = x_type_register_fundamental(X_TYPE_OBJECT, x_intern_static_string("XObject"), &info, &finfo, (XTypeFlags)0);
     x_assert(type == X_TYPE_OBJECT);
     x_value_register_transform_func(X_TYPE_OBJECT, X_TYPE_OBJECT, x_value_object_transform_value);
+}
+
+static inline void x_object_init_pspec_pool(void)
+{
+    if (X_UNLIKELY(x_atomic_pointer_get(&pspec_pool) == NULL)) {
+        XParamSpecPool *pool = x_param_spec_pool_new(TRUE);
+        if (!x_atomic_pointer_compare_and_exchange(&pspec_pool, NULL, pool)) {
+            x_param_spec_pool_free(pool);
+        }
+    }
 }
 
 static void x_object_base_class_init(XObjectClass *classt)
@@ -290,7 +333,7 @@ static void x_object_do_class_init(XObjectClass *classt)
 #ifndef HAVE_OPTIONAL_FLAGS
     quark_in_construction = x_quark_from_static_string("XObject-in-construction");
 #endif
-    pspec_pool = x_param_spec_pool_new(TRUE);
+    x_object_init_pspec_pool();
 
     classt->constructor = x_object_constructor;
     classt->constructed = x_object_constructed;
@@ -317,6 +360,7 @@ static void x_object_do_class_init(XObjectClass *classt)
 static inline xboolean install_property_internal(XType x_type, xuint property_id, XParamSpec *pspec)
 {
     x_param_spec_ref_sink(pspec);
+    x_object_init_pspec_pool();
 
     if (x_param_spec_pool_lookup(pspec_pool, pspec->name, x_type, FALSE)) {
         x_critical("When installing property: type '%s' already has a property named '%s'", x_type_name(x_type), pspec->name);
@@ -531,6 +575,8 @@ XParamSpec *x_object_interface_find_property(xpointer x_iface, const xchar *prop
     x_return_val_if_fail(X_TYPE_IS_INTERFACE(iface_class->x_type), NULL);
     x_return_val_if_fail(property_name != NULL, NULL);
 
+    x_object_init_pspec_pool();
+
     return x_param_spec_pool_lookup(pspec_pool, property_name, iface_class->x_type, FALSE);
 }
 
@@ -592,6 +638,8 @@ XParamSpec **x_object_interface_list_properties(xpointer x_iface, xuint *n_prope
     XTypeInterface *iface_class = (XTypeInterface *)x_iface;
 
     x_return_val_if_fail(X_TYPE_IS_INTERFACE(iface_class->x_type), NULL);
+
+    x_object_init_pspec_pool();
 
     pspecs = x_param_spec_pool_list(pspec_pool, iface_class->x_type, &n);
     if (n_properties_p) {
@@ -713,7 +761,7 @@ static void x_object_init(XObject *object, XObjectClass *classt)
     object->qdata = NULL;
 
     if (CLASS_HAS_PROPS(classt) && CLASS_NEEDS_NOTIFY(classt)) {
-        x_object_notify_queue_freeze(object, FALSE);
+        x_object_notify_queue_freeze(object);
     }
 
     set_object_in_construction(object);
@@ -794,7 +842,7 @@ void x_object_freeze_notify(XObject *object)
     x_return_if_fail(X_IS_OBJECT(object));
 
 #ifndef X_DISABLE_CHECKS
-    if (X_UNLIKELY(x_atomic_int_get(&object->ref_count) == 0)) {
+    if (X_UNLIKELY(x_atomic_int_get(&object->ref_count) <= 0)) {
         x_critical("Attempting to freeze the notification queue for object %s[%p]; "
                    "Property notification does not work during instance finalization.",
                     X_OBJECT_TYPE_NAME(object), object);
@@ -802,9 +850,7 @@ void x_object_freeze_notify(XObject *object)
     }
 #endif
 
-    x_object_ref(object);
-    x_object_notify_queue_freeze(object, FALSE);
-    x_object_unref(object);
+    x_object_notify_queue_freeze(object);
 }
 
 static inline void x_object_notify_by_spec_internal(XObject *object, XParamSpec *pspec)
@@ -831,21 +877,7 @@ static inline void x_object_notify_by_spec_internal(XObject *object, XParamSpec 
 #endif
 
     if (pspec != NULL && needs_notify) {
-        xboolean need_thaw = TRUE;
-        XObjectNotifyQueue *nqueue;
-
-        nqueue = x_object_notify_queue_freeze(object, TRUE);
-        if (in_init && !nqueue) {
-            nqueue = x_object_notify_queue_freeze(object, FALSE);
-            need_thaw = FALSE;
-        }
-
-        if (nqueue != NULL) {
-            x_object_notify_queue_add(object, nqueue, pspec);
-            if (need_thaw) {
-                x_object_notify_queue_thaw(object, nqueue);
-            }
-        } else {
+        if (!x_object_notify_queue_add(object, NULL, pspec, in_init)) {
 #ifndef __COVERITY__
             x_object_ref(object);
 #endif
@@ -883,12 +915,10 @@ void x_object_notify_by_pspec(XObject *object, XParamSpec *pspec)
 
 void x_object_thaw_notify(XObject *object)
 {
-    XObjectNotifyQueue *nqueue;
-
     x_return_if_fail(X_IS_OBJECT(object));
 
 #ifndef X_DISABLE_CHECKS
-    if (X_UNLIKELY(x_atomic_int_get(&object->ref_count) == 0)) {
+    if (X_UNLIKELY(x_atomic_int_get(&object->ref_count) <= 0)) {
         x_critical("Attempting to thaw the notification queue for object %s[%p]; "
                    "Property notification does not work during instance finalization.",
                    X_OBJECT_TYPE_NAME(object), object);
@@ -896,13 +926,7 @@ void x_object_thaw_notify(XObject *object)
     }
 #endif
 
-    x_object_ref(object);
-
-    nqueue = x_object_notify_queue_freeze(object, FALSE);
-    x_object_notify_queue_thaw(object, nqueue);
-    x_object_notify_queue_thaw(object, nqueue);
-
-    x_object_unref(object);
+    x_object_notify_queue_thaw(object, NULL, TRUE);
 }
 
 static void maybe_issue_property_deprecation_warning(const XParamSpec *pspec)
@@ -1012,7 +1036,7 @@ static inline void object_set_property(XObject *object, XParamSpec *pspec, const
     }
 
     if ((pspec->flags & (X_PARAM_EXPLICIT_NOTIFY | X_PARAM_READABLE)) == X_PARAM_READABLE && nqueue != NULL) {
-        x_object_notify_queue_add(object, nqueue, pspec);
+        x_object_notify_queue_add(object, nqueue, pspec, FALSE);
     }
 }
 
@@ -1211,7 +1235,7 @@ static xpointer x_object_new_with_custom_constructor(XObjectClass *classt, XObje
         if ((newly_constructed && _x_object_has_notify_handler_X(object)) || _x_object_has_notify_handler(object)) {
             nqueue = (XObjectNotifyQueue *)x_datalist_id_get_data(&object->qdata, quark_notify_queue);
             if (!nqueue) {
-                nqueue = x_object_notify_queue_freeze(object, FALSE);
+                nqueue = x_object_notify_queue_freeze(object);
             }
         }
     }
@@ -1227,7 +1251,7 @@ static xpointer x_object_new_with_custom_constructor(XObjectClass *classt, XObje
     }
 
     if (nqueue) {
-        x_object_notify_queue_thaw(object, nqueue);
+        x_object_notify_queue_thaw(object, nqueue, FALSE);
     }
 
     return object;
@@ -1254,7 +1278,7 @@ static xpointer x_object_new_internal(XObjectClass *classt, XObjectConstructPara
         if (_x_object_has_notify_handler_X(object)) {
             nqueue = (XObjectNotifyQueue *)x_datalist_id_get_data(&object->qdata, quark_notify_queue);
             if (!nqueue) {
-                nqueue = x_object_notify_queue_freeze(object, FALSE);
+                nqueue = x_object_notify_queue_freeze(object);
             }
         }
 
@@ -1294,7 +1318,7 @@ static xpointer x_object_new_internal(XObjectClass *classt, XObjectConstructPara
     }
 
     if (nqueue) {
-        x_object_notify_queue_thaw(object, nqueue);
+        x_object_notify_queue_thaw(object, nqueue, FALSE);
     }
 
     return object;
@@ -1518,7 +1542,7 @@ static XObject *x_object_constructor(XType type, xuint n_construct_properties, X
     object = (XObject *)x_type_create_instance(type);
 
     if (n_construct_properties) {
-        XObjectNotifyQueue *nqueue = x_object_notify_queue_freeze(object, FALSE);
+        XObjectNotifyQueue *nqueue = x_object_notify_queue_freeze(object);
 
         while (n_construct_properties--) {
             XValue *value = construct_params->value;
@@ -1528,7 +1552,7 @@ static XObject *x_object_constructor(XType type, xuint n_construct_properties, X
             object_set_property(object, pspec, value, nqueue, TRUE);
         }
 
-        x_object_notify_queue_thaw(object, nqueue);
+        x_object_notify_queue_thaw(object, nqueue, FALSE);
     }
 
     return object;
@@ -1577,7 +1601,7 @@ void x_object_setv(XObject *object, xuint n_properties, const xchar *names[], co
     classt = X_OBJECT_GET_CLASS(object);
 
     if (_x_object_has_notify_handler(object)) {
-        nqueue = x_object_notify_queue_freeze(object, FALSE);
+        nqueue = x_object_notify_queue_freeze(object);
     }
 
     for (i = 0; i < n_properties; i++) {
@@ -1590,7 +1614,7 @@ void x_object_setv(XObject *object, xuint n_properties, const xchar *names[], co
     }
 
     if (nqueue) {
-        x_object_notify_queue_thaw(object, nqueue);
+        x_object_notify_queue_thaw(object, nqueue, FALSE);
     }
 
     x_object_unref(object);
@@ -1606,7 +1630,7 @@ void x_object_set_valist(XObject *object, const xchar *first_property_name, va_l
     x_object_ref(object);
 
     if (_x_object_has_notify_handler(object)) {
-        nqueue = x_object_notify_queue_freeze(object, FALSE);
+        nqueue = x_object_notify_queue_freeze(object);
     }
 
     classt = X_OBJECT_GET_CLASS(object);
@@ -1642,7 +1666,7 @@ void x_object_set_valist(XObject *object, const xchar *first_property_name, va_l
     }
 
     if (nqueue) {
-        x_object_notify_queue_thaw(object, nqueue);
+        x_object_notify_queue_thaw(object, nqueue, FALSE);
     }
 
     x_object_unref(object);
@@ -2199,7 +2223,7 @@ retry_atomic_decrement1:
             x_rw_lock_writer_unlock(&weak_locations_lock);
         }
 
-        nqueue = x_object_notify_queue_freeze(object, FALSE);
+        nqueue = x_object_notify_queue_freeze(object);
 
         TRACE(XOBJECT_OBJECT_DISPOSE(object, X_TYPE_FROM_INSTANCE(object), 1));
         X_OBJECT_GET_CLASS(object)->dispose(object);
@@ -2213,7 +2237,7 @@ retry_atomic_decrement1:
 
             TRACE(XOBJECT_OBJECT_UNREF(object, X_TYPE_FROM_INSTANCE(object), old_ref));
 
-            x_object_notify_queue_thaw(object, nqueue);
+            x_object_notify_queue_thaw(object, nqueue, FALSE);
 
             if ((old_ref == 2) && OBJECT_HAS_TOGGLE_REF(object) && (x_atomic_int_get((int *)&object->ref_count) == 1)) {
                 toggle_refs_notify (object, TRUE);
@@ -2252,7 +2276,7 @@ retry_atomic_decrement1:
 
             x_type_free_instance((XTypeInstance *)object);
         } else {
-            x_object_notify_queue_thaw(object, nqueue);
+            x_object_notify_queue_thaw(object, nqueue, FALSE);
         }
     }
 }

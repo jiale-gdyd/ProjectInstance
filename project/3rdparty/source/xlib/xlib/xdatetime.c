@@ -399,8 +399,16 @@ XDateTime *x_date_time_new_from_unix_local(xint64 t)
         return NULL;
     }
 
+    return x_date_time_new_from_unix_local_usec(t * USEC_PER_SECOND);
+}
+
+XDateTime *x_date_time_new_from_unix_local_usec(xint64 usecs)
+{
+    XTimeZone *local;
+    XDateTime *datetime;
+
     local = x_time_zone_new_local();
-    datetime = x_date_time_new_from_unix(local, t * USEC_PER_SECOND);
+    datetime = x_date_time_new_from_unix(local, usecs);
     x_time_zone_unref(local);
 
     return datetime;
@@ -408,15 +416,20 @@ XDateTime *x_date_time_new_from_unix_local(xint64 t)
 
 XDateTime *x_date_time_new_from_unix_utc(xint64 t)
 {
-    XTimeZone *utc;
-    XDateTime *datetime;
-
     if (t > X_MAXINT64 / USEC_PER_SECOND || t < X_MININT64 / USEC_PER_SECOND) {
         return NULL;
     }
 
+    return x_date_time_new_from_unix_utc_usec(t * USEC_PER_SECOND);
+}
+
+XDateTime *x_date_time_new_from_unix_utc_usec(xint64 usecs)
+{
+    XTimeZone *utc;
+    XDateTime *datetime;
+
     utc = x_time_zone_new_utc();
-    datetime = x_date_time_new_from_unix(utc, t * USEC_PER_SECOND);
+    datetime = x_date_time_new_from_unix(utc, usecs);
     x_time_zone_unref(utc);
 
     return datetime;
@@ -1147,6 +1160,12 @@ xint64 x_date_time_to_unix(XDateTime *datetime)
 {
     x_return_val_if_fail(datetime != NULL, 0);
     return INSTANT_TO_UNIX(x_date_time_to_instant(datetime));
+}
+
+xint64 x_date_time_to_unix_usec(XDateTime *datetime)
+{
+    x_return_val_if_fail(datetime != NULL, 0);
+    return INSTANT_TO_UNIX_USECS(x_date_time_to_instant(datetime));
 }
 
 X_GNUC_BEGIN_IGNORE_DEPRECATIONS

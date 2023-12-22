@@ -557,9 +557,19 @@ XParamSpecPool *x_param_spec_pool_new(xboolean type_prefixing)
 
     memcpy(&pool->mutex, &init_mutex, sizeof(init_mutex));
     pool->type_prefixing = type_prefixing != FALSE;
-    pool->hash_table = x_hash_table_new(param_spec_pool_hash, param_spec_pool_equals);
+    pool->hash_table = x_hash_table_new_full(param_spec_pool_hash, param_spec_pool_equals, (XDestroyNotify)x_param_spec_unref, NULL);
 
     return pool;
+}
+
+void x_param_spec_pool_free(XParamSpecPool *pool)
+{
+    x_mutex_lock(&pool->mutex);
+    x_hash_table_unref(pool->hash_table);
+    x_mutex_unlock(&pool->mutex);
+
+    x_mutex_clear(&pool->mutex);
+    x_free(pool);
 }
 
 void x_param_spec_pool_insert(XParamSpecPool *pool, XParamSpec *pspec, XType owner_type)
@@ -591,9 +601,7 @@ void x_param_spec_pool_remove(XParamSpecPool *pool, XParamSpec *pspec)
 {
     if (pool && pspec) {
         x_mutex_lock(&pool->mutex);
-        if (x_hash_table_remove(pool->hash_table, pspec)) {
-            x_param_spec_unref(pspec);
-        } else {
+        if (!x_hash_table_remove(pool->hash_table, pspec)) {
             x_critical(X_STRLOC ": attempt to remove unknown pspec '%s' from pool", pspec->name);
         }
         x_mutex_unlock(&pool->mutex);

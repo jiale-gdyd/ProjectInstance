@@ -35,6 +35,12 @@ XDateTime *x_date_time_new_from_unix_local(xint64 t);
 XLIB_AVAILABLE_IN_ALL
 XDateTime *x_date_time_new_from_unix_utc(xint64 t);
 
+XLIB_AVAILABLE_IN_2_80
+XDateTime *x_date_time_new_from_unix_local_usec(xint64 usecs);
+
+XLIB_AVAILABLE_IN_2_80
+XDateTime *x_date_time_new_from_unix_utc_usec(xint64 usecs);
+
 X_GNUC_BEGIN_IGNORE_DEPRECATIONS
 XLIB_DEPRECATED_IN_2_62_FOR(x_date_time_new_from_unix_local)
 XDateTime *x_date_time_new_from_timeval_local(const XTimeVal *tv);
@@ -144,6 +150,9 @@ xdouble x_date_time_get_seconds(XDateTime *datetime);
 
 XLIB_AVAILABLE_IN_ALL
 xint64 x_date_time_to_unix(XDateTime *datetime);
+
+XLIB_AVAILABLE_IN_2_80
+xint64 x_date_time_to_unix_usec(XDateTime *datetime);
 
 X_GNUC_BEGIN_IGNORE_DEPRECATIONS
 XLIB_DEPRECATED_IN_2_62_FOR(x_date_time_to_unix)
