@@ -7,7 +7,7 @@ int lock_file(char *path)
         return INVALID_LOCK_FD;
     }
 
-    int fd = open(path, O_RDWR | O_CREAT | O_EXCL, S_IRWXU | S_IRWXG | S_IRWXO);
+    int fd = open(path, O_RDWR | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO);
     if (fd == INVALID_LOCK_FD) {
         logc_error("lock file error : %s ", strerror(errno));
     }

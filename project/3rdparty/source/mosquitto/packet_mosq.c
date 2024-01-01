@@ -256,7 +256,7 @@ int packet__write(struct mosquitto *mosq)
         if (((packet->command) & 0xF6) == CMD_PUBLISH) {
             callback__on_publish(mosq, packet->mid, 0, NULL);
         } else if (((packet->command) & 0xF0) == CMD_DISCONNECT) {
-            do_client_disconnect(mosq, MOSQ_ERR_SUCCESS, NULL);
+            net__socket_shutdown(mosq);
             return MOSQ_ERR_SUCCESS;
         }
 

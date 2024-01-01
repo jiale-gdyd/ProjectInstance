@@ -44,6 +44,7 @@ typedef xsize XType;
 
 #define X_TYPE_HMAC                         (x_hmac_get_type())
 #define X_TYPE_DIR                          (x_dir_get_type())
+#define X_TYPE_RAND                         (x_rand_get_type())
 #define X_TYPE_STRV_BUILDER                 (x_strv_builder_get_type())
 
 XLIB_AVAILABLE_IN_ALL
@@ -147,6 +148,9 @@ XType x_hmac_get_type(void) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_2_80
 XType x_dir_get_type(void) X_GNUC_CONST;
+
+XLIB_AVAILABLE_IN_2_80
+XType x_rand_get_type(void) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_2_80
 XType x_strv_builder_get_type(void) X_GNUC_CONST;

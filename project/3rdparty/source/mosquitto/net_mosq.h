@@ -10,6 +10,7 @@
 #define COMPAT_ECONNRESET           ECONNRESET
 #define COMPAT_EINTR                EINTR
 #define COMPAT_EWOULDBLOCK          EWOULDBLOCK
+#define COMPAT_SHUTDOWN(a)          shutdown(a, SHUT_WR)
 
 #ifndef INVALID_SOCKET
 #define INVALID_SOCKET              (-1)
@@ -27,6 +28,7 @@ void net__init_tls(void);
 
 int net__socket_connect(struct mosquitto *mosq, const char *host, uint16_t port, const char *bind_address, bool blocking);
 int net__socket_close(struct mosquitto *mosq);
+int net__socket_shutdown(struct mosquitto *mosq);
 int net__try_connect(const char *host, uint16_t port, mosq_sock_t *sock, const char *bind_address, bool blocking);
 int net__try_connect_step1(struct mosquitto *mosq, const char *host);
 int net__try_connect_step2(struct mosquitto *mosq, uint16_t port, mosq_sock_t *sock);

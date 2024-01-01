@@ -43,6 +43,10 @@ static void x_type_module_finalize(XObject *object)
     XTypeModule *module = X_TYPE_MODULE(object);
 
     x_free(module->name);
+
+    x_assert(module->type_infos == NULL);
+    x_assert(module->interface_infos == NULL);
+
     X_OBJECT_CLASS(parent_class)->finalize(object);
 }
 

@@ -824,7 +824,7 @@ struct liblog_rule *liblog_rule_new(char *line, struct logc_arraylist *levels, s
 
             if (file_limit) {
                 memset(archive_max_size, 0x00, sizeof(archive_max_size));
-                nscan = sscanf(file_limit, " %[0-9MmKkBb] * %d ~", archive_max_size, &(a_rule->archive_max_count));
+                nscan = sscanf(file_limit, " %[0-9GgMmKkBb] * %d ~", archive_max_size, &(a_rule->archive_max_count));
                 if (nscan) {
                     a_rule->archive_max_size = logc_parse_byte_size(archive_max_size);
                 }

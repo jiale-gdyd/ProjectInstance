@@ -199,6 +199,9 @@ XList *x_param_spec_pool_list_owned(XParamSpecPool *pool, XType owner_type);
 XLIB_AVAILABLE_IN_ALL
 XParamSpec **x_param_spec_pool_list(XParamSpecPool *pool, XType owner_type, xuint *n_pspecs_p);
 
+XLIB_AVAILABLE_IN_2_80
+void x_param_spec_pool_free(XParamSpecPool *pool);
+
 X_END_DECLS
 
 #endif
