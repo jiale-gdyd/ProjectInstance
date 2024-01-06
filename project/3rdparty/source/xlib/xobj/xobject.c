@@ -39,18 +39,40 @@ enum {
     PROP_NONE
 };
 
+#define _OPTIONAL_BIT_LOCK                              3
+
 #define OPTIONAL_FLAG_IN_CONSTRUCTION                   (1 << 0)
 #define OPTIONAL_FLAG_HAS_SIGNAL_HANDLER                (1 << 1)
 #define OPTIONAL_FLAG_HAS_NOTIFY_HANDLER                (1 << 2)
+#define OPTIONAL_FLAG_LOCK                              (1 << 3)
+
+#define OPTIONAL_BIT_LOCK_WEAK_REFS                     1
+#define OPTIONAL_BIT_LOCK_NOTIFY                        2
+#define OPTIONAL_BIT_LOCK_TOGGLE_REFS                   3
+#define OPTIONAL_BIT_LOCK_CLOSURE_ARRAY                 4
 
 #if SIZEOF_INT == 4 && XLIB_SIZEOF_VOID_P == 8
-#define HAVE_OPTIONAL_FLAGS
+#define HAVE_OPTIONAL_FLAGS_IN_GOBJECT                  1
+#else
+#define HAVE_OPTIONAL_FLAGS_IN_GOBJECT                  0
+#endif
+
+#define HAVE_PRIVATE (!HAVE_OPTIONAL_FLAGS_IN_GOBJECT)
+
+#if HAVE_PRIVATE
+typedef struct {
+#if !HAVE_OPTIONAL_FLAGS_IN_GOBJECT
+    xuint optional_flags;
+#endif
+} XObjectPrivate;
+
+static int XObject_private_offset;
 #endif
 
 typedef struct {
     XTypeInstance x_type_instance;
     xuint         ref_count;
-#ifdef HAVE_OPTIONAL_FLAGS
+#if HAVE_OPTIONAL_FLAGS_IN_GOBJECT
     xuint         optional_flags;
 #endif
     XData         *qdata;
@@ -91,18 +113,10 @@ struct _XObjectNotifyQueue {
     xuint16 freeze_count;
 };
 
-X_LOCK_DEFINE_STATIC(closure_array_mutex);
-X_LOCK_DEFINE_STATIC(weak_refs_mutex);
-X_LOCK_DEFINE_STATIC(toggle_refs_mutex);
-
 static XQuark quark_notify_queue;
-static XQuark quark_weak_refs = 0;
 static XQuark quark_toggle_refs = 0;
 static XQuark quark_closure_array = 0;
 static XQuark quark_weak_notifies = 0;
-#ifndef HAVE_OPTIONAL_FLAGS
-static XQuark quark_in_construction;
-#endif
 
 static XParamSpecPool *pspec_pool = NULL;
 static xulong xobject_signals[LAST_SIGNAL] = { 0, };
@@ -111,7 +125,47 @@ static xuint (*floating_flag_handler)(XObject *, xint) = object_floating_flag_ha
 static XRWLock weak_locations_lock;
 static XQuark quark_weak_locations = 0;
 
-X_LOCK_DEFINE_STATIC(notify_lock);
+#if HAVE_PRIVATE
+X_ALWAYS_INLINE static inline XObjectPrivate *x_object_get_instance_private(XObject *object)
+{
+    return X_STRUCT_MEMBER_P(object, GObject_private_offset);
+}
+#endif
+
+X_ALWAYS_INLINE static inline xuint *object_get_optional_flags_p(XObject *object)
+{
+#if HAVE_OPTIONAL_FLAGS_IN_GOBJECT
+    return &(((XObjectReal *)object)->optional_flags);
+#else
+    return &x_object_get_instance_private(object)->optional_flags;
+#endif
+}
+
+#if defined(X_ENABLE_DEBUG) && defined(X_THREAD_LOCAL)
+static X_THREAD_LOCAL xuint _object_bit_is_locked;
+#endif
+
+static void object_bit_lock(XObject *object, xuint lock_bit)
+{
+#if defined(X_ENABLE_DEBUG) && defined(X_THREAD_LOCAL)
+    x_assert(lock_bit > 0);
+    x_assert(_object_bit_is_locked == 0);
+    _object_bit_is_locked = lock_bit;
+#endif
+
+    x_bit_lock((xint *)object_get_optional_flags_p(object), _OPTIONAL_BIT_LOCK);
+}
+
+static void object_bit_unlock(XObject *object, xuint lock_bit)
+{
+#if defined(X_ENABLE_DEBUG) && defined(X_THREAD_LOCAL)
+    x_assert(lock_bit > 0);
+    x_assert(_object_bit_is_locked == lock_bit);
+    _object_bit_is_locked = 0;
+#endif
+
+    x_bit_unlock((xint *)object_get_optional_flags_p(object), _OPTIONAL_BIT_LOCK);
+}
 
 static void x_object_notify_queue_free(xpointer data)
 {
@@ -138,7 +192,7 @@ static XObjectNotifyQueue *x_object_notify_queue_freeze(XObject *object)
 {
     XObjectNotifyQueue *nqueue;
 
-    X_LOCK(notify_lock);
+    object_bit_lock(object, OPTIONAL_BIT_LOCK_NOTIFY);
     nqueue = (XObjectNotifyQueue *)x_datalist_id_get_data(&object->qdata, quark_notify_queue);
     if (!nqueue) {
         nqueue = x_object_notify_queue_create_queue_frozen(object);
@@ -151,7 +205,7 @@ static XObjectNotifyQueue *x_object_notify_queue_freeze(XObject *object)
         nqueue->freeze_count++;
     }
 out:
-    X_UNLOCK(notify_lock);
+    object_bit_unlock(object, OPTIONAL_BIT_LOCK_NOTIFY);
 
     return nqueue;
 }
@@ -162,21 +216,21 @@ static void x_object_notify_queue_thaw(XObject *object, XObjectNotifyQueue *nque
     xuint n_pspecs = 0;
     XParamSpec *pspecs_mem[16], **pspecs, **free_me = NULL;
 
-    X_LOCK(notify_lock);
+    object_bit_lock(object, OPTIONAL_BIT_LOCK_NOTIFY);
 
     if (!nqueue) {
         nqueue = x_datalist_id_get_data(&object->qdata, quark_notify_queue);
     }
 
     if (X_UNLIKELY(!nqueue || nqueue->freeze_count == 0)) {
-        X_UNLOCK(notify_lock);
+        object_bit_unlock(object, OPTIONAL_BIT_LOCK_NOTIFY);
         x_critical("%s: property-changed notification for %s(%p) is not frozen", X_STRFUNC, X_OBJECT_TYPE_NAME(object), object);
         return;
     }
 
     nqueue->freeze_count--;
     if (nqueue->freeze_count) {
-        X_UNLOCK(notify_lock);
+        object_bit_unlock(object, OPTIONAL_BIT_LOCK_NOTIFY);
         return;
     }
 
@@ -187,7 +241,7 @@ static void x_object_notify_queue_thaw(XObject *object, XObjectNotifyQueue *nque
     }
     x_datalist_id_set_data(&object->qdata, quark_notify_queue, NULL);
 
-    X_UNLOCK(notify_lock);
+    object_bit_unlock(object, OPTIONAL_BIT_LOCK_NOTIFY);
 
     if (n_pspecs) {
         if (take_ref) {
@@ -205,13 +259,13 @@ static void x_object_notify_queue_thaw(XObject *object, XObjectNotifyQueue *nque
 
 static xboolean x_object_notify_queue_add(XObject *object, XObjectNotifyQueue *nqueue, XParamSpec *pspec, xboolean in_init)
 {
-    X_LOCK(notify_lock);
+    object_bit_lock(object, OPTIONAL_BIT_LOCK_NOTIFY);
 
     if (!nqueue) {
         nqueue = x_datalist_id_get_data(&object->qdata, quark_notify_queue);
         if (!nqueue) {
             if (!in_init) {
-                X_UNLOCK(notify_lock);
+                object_bit_unlock(object, OPTIONAL_BIT_LOCK_NOTIFY);
                 return FALSE;
             }
 
@@ -226,7 +280,7 @@ static xboolean x_object_notify_queue_add(XObject *object, XObjectNotifyQueue *n
         nqueue->n_pspecs++;
     }
 
-    X_UNLOCK(notify_lock);
+    object_bit_unlock(object, OPTIONAL_BIT_LOCK_NOTIFY);
     return TRUE;
 }
 
@@ -269,6 +323,10 @@ void _x_object_type_init(void)
     type = x_type_register_fundamental(X_TYPE_OBJECT, x_intern_static_string("XObject"), &info, &finfo, (XTypeFlags)0);
     x_assert(type == X_TYPE_OBJECT);
     x_value_register_transform_func(X_TYPE_OBJECT, X_TYPE_OBJECT, x_value_object_transform_value);
+
+#if HAVE_PRIVATE
+    XObject_private_offset = x_type_add_instance_private(X_TYPE_OBJECT, sizeof(XObjectPrivate));
+#endif
 }
 
 static inline void x_object_init_pspec_pool(void)
@@ -324,15 +382,11 @@ static void x_object_do_class_init(XObjectClass *classt)
 {
     quark_closure_array = x_quark_from_static_string("XObject-closure-array");
 
-    quark_weak_refs = x_quark_from_static_string("XObject-weak-references");
     quark_weak_notifies = x_quark_from_static_string("XObject-weak-notifies");
     quark_weak_locations = x_quark_from_static_string("XObject-weak-locations");
     quark_toggle_refs = x_quark_from_static_string("XObject-toggle-references");
     quark_notify_queue = x_quark_from_static_string("XObject-notify-queue");
 
-#ifndef HAVE_OPTIONAL_FLAGS
-    quark_in_construction = x_quark_from_static_string("XObject-in-construction");
-#endif
     x_object_init_pspec_pool();
 
     classt->constructor = x_object_constructor;
@@ -355,6 +409,10 @@ static void x_object_do_class_init(XObjectClass *classt)
             1, X_TYPE_PARAM);
 
     x_type_add_interface_check(NULL, object_interface_check_properties);
+
+#if HAVE_PRIVATE
+    x_type_class_adjust_private_offset(class, &XObject_private_offset);
+#endif
 }
 
 static inline xboolean install_property_internal(XType x_type, xuint property_id, XParamSpec *pspec)
@@ -651,108 +709,52 @@ XParamSpec **x_object_interface_list_properties(xpointer x_iface, xuint *n_prope
 
 static inline xuint object_get_optional_flags(XObject *object)
 {
-#ifdef HAVE_OPTIONAL_FLAGS
-    XObjectReal *real = (XObjectReal *)object;
-    return (xuint)x_atomic_int_get(&real->optional_flags);
-#else
-    return 0;
-#endif
+    return x_atomic_int_get(object_get_optional_flags_p(object));
 }
 
-static inline xuint object_get_optional_flags_X(XObject *object)
-{
-#ifdef HAVE_OPTIONAL_FLAGS
-    XObjectReal *real = (XObjectReal *)object;
-    return real->optional_flags;
-#else
-    return 0;
-#endif
-}
-
-#ifdef HAVE_OPTIONAL_FLAGS
 static inline void object_set_optional_flags(XObject *object, xuint flags)
 {
-    XObjectReal *real = (XObjectReal *)object;
-    x_atomic_int_or(&real->optional_flags, flags);
+    x_atomic_int_or(object_get_optional_flags_p(object), flags);
 }
 
-static inline void object_set_optional_flags_X(XObject *object, xuint flags)
+static inline void object_unset_optional_flags(XObject *object, xuint flags)
 {
-    XObjectReal *real = (XObjectReal *)object;
-    real->optional_flags |= flags;
+    x_atomic_int_and(object_get_optional_flags_p(object), ~flags);
 }
-
-static inline void object_unset_optional_flags_X(XObject *object, xuint flags)
-{
-    XObjectReal *real = (XObjectReal *)object;
-    real->optional_flags &= ~flags;
-}
-#endif
 
 xboolean _x_object_has_signal_handler(XObject *object)
 {
-#ifdef HAVE_OPTIONAL_FLAGS
     return (object_get_optional_flags(object) & OPTIONAL_FLAG_HAS_SIGNAL_HANDLER) != 0;
-#else
-    return TRUE;
-#endif
 }
 
 static inline xboolean _x_object_has_notify_handler(XObject *object)
 {
-#ifdef HAVE_OPTIONAL_FLAGS
     return CLASS_NEEDS_NOTIFY(X_OBJECT_GET_CLASS(object)) || (object_get_optional_flags (object) & OPTIONAL_FLAG_HAS_NOTIFY_HANDLER) != 0;
-#else
-    return TRUE;
-#endif
-}
-
-static inline xboolean _x_object_has_notify_handler_X(XObject *object)
-{
-#ifdef HAVE_OPTIONAL_FLAGS
-    return CLASS_NEEDS_NOTIFY(X_OBJECT_GET_CLASS(object)) || (object_get_optional_flags_X (object) & OPTIONAL_FLAG_HAS_NOTIFY_HANDLER) != 0;
-#else
-    return TRUE;
-#endif
 }
 
 void _x_object_set_has_signal_handler(XObject *object, xuint signal_id)
 {
-#ifdef HAVE_OPTIONAL_FLAGS
     xuint flags = OPTIONAL_FLAG_HAS_SIGNAL_HANDLER;
     if (signal_id == xobject_signals[NOTIFY]) {
         flags |= OPTIONAL_FLAG_HAS_NOTIFY_HANDLER;
     }
 
     object_set_optional_flags(object, flags);
-#endif
 }
 
 static inline xboolean object_in_construction(XObject *object)
 {
-#ifdef HAVE_OPTIONAL_FLAGS
     return (object_get_optional_flags(object) & OPTIONAL_FLAG_IN_CONSTRUCTION) != 0;
-#else
-    return x_datalist_id_get_data(&object->qdata, quark_in_construction) != NULL;
-#endif
 }
 
 static inline void set_object_in_construction(XObject *object)
 {
-#ifdef HAVE_OPTIONAL_FLAGS
-    object_set_optional_flags_X(object, OPTIONAL_FLAG_IN_CONSTRUCTION);
-#else
-    x_datalist_id_set_data(&object->qdata, quark_in_construction, object);
-#endif
+    object_set_optional_flags(object, OPTIONAL_FLAG_IN_CONSTRUCTION);
 }
 
 static inline void unset_object_in_construction(XObject *object)
 {
-#ifdef HAVE_OPTIONAL_FLAGS
-    object_unset_optional_flags_X(object, OPTIONAL_FLAG_IN_CONSTRUCTION);
-#else
-    x_datalist_id_set_data(&object->qdata, quark_in_construction, NULL);
-#endif
+    object_unset_optional_flags(object, OPTIONAL_FLAG_IN_CONSTRUCTION);
 }
 
 static void x_object_init(XObject *object, XObjectClass *classt)
@@ -796,9 +798,6 @@ static void x_object_real_dispose(XObject *object)
 {
     x_signal_handlers_destroy(object);
 
-    x_datalist_id_set_data(&object->qdata, quark_weak_refs, NULL);
-    x_datalist_id_set_data(&object->qdata, quark_weak_locations, NULL);
-
     x_datalist_id_set_data(&object->qdata, quark_weak_notifies, NULL);
     x_datalist_id_set_data(&object->qdata, quark_closure_array, NULL);
 }
@@ -834,6 +833,7 @@ void x_object_run_dispose(XObject *object)
     TRACE(XOBJECT_OBJECT_DISPOSE(object, X_TYPE_FROM_INSTANCE(object), 0));
     X_OBJECT_GET_CLASS(object)->dispose(object);
     TRACE(XOBJECT_OBJECT_DISPOSE_END(object, X_TYPE_FROM_INSTANCE(object), 0));
+    x_datalist_id_remove_data(&object->qdata, quark_weak_locations);
     x_object_unref(object);
 }
 
@@ -855,10 +855,8 @@ void x_object_freeze_notify(XObject *object)
 
 static inline void x_object_notify_by_spec_internal(XObject *object, XParamSpec *pspec)
 {
-#ifdef HAVE_OPTIONAL_FLAGS
-    xuint object_flags;
-#endif
     xboolean in_init;
+    xuint object_flags;
     xboolean needs_notify;
 
     if (X_UNLIKELY(~pspec->flags & X_PARAM_READABLE)) {
@@ -867,14 +865,9 @@ static inline void x_object_notify_by_spec_internal(XObject *object, XParamSpec 
 
     param_spec_follow_override(&pspec);
 
-#ifdef HAVE_OPTIONAL_FLAGS
     object_flags = object_get_optional_flags(object);
     needs_notify = ((object_flags & OPTIONAL_FLAG_HAS_NOTIFY_HANDLER) != 0) || CLASS_NEEDS_NOTIFY(X_OBJECT_GET_CLASS(object));
         in_init = (object_flags & OPTIONAL_FLAG_IN_CONSTRUCTION) != 0;
-#else
-    needs_notify = TRUE;
-    in_init = object_in_construction(object);
-#endif
 
     if (pspec != NULL && needs_notify) {
         if (!x_object_notify_queue_add(object, NULL, pspec, in_init)) {
@@ -1232,7 +1225,7 @@ static xpointer x_object_new_with_custom_constructor(XObjectClass *classt, XObje
     }
 
     if (CLASS_HAS_PROPS(classt)) {
-        if ((newly_constructed && _x_object_has_notify_handler_X(object)) || _x_object_has_notify_handler(object)) {
+        if ((newly_constructed && _x_object_has_notify_handler(object)) || _x_object_has_notify_handler(object)) {
             nqueue = (XObjectNotifyQueue *)x_datalist_id_get_data(&object->qdata, quark_notify_queue);
             if (!nqueue) {
                 nqueue = x_object_notify_queue_freeze(object);
@@ -1275,7 +1268,7 @@ static xpointer x_object_new_internal(XObjectClass *classt, XObjectConstructPara
     if (CLASS_HAS_PROPS(classt)) {
         XSList *node;
 
-        if (_x_object_has_notify_handler_X(object)) {
+        if (_x_object_has_notify_handler(object)) {
             nqueue = (XObjectNotifyQueue *)x_datalist_id_get_data(&object->qdata, quark_notify_queue);
             if (!nqueue) {
                 nqueue = x_object_notify_queue_freeze(object);
@@ -1932,7 +1925,7 @@ void x_object_weak_ref(XObject *object, XWeakNotify notify, xpointer data)
     x_return_if_fail(notify != NULL);
     x_return_if_fail(x_atomic_int_get(&object->ref_count) >= 1);
 
-    X_LOCK(weak_refs_mutex);
+    object_bit_lock(object, OPTIONAL_BIT_LOCK_WEAK_REFS);
     wstack = (WeakRefStack *)x_datalist_id_remove_no_notify(&object->qdata, quark_weak_notifies);
     if (wstack) {
         i = wstack->n_weak_refs++;
@@ -1947,7 +1940,7 @@ void x_object_weak_ref(XObject *object, XWeakNotify notify, xpointer data)
     wstack->weak_refs[i].notify = notify;
     wstack->weak_refs[i].data = data;
     x_datalist_id_set_data_full(&object->qdata, quark_weak_notifies, wstack, weak_refs_notify);
-    X_UNLOCK(weak_refs_mutex);
+    object_bit_unlock(object, OPTIONAL_BIT_LOCK_WEAK_REFS);
 }
 
 void x_object_weak_unref(XObject *object, XWeakNotify notify, xpointer data)
@@ -1958,7 +1951,7 @@ void x_object_weak_unref(XObject *object, XWeakNotify notify, xpointer data)
     x_return_if_fail(X_IS_OBJECT(object));
     x_return_if_fail(notify != NULL);
 
-    X_LOCK (weak_refs_mutex);
+    object_bit_lock(object, OPTIONAL_BIT_LOCK_WEAK_REFS);
     wstack = (WeakRefStack *)x_datalist_id_get_data(&object->qdata, quark_weak_notifies);
     if (wstack) {
         xuint i;
@@ -1975,7 +1968,7 @@ void x_object_weak_unref(XObject *object, XWeakNotify notify, xpointer data)
             }
         }
     }
-    X_UNLOCK(weak_refs_mutex);
+    object_bit_unlock(object, OPTIONAL_BIT_LOCK_WEAK_REFS);
 
     if (!found_one) {
         x_critical("%s: couldn't find weak ref %p(%p)", X_STRFUNC, notify, data);
@@ -2062,7 +2055,6 @@ void x_object_force_floating(XObject *object)
 }
 
 typedef struct {
-    XObject           *object;
     xuint             n_toggle_refs;
     struct {
         XToggleNotify notify;
@@ -2070,22 +2062,23 @@ typedef struct {
     } toggle_refs[1];
 } ToggleRefStack;
 
-static void toggle_refs_notify(XObject *object, xboolean is_last_ref)
+static XToggleNotify toggle_refs_get_notify_unlocked(XObject *object, xpointer *out_data)
 {
-    ToggleRefStack tstack, *tstackptr;
+    ToggleRefStack *tstackptr;
 
-    X_LOCK (toggle_refs_mutex);
     if (!OBJECT_HAS_TOGGLE_REF(object)) {
-        X_UNLOCK(toggle_refs_mutex);
-        return;
+        return NULL;
     }
 
     tstackptr = (ToggleRefStack *)x_datalist_id_get_data(&object->qdata, quark_toggle_refs);
-    tstack = *tstackptr;
-    X_UNLOCK(toggle_refs_mutex);
 
-    x_assert(tstack.n_toggle_refs == 1);
-    tstack.toggle_refs[0].notify (tstack.toggle_refs[0].data, tstack.object, is_last_ref);
+    if (tstackptr->n_toggle_refs != 1) {
+        x_critical("Unexpected number of toggle-refs. x_object_add_toggle_ref() must be paired with x_object_remove_toggle_ref()");
+        return NULL;
+    }
+
+    *out_data = tstackptr->toggle_refs[0].data;
+    return tstackptr->toggle_refs[0].notify;
 }
 
 void x_object_add_toggle_ref(XObject *object, XToggleNotify notify, xpointer data)
@@ -2099,14 +2092,13 @@ void x_object_add_toggle_ref(XObject *object, XToggleNotify notify, xpointer dat
 
     x_object_ref(object);
 
-    X_LOCK(toggle_refs_mutex);
+    object_bit_lock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
     tstack = (ToggleRefStack *)x_datalist_id_remove_no_notify(&object->qdata, quark_toggle_refs);
     if (tstack) {
         i = tstack->n_toggle_refs++;
         tstack = (ToggleRefStack *)x_realloc(tstack, sizeof(*tstack) + sizeof(tstack->toggle_refs[0]) * i);
     } else {
         tstack = x_renew(ToggleRefStack, NULL, 1);
-        tstack->object = object;
         tstack->n_toggle_refs = 1;
         i = 0;
     }
@@ -2118,7 +2110,7 @@ void x_object_add_toggle_ref(XObject *object, XToggleNotify notify, xpointer dat
     tstack->toggle_refs[i].notify = notify;
     tstack->toggle_refs[i].data = data;
     x_datalist_id_set_data_full(&object->qdata, quark_toggle_refs, tstack, (XDestroyNotify)x_free);
-    X_UNLOCK(toggle_refs_mutex);
+    object_bit_unlock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
 }
 
 void x_object_remove_toggle_ref(XObject *object, XToggleNotify notify, xpointer data)
@@ -2129,7 +2121,7 @@ void x_object_remove_toggle_ref(XObject *object, XToggleNotify notify, xpointer 
     x_return_if_fail(X_IS_OBJECT(object));
     x_return_if_fail(notify != NULL);
 
-    X_LOCK(toggle_refs_mutex);
+    object_bit_lock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
     tstack = (ToggleRefStack *)x_datalist_id_get_data(&object->qdata, quark_toggle_refs);
     if (tstack) {
         xuint i;
@@ -2144,13 +2136,14 @@ void x_object_remove_toggle_ref(XObject *object, XToggleNotify notify, xpointer 
 
                 if (tstack->n_toggle_refs == 0) {
                     x_datalist_unset_flags(&object->qdata, OBJECT_HAS_TOGGLE_REF_FLAG);
+                    x_datalist_id_set_data_full(&object->qdata, quark_toggle_refs, NULL, NULL);
                 }
 
                 break;
             }
         }
     }
-    X_UNLOCK(toggle_refs_mutex);
+    object_bit_unlock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
 
     if (found_one) {
         x_object_unref(object);
@@ -2159,126 +2152,232 @@ void x_object_remove_toggle_ref(XObject *object, XToggleNotify notify, xpointer 
     }
 }
 
+static xpointer object_ref(XObject *object, XToggleNotify *out_toggle_notify, xpointer *out_toggle_data)
+{
+    xint old_ref;
+    xpointer toggle_data;
+    XToggleNotify toggle_notify;
+
+    old_ref = x_atomic_int_get(&object->ref_count);
+
+retry:
+    toggle_notify = NULL;
+    toggle_data = NULL;
+
+    if (old_ref > 1 && old_ref < X_MAXINT) {
+        if (!x_atomic_int_compare_and_exchange_full((int *)&object->ref_count, old_ref, old_ref + 1, &old_ref)) {
+            goto retry;
+        }
+    } else if (old_ref == 1) {
+        xboolean do_retry;
+
+        object_bit_lock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
+        toggle_notify = toggle_refs_get_notify_unlocked(object, &toggle_data);
+        do_retry = !x_atomic_int_compare_and_exchange_full((int *)&object->ref_count, old_ref, old_ref + 1, &old_ref);
+        object_bit_unlock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
+
+        if (do_retry) {
+            goto retry;
+        }
+    } else {
+        xboolean object_already_finalized = TRUE;
+
+        *out_toggle_notify = NULL;
+        *out_toggle_data = NULL;
+        x_return_val_if_fail(!object_already_finalized, NULL);
+        return NULL;
+    }
+
+    TRACE(XOBJECT_OBJECT_REF(object, X_TYPE_FROM_INSTANCE(object), old_ref));
+
+    *out_toggle_notify = toggle_notify;
+    *out_toggle_data = toggle_data;
+    return object;
+}
+
 xpointer (x_object_ref)(xpointer _object)
 {
-    xint old_val;
-    xboolean object_already_finalized;
-    XObject *object = (XObject *)_object;
+    xpointer toggle_data;
+    XObject *object = _object;
+    XToggleNotify toggle_notify;
 
     x_return_val_if_fail(X_IS_OBJECT(object), NULL);
 
-    old_val = x_atomic_int_add(&object->ref_count, 1);
-    object_already_finalized = (old_val <= 0);
-    x_return_val_if_fail(!object_already_finalized, NULL);
+    object = object_ref(object, &toggle_notify, &toggle_data);
 
-    if (old_val == 1 && OBJECT_HAS_TOGGLE_REF(object)) {
-        toggle_refs_notify(object, FALSE);
+    if (toggle_notify) {
+        toggle_notify(toggle_data, object, FALSE);
     }
 
-    TRACE(XOBJECT_OBJECT_REF(object, X_TYPE_FROM_INSTANCE(object), old_val));
     return object;
+}
+
+static xboolean _object_unref_clear_weak_locations(XObject *object, xint *p_old_ref, xboolean do_unref)
+{
+    XSList **weak_locations;
+
+    if (do_unref) {
+        xboolean unreffed = FALSE;
+
+        x_rw_lock_reader_lock(&weak_locations_lock);
+        weak_locations = x_datalist_id_get_data(&object->qdata, quark_weak_locations);
+        if (!weak_locations) {
+            unreffed = x_atomic_int_compare_and_exchange_full((int *)&object->ref_count, 1, 0, p_old_ref);
+            x_rw_lock_reader_unlock(&weak_locations_lock);
+            return unreffed;
+        }
+        x_rw_lock_reader_unlock(&weak_locations_lock);
+
+        x_rw_lock_writer_lock(&weak_locations_lock);
+        if (!x_atomic_int_compare_and_exchange_full((int *)&object->ref_count, 1, 0, p_old_ref)) {
+            x_rw_lock_writer_unlock(&weak_locations_lock);
+            return FALSE;
+        }
+
+        weak_locations = x_datalist_id_remove_no_notify(&object->qdata, quark_weak_locations);
+        x_clear_pointer(&weak_locations, weak_locations_free_unlocked);
+
+        x_rw_lock_writer_unlock(&weak_locations_lock);
+        return TRUE;
+    }
+
+    weak_locations = x_datalist_id_get_data(&object->qdata, quark_weak_locations);
+    if (weak_locations != NULL) {
+        x_rw_lock_writer_lock(&weak_locations_lock);
+
+        *p_old_ref = x_atomic_int_get(&object->ref_count);
+        if (*p_old_ref != 1) {
+            x_rw_lock_writer_unlock(&weak_locations_lock);
+            return FALSE;
+        }
+
+        weak_locations = x_datalist_id_remove_no_notify(&object->qdata, quark_weak_locations);
+        x_clear_pointer(&weak_locations, weak_locations_free_unlocked);
+
+        x_rw_lock_writer_unlock(&weak_locations_lock);
+        return TRUE;
+    }
+
+    return TRUE;
 }
 
 void x_object_unref(xpointer _object)
 {
     xint old_ref;
+    XType obj_gtype;
+    xboolean do_retry;
+    xpointer toggle_data;
+    XObjectNotifyQueue *nqueue;
+    XToggleNotify toggle_notify;
     XObject *object = (XObject *)_object;
 
     x_return_if_fail(X_IS_OBJECT(object));
 
+    obj_gtype = X_TYPE_FROM_INSTANCE(object);
+    (void)obj_gtype;
+
     old_ref = x_atomic_int_get(&object->ref_count);
 
-retry_atomic_decrement1:
-    while (old_ref > 1) {
+retry_beginning:
+    if (old_ref > 2) {
         if (!x_atomic_int_compare_and_exchange_full((int *)&object->ref_count, old_ref, old_ref - 1, &old_ref)) {
-            continue;
+            goto retry_beginning;
         }
 
-        TRACE(XOBJECT_OBJECT_UNREF(object, X_TYPE_FROM_INSTANCE(object), old_ref));
-
-        if ((old_ref == 2) && OBJECT_HAS_TOGGLE_REF(object)) {
-            toggle_refs_notify(object, TRUE);
-        }
-
+        TRACE(XOBJECT_OBJECT_UNREF(object, obj_gtype, old_ref));
         return;
     }
 
-    {
-        XSList **weak_locations;
-        XObjectNotifyQueue *nqueue;
-
-        weak_locations = weak_locations = (XSList **)x_datalist_id_get_data(&object->qdata, quark_weak_locations);
-        if (weak_locations != NULL) {
-            x_rw_lock_writer_lock(&weak_locations_lock);
-
-            old_ref = x_atomic_int_get(&object->ref_count);
-            if (old_ref != 1) {
-                x_rw_lock_writer_unlock(&weak_locations_lock);
-                goto retry_atomic_decrement1;
-            }
-
-            weak_locations = (XSList **)x_datalist_id_remove_no_notify(&object->qdata, quark_weak_locations);
-            x_clear_pointer(&weak_locations, weak_locations_free_unlocked);
-
-            x_rw_lock_writer_unlock(&weak_locations_lock);
+    if (old_ref == 2) {
+        object_bit_lock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
+        toggle_notify = toggle_refs_get_notify_unlocked(object, &toggle_data);
+        if (!x_atomic_int_compare_and_exchange_full((int *)&object->ref_count, old_ref, old_ref - 1, &old_ref)) {
+            object_bit_unlock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
+            goto retry_beginning;
         }
+        object_bit_unlock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
 
-        nqueue = x_object_notify_queue_freeze(object);
-
-        TRACE(XOBJECT_OBJECT_DISPOSE(object, X_TYPE_FROM_INSTANCE(object), 1));
-        X_OBJECT_GET_CLASS(object)->dispose(object);
-        TRACE(XOBJECT_OBJECT_DISPOSE_END(object, X_TYPE_FROM_INSTANCE(object), 1));
-
-        old_ref = x_atomic_int_get((int *)&object->ref_count);
-        while (old_ref > 1) {
-            if (!x_atomic_int_compare_and_exchange_full((int *)&object->ref_count, old_ref, old_ref - 1, &old_ref)) {
-                continue;
-            }
-
-            TRACE(XOBJECT_OBJECT_UNREF(object, X_TYPE_FROM_INSTANCE(object), old_ref));
-
-            x_object_notify_queue_thaw(object, nqueue, FALSE);
-
-            if ((old_ref == 2) && OBJECT_HAS_TOGGLE_REF(object) && (x_atomic_int_get((int *)&object->ref_count) == 1)) {
-                toggle_refs_notify (object, TRUE);
-            }
-
-            return;
+        TRACE(XOBJECT_OBJECT_UNREF(object, obj_gtype, old_ref));
+        if (toggle_notify) {
+            toggle_notify(toggle_data, object, TRUE);
         }
-
-        x_datalist_id_set_data(&object->qdata, quark_closure_array, NULL);
-        x_signal_handlers_destroy(object);
-        x_datalist_id_set_data(&object->qdata, quark_weak_refs, NULL);
-        x_datalist_id_set_data(&object->qdata, quark_weak_locations, NULL);
-        x_datalist_id_set_data(&object->qdata, quark_weak_notifies, NULL);
-
-        old_ref = x_atomic_int_add(&object->ref_count, -1);
-        x_return_if_fail(old_ref > 0);
-
-        TRACE(XOBJECT_OBJECT_UNREF(object, X_TYPE_FROM_INSTANCE(object), old_ref));
-
-        if (X_LIKELY(old_ref == 1)) {
-            TRACE(XOBJECT_OBJECT_FINALIZE(object, X_TYPE_FROM_INSTANCE(object)));
-            X_OBJECT_GET_CLASS(object)->finalize(object);
-            TRACE(XOBJECT_OBJECT_FINALIZE_END(object, X_TYPE_FROM_INSTANCE(object)));
-
-            XOBJECT_IF_DEBUG(OBJECTS, {
-                xboolean was_present;
-
-                X_LOCK(debug_objects);
-                was_present = x_hash_table_remove(debug_objects_ht, object);
-                X_UNLOCK(debug_objects);
-
-                if (was_present) {
-                    x_critical("Object %p of type %s not finalized correctly.", object, X_OBJECT_TYPE_NAME(object));
-                }
-            });
-
-            x_type_free_instance((XTypeInstance *)object);
-        } else {
-            x_object_notify_queue_thaw(object, nqueue, FALSE);
-        }
+        return;
     }
+
+    if (X_UNLIKELY(old_ref != 1)) {
+        xboolean object_already_finalized = TRUE;
+        x_return_if_fail(!object_already_finalized);
+        return;
+    }
+
+    if (!_object_unref_clear_weak_locations(object, &old_ref, FALSE)) {
+        goto retry_beginning;
+    }
+
+    nqueue = x_object_notify_queue_freeze(object);
+
+    TRACE(XOBJECT_OBJECT_DISPOSE(object, X_TYPE_FROM_INSTANCE(object), 1));
+    X_OBJECT_GET_CLASS(object)->dispose(object);
+    TRACE(XOBJECT_OBJECT_DISPOSE_END(object, X_TYPE_FROM_INSTANCE(object), 1));
+
+retry_decrement:
+    if (old_ref > 1 && nqueue) {
+        x_object_notify_queue_thaw(object, nqueue, FALSE);
+        nqueue = NULL;
+    }
+
+    if (old_ref > 2) {
+        if (!x_atomic_int_compare_and_exchange_full((int *)&object->ref_count, old_ref, old_ref - 1, &old_ref)) {
+            goto retry_decrement;
+        }
+
+        TRACE(XOBJECT_OBJECT_UNREF(object, obj_gtype, old_ref));
+        return;
+    }
+
+    if (old_ref == 2) {
+        object_bit_lock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
+        toggle_notify = toggle_refs_get_notify_unlocked(object, &toggle_data);
+        do_retry = !x_atomic_int_compare_and_exchange_full((int *)&object->ref_count, old_ref, old_ref - 1, &old_ref);
+        object_bit_unlock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
+
+        if (do_retry) {
+            goto retry_decrement;
+        }
+
+        TRACE(XOBJECT_OBJECT_UNREF(object, obj_gtype, old_ref));
+        if (toggle_notify) {
+            toggle_notify(toggle_data, object, TRUE);
+        }
+        return;
+    }
+
+    if (!_object_unref_clear_weak_locations(object, &old_ref, TRUE)) {
+        goto retry_decrement;
+    }
+
+    TRACE(XOBJECT_OBJECT_UNREF(object, obj_gtype, old_ref));
+
+    x_datalist_id_set_data(&object->qdata, quark_closure_array, NULL);
+    x_signal_handlers_destroy(object);
+    x_datalist_id_set_data(&object->qdata, quark_weak_notifies, NULL);
+
+    TRACE(XOBJECT_OBJECT_FINALIZE(object, X_TYPE_FROM_INSTANCE(object)));
+    X_OBJECT_GET_CLASS(object)->finalize(object);
+    TRACE(XOBJECT_OBJECT_FINALIZE_END(object, X_TYPE_FROM_INSTANCE(object)));
+
+    XOBJECT_IF_DEBUG(OBJECTS, {
+        xboolean was_present;
+        X_LOCK(debug_objects);
+        was_present = x_hash_table_remove(debug_objects_ht, object);
+        X_UNLOCK(debug_objects);
+
+        if (was_present) {
+            x_critical("Object %p of type %s not finalized correctly.", object, X_OBJECT_TYPE_NAME(object));
+        }
+    });
+
+    x_type_free_instance((XTypeInstance *)object);
 }
 
 #undef x_clear_object
@@ -2531,7 +2630,7 @@ static void object_remove_closure(xpointer data, XClosure *closure)
     CArray *carray;
     XObject *object = (XObject *)data;
 
-    X_LOCK(closure_array_mutex);
+    object_bit_lock(object, OPTIONAL_BIT_LOCK_CLOSURE_ARRAY);
     carray = (CArray *)x_object_get_qdata(object, quark_closure_array);
     for (i = 0; i < carray->n_closures; i++) {
         if (carray->closures[i] == closure) {
@@ -2540,11 +2639,11 @@ static void object_remove_closure(xpointer data, XClosure *closure)
                 carray->closures[i] = carray->closures[carray->n_closures];
             }
 
-            X_UNLOCK(closure_array_mutex);
+            object_bit_unlock(object, OPTIONAL_BIT_LOCK_CLOSURE_ARRAY);
             return;
         }
     }
-    X_UNLOCK(closure_array_mutex);
+    object_bit_unlock(object, OPTIONAL_BIT_LOCK_CLOSURE_ARRAY);
 
     x_assert_not_reached();
 }
@@ -2579,7 +2678,7 @@ void x_object_watch_closure(XObject *object, XClosure *closure)
     x_closure_add_invalidate_notifier(closure, object, object_remove_closure);
     x_closure_add_marshal_guards(closure, object, (XClosureNotify)x_object_ref, object, (XClosureNotify)x_object_unref);
 
-    X_LOCK(closure_array_mutex);
+    object_bit_lock(object, OPTIONAL_BIT_LOCK_CLOSURE_ARRAY);
     carray = (CArray *)x_datalist_id_remove_no_notify(&object->qdata, quark_closure_array);
     if (!carray) {
         carray = x_renew(CArray, NULL, 1);
@@ -2593,7 +2692,7 @@ void x_object_watch_closure(XObject *object, XClosure *closure)
 
     carray->closures[i] = closure;
     x_datalist_id_set_data_full(&object->qdata, quark_closure_array, carray, destroy_closure_array);
-    X_UNLOCK(closure_array_mutex);
+    object_bit_unlock(object, OPTIONAL_BIT_LOCK_CLOSURE_ARRAY);
 }
 
 XClosure *x_closure_new_object(xuint sizeof_closure, XObject *object)
@@ -2674,7 +2773,9 @@ static void x_initially_unowned_class_init(XInitiallyUnownedClass *klass)
 void x_weak_ref_init(XWeakRef *weak_ref, xpointer object)
 {
     weak_ref->priv.p = NULL;
-    x_weak_ref_set(weak_ref, object);
+    if (object) {
+        x_weak_ref_set(weak_ref, object);
+    }
 }
 
 void x_weak_ref_clear(XWeakRef *weak_ref)
@@ -2685,19 +2786,25 @@ void x_weak_ref_clear(XWeakRef *weak_ref)
 
 xpointer x_weak_ref_get(XWeakRef *weak_ref)
 {
-    xpointer object_or_null;
+    XObject *object;
+    xpointer toggle_data = NULL;
+    XToggleNotify toggle_notify = NULL;
 
-    x_return_val_if_fail(weak_ref!= NULL, NULL);
+    x_return_val_if_fail(weak_ref, NULL);
 
     x_rw_lock_reader_lock(&weak_locations_lock);
-    object_or_null = weak_ref->priv.p;
+    object = weak_ref->priv.p;
 
-    if (object_or_null != NULL) {
-        x_object_ref(object_or_null);
+    if (object) {
+        object = object_ref(object, &toggle_notify, &toggle_data);
     }
     x_rw_lock_reader_unlock(&weak_locations_lock);
 
-    return object_or_null;
+    if (toggle_notify) {
+        toggle_notify(toggle_data, object, FALSE);
+    }
+
+    return object;
 }
 
 static void weak_locations_free_unlocked(XSList **weak_locations)
@@ -2745,8 +2852,7 @@ void x_weak_ref_set(XWeakRef *weak_ref, xpointer object)
         if (old_object != NULL) {
             weak_locations = (XSList **)x_datalist_id_get_data(&old_object->qdata, quark_weak_locations);
             if (weak_locations == NULL) {
-                xboolean in_weak_refs_notify = x_datalist_id_get_data(&old_object->qdata, quark_weak_refs) == NULL;
-                x_assert(in_weak_refs_notify);
+                x_critical("unexpected missing XWeakRef");
             } else {
                 *weak_locations = x_slist_remove(*weak_locations, weak_ref);
 
@@ -2758,6 +2864,13 @@ void x_weak_ref_set(XWeakRef *weak_ref, xpointer object)
         }
 
         if (new_object != NULL) {
+            if (x_atomic_int_get(&new_object->ref_count) < 1) {
+                weak_ref->priv.p = NULL;
+                x_rw_lock_writer_unlock(&weak_locations_lock);
+                x_critical("calling x_weak_ref_set() with already destroyed object");
+                return;
+            }
+
             weak_locations = (XSList **)x_datalist_id_get_data(&new_object->qdata, quark_weak_locations);
             if (weak_locations == NULL) {
                 weak_locations = x_new0(XSList *, 1);

@@ -70,4 +70,10 @@ XLibPrivateVTable *xlib__private__(void);
 xboolean x_uint_equal(xconstpointer v1, xconstpointer v2);
 xuint x_uint_hash(xconstpointer v);
 
+#if defined(__GNUC__)
+#define X_THREAD_LOCAL      __thread
+#else
+#undef X_THREAD_LOCAL
+#endif
+
 #endif

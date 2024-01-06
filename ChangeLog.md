@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2024-01-06
+  * libdrm: amdgpu: fix use-after-free
+
 ## 2023-12-22
   * rga: samples: utils: build: cmake: fix compile errors
 
