@@ -16,7 +16,6 @@
 
 #define MODULE_TAG "vpu_api_mlvec"
 
-#include <fcntl.h>
 #include <string.h>
 
 #include "../../osal/inc/mpp_mem.h"

@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2023-12-14 fix[hal_enc]: Add encoder internal buffer sync";
+static const char *mpp_last_commit_message = "2024-01-12 fix[mpp_dmabuf]: fix align cache line size calculate err";
 
 void show_mpp_version(void)
 {
