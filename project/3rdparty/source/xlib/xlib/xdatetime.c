@@ -132,7 +132,7 @@ static const xint ab_alt_month_item[12] = {
 #define MONTH_ABBR_STANDALONE(d)                        nl_langinfo(ab_alt_month_item[x_date_time_get_month(d) - 1])
 #define MONTH_ABBR_STANDALONE_IS_LOCALE                 TRUE
 
-#ifdef HAVE_LANGINFO_ERA
+#if defined(HAVE_LANGINFO_ERA) && (X_BYTE_ORDER == X_LITTLE_ENDIAN || XLIB_SIZEOF_VOID_P == 4)
 #define PREFERRED_ERA_DATE_TIME_FMT                     nl_langinfo(ERA_D_T_FMT)
 #define PREFERRED_ERA_DATE_FMT                          nl_langinfo(ERA_D_FMT)
 #define PREFERRED_ERA_TIME_FMT                          nl_langinfo(ERA_T_FMT)

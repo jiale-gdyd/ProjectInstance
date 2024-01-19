@@ -273,16 +273,10 @@ static inline HandlerList *handler_list_ensure(xuint signal_id, xpointer instanc
     key.tail_after = NULL;
     if (!hlbsa) {
         hlbsa = x_bsearch_array_create(&x_signal_hlbsa_bconfig);
-        hlbsa = x_bsearch_array_insert(hlbsa, &x_signal_hlbsa_bconfig, &key);
-        x_hash_table_insert(x_handler_list_bsa_ht, instance, hlbsa);
-    } else {
-        XBSearchArray *o = hlbsa;
-
-        hlbsa = x_bsearch_array_insert(o, &x_signal_hlbsa_bconfig, &key);
-        if (hlbsa != o) {
-            x_hash_table_insert(x_handler_list_bsa_ht, instance, hlbsa);
-        }
     }
+
+    hlbsa = x_bsearch_array_insert(hlbsa, &x_signal_hlbsa_bconfig, &key);
+    x_hash_table_insert(x_handler_list_bsa_ht, instance, hlbsa);
 
     return (HandlerList *)x_bsearch_array_lookup(hlbsa, &x_signal_hlbsa_bconfig, &key);
 }

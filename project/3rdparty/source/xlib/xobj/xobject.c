@@ -51,7 +51,7 @@ enum {
 #define OPTIONAL_BIT_LOCK_TOGGLE_REFS                   3
 #define OPTIONAL_BIT_LOCK_CLOSURE_ARRAY                 4
 
-#if SIZEOF_INT == 4 && XLIB_SIZEOF_VOID_P == 8
+#if SIZEOF_INT == 4 && XLIB_SIZEOF_VOID_P >= 8
 #define HAVE_OPTIONAL_FLAGS_IN_GOBJECT                  1
 #else
 #define HAVE_OPTIONAL_FLAGS_IN_GOBJECT                  0

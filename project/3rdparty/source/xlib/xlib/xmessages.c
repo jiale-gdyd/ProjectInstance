@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <locale.h>
+#include <syslog.h>
 #include <sys/un.h>
 #include <sys/uio.h>
 #include <sys/types.h>
@@ -633,6 +634,19 @@ static const xchar *log_level_to_priority(XLogLevelFlags log_level)
     return "5";
 }
 
+static int str_to_syslog_facility(const xchar *syslog_facility_str)
+{
+    int syslog_facility = LOG_USER;
+
+    if (x_strcmp0(syslog_facility_str, "auth") == 0) {
+        syslog_facility = LOG_AUTH;
+    } else if (x_strcmp0(syslog_facility_str, "daemon") == 0) {
+        syslog_facility = LOG_DAEMON;
+    }
+
+    return syslog_facility;
+}
+
 static inline FILE *log_level_to_file(XLogLevelFlags log_level)
 {
     if (xmessages_use_stderr) {
@@ -925,6 +939,7 @@ xboolean x_log_writer_supports_color(xint output_fd)
 }
 
 static int journal_fd = -1;
+static xboolean syslog_opened = FALSE;
 
 #ifndef SOCK_CLOEXEC
 #define SOCK_CLOEXEC            0
@@ -1074,6 +1089,56 @@ xchar *x_log_writer_format_fields(XLogLevelFlags log_level, const XLogField *fie
     }
 
     return x_string_free(gstring, FALSE);
+}
+
+XLogWriterOutput x_log_writer_syslog(XLogLevelFlags log_level, const XLogField *fields, xsize n_fields, xpointer user_data)
+{
+    xsize i;
+    int syslog_level;
+    XString *gstring;
+    int syslog_facility = 0;
+    const char *message = NULL;
+    xssize message_length = -1;
+    const char *log_domain = NULL;
+    xssize log_domain_length = -1;
+
+    x_return_val_if_fail(fields != NULL, X_LOG_WRITER_UNHANDLED);
+    x_return_val_if_fail(n_fields > 0, X_LOG_WRITER_UNHANDLED);
+
+    if (!syslog_opened) {
+        openlog(NULL, 0, 0);
+        syslog_opened = TRUE;
+    }
+
+    for (i = 0; i < n_fields; i++) {
+        const XLogField *field = &fields[i];
+
+        if (x_strcmp0(field->key, "MESSAGE") == 0) {
+            message = field->value;
+            message_length = field->length;
+        } else if (x_strcmp0(field->key, "XLIB_DOMAIN") == 0) {
+            log_domain = field->value;
+            log_domain_length = field->length;
+        } else if (x_strcmp0(field->key, "SYSLOG_FACILITY") == 0) {
+            syslog_facility = str_to_syslog_facility(field->value);
+        }
+    }
+
+    gstring = x_string_new(NULL);
+
+    if (log_domain != NULL) {
+        x_string_append_len(gstring, log_domain, log_domain_length);
+        x_string_append(gstring, ": ");
+    }
+
+    x_string_append_len(gstring, message, message_length);
+
+    syslog_level = atoi(log_level_to_priority(log_level));
+    syslog(syslog_level | syslog_facility, "%s", gstring->str);
+
+    x_string_free(gstring, TRUE);
+
+    return X_LOG_WRITER_HANDLED;
 }
 
 #if defined(__linux__) && !defined(__BIONIC__) && defined(HAVE_MKOSTEMP) && defined(O_CLOEXEC)

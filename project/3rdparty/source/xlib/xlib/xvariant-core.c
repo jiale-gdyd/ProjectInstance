@@ -213,7 +213,7 @@ XVariant *x_variant_new_from_bytes(const XVariantType *type, XBytes *bytes, xboo
         xpointer aligned_data = NULL;
         xsize aligned_size = x_bytes_get_size(bytes);
 
-        if (posix_memalign(&aligned_data, MAX(sizeof(void *), alignment + 1), aligned_size) != 0) {
+        if ((aligned_size != 0) && (posix_memalign(&aligned_data, MAX(sizeof(void *), alignment + 1), aligned_size) != 0)) {
             x_error("posix_memalign failed");
         }
 

@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2024-01-19
+  * libdrm: bump version to 2.4.120
+
 ## 2024-01-06
   * libdrm: amdgpu: fix use-after-free
 

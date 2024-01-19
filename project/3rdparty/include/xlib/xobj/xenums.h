@@ -107,14 +107,14 @@ void x_flags_complete_type_info(XType x_flags_type, XTypeInfo *info, const XFlag
 #define X_DEFINE_ENUM_TYPE(TypeName, type_name, ...)                                                        \
     XType type_name ## _get_type(void)                                                                      \
     {                                                                                                       \
-        static xsize x_define_type__static = 0;                                                             \
-        if (x_once_init_enter(&x_define_type__static)) {                                                    \
+        static _x_type_once_init_type x_define_type__static = 0;                                            \
+        if (_x_type_once_init_enter(&x_define_type__static)) {                                              \
             static const XEnumValue enum_values[] = {                                                       \
                 __VA_ARGS__ ,                                                                               \
                 { 0, NULL, NULL },                                                                          \
             };                                                                                              \
             XType x_define_type = x_enum_register_static(x_intern_static_string(#TypeName), enum_values);   \
-            x_once_init_leave(&x_define_type__static, x_define_type);                                       \
+            _x_type_once_init_leave(&x_define_type__static, x_define_type);                                 \
         }                                                                                                   \
         return x_define_type__static;                                                                       \
     } XLIB_AVAILABLE_MACRO_IN_2_74
@@ -122,14 +122,14 @@ void x_flags_complete_type_info(XType x_flags_type, XTypeInfo *info, const XFlag
 #define X_DEFINE_FLAGS_TYPE(TypeName, type_name, ...)                                                       \
     XType type_name ## _get_type(void)                                                                      \
     {                                                                                                       \
-        static xsize x_define_type__static = 0;                                                             \
-        if (X_once_init_enter(&x_define_type__static)) {                                                    \
+        static _x_type_once_init_type x_define_type__static = 0;                                            \
+        if (_x_type_once_init_enter(&x_define_type__static)) {                                              \
             static const XFlagsValue flags_values[] = {                                                     \
                 __VA_ARGS__ ,                                                                               \
                 { 0, NULL, NULL },                                                                          \
             };                                                                                              \
             XType x_define_type = x_flags_register_static(x_intern_static_string(#TypeName), flags_values); \
-            x_once_init_leave(&x_define_type__static, x_define_type);                                       \
+            _x_type_once_init_leave(&x_define_type__static, x_define_type);                                 \
         }                                                                                                   \
         return x_define_type__static;                                                                       \
     } XLIB_AVAILABLE_MACRO_IN_2_74

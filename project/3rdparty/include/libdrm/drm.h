@@ -32,9 +32,9 @@ extern "C" {
 
 #define LIBDRM_VERSION_MAJOR                                2
 #define LIBDRM_VERSION_MINOR                                4
-#define LIBDRM_VERSION_PATCH                                119
+#define LIBDRM_VERSION_PATCH                                120
 
-#define LIBDRM_VERSION_STRING                               "2.4.119"
+#define LIBDRM_VERSION_STRING                               "2.4.120"
 
 #define DRM_NAME                                            "drm"
 
@@ -437,6 +437,7 @@ struct drm_gem_open {
 #define DRM_CAP_CRTC_IN_VBLANK_EVENT                            0x12
 #define DRM_CAP_SYNCOBJ                                         0x13
 #define DRM_CAP_SYNCOBJ_TIMELINE                                0x14
+#define DRM_CAP_ATOMIC_ASYNC_PAGE_FLIP                          0x15
 
 struct drm_get_cap {
     __u64 capability;
@@ -448,6 +449,7 @@ struct drm_get_cap {
 #define DRM_CLIENT_CAP_ATOMIC                                   3
 #define DRM_CLIENT_CAP_ASPECT_RATIO                             4
 #define DRM_CLIENT_CAP_WRITEBACK_CONNECTORS                     5
+#define DRM_CLIENT_CAP_CURSOR_PLANE_HOTSPOT                     6
 
 struct drm_set_client_cap {
     __u64 capability;
@@ -496,6 +498,7 @@ struct drm_syncobj_transfer {
 #define DRM_SYNCOBJ_WAIT_FLAGS_WAIT_ALL                         (1 << 0)
 #define DRM_SYNCOBJ_WAIT_FLAGS_WAIT_FOR_SUBMIT                  (1 << 1)
 #define DRM_SYNCOBJ_WAIT_FLAGS_WAIT_AVAILABLE                   (1 << 2)
+#define DRM_SYNCOBJ_WAIT_FLAGS_WAIT_DEADLINE                    (1 << 3)
 
 struct drm_syncobj_wait {
     __u64 handles;
@@ -504,6 +507,7 @@ struct drm_syncobj_wait {
     __u32 flags;
     __u32 first_signaled;
     __u32 pad;
+    __u64 deadline_nsec;
 };
 
 struct drm_syncobj_timeline_wait {
@@ -514,6 +518,7 @@ struct drm_syncobj_timeline_wait {
     __u32 flags;
     __u32 first_signaled;
     __u32 pad;
+    __u64 deadline_nsec;
 };
 
 struct drm_syncobj_eventfd {

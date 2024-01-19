@@ -94,6 +94,9 @@ xboolean x_log_writer_is_journald(xint output_fd);
 XLIB_AVAILABLE_IN_2_50
 xchar *x_log_writer_format_fields(XLogLevelFlags log_level, const XLogField *fields, xsize n_fields, xboolean use_color);
 
+XLIB_AVAILABLE_IN_2_80
+XLogWriterOutput x_log_writer_syslog(XLogLevelFlags log_level, const XLogField *fields, xsize n_fields, xpointer user_data);
+
 XLIB_AVAILABLE_IN_2_50
 XLogWriterOutput x_log_writer_journald(XLogLevelFlags log_level, const XLogField *fields, xsize n_fields, xpointer user_data);
 
