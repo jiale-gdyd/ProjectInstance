@@ -75,6 +75,10 @@ struct _XOnce {
 #define X_UNLOCK(name)                              x_mutex_unlock(&X_LOCK_NAME(name))
 #define X_TRYLOCK(name)                             x_mutex_trylock(&X_LOCK_NAME(name))
 
+#ifdef x_autoptr
+#define X_AUTO_LOCK(name)                           X_MUTEX_AUTO_LOCK(&X_LOCK_NAME(name), x__##name##_locker)
+#endif
+
 XLIB_AVAILABLE_IN_2_32
 XThread *x_thread_ref(XThread *thread);
 
@@ -255,6 +259,12 @@ static inline void x_mutex_locker_free(XMutexLocker *locker)
     x_mutex_unlock((XMutex *)locker);
 }
 
+#ifdef x_autoptr
+#define X_MUTEX_AUTO_LOCK(mutex, var)                       \
+    XLIB_AVAILABLE_MACRO_IN_2_80 x_autoptr(XMutexLocker)    \
+    X_GNUC_UNUSED var = x_mutex_locker_new(mutex)
+#endif
+
 typedef void XRecMutexLocker;
 
 X_GNUC_BEGIN_IGNORE_DEPRECATIONS
@@ -273,6 +283,12 @@ static inline void x_rec_mutex_locker_free(XRecMutexLocker *locker)
     x_rec_mutex_unlock((XRecMutex *)locker);
 }
 X_GNUC_END_IGNORE_DEPRECATIONS
+
+#ifdef x_autoptr
+#define X_REC_MUTEX_AUTO_LOCK(mutex, var)                   \
+    XLIB_AVAILABLE_MACRO_IN_2_80 x_autoptr(XRecMutexLocker) \
+    X_GNUC_UNUSED var = x_rec_mutex_locker_new(mutex)
+#endif
 
 typedef void XRWLockWriterLocker;
 
@@ -293,6 +309,12 @@ static inline void x_rw_lock_writer_locker_free(XRWLockWriterLocker *locker)
 }
 X_GNUC_END_IGNORE_DEPRECATIONS
 
+#ifdef x_autoptr
+#define X_RW_LOCK_WRITER_AUTO_LOCK(mutex, var)                  \
+    XLIB_AVAILABLE_MACRO_IN_2_80 x_autoptr(XRWLockWriterLocker) \
+    X_GNUC_UNUSED var = x_rw_lock_writer_locker_new(mutex)
+#endif
+
 typedef void XRWLockReaderLocker;
 
 X_GNUC_BEGIN_IGNORE_DEPRECATIONS
@@ -311,6 +333,12 @@ static inline void x_rw_lock_reader_locker_free(XRWLockReaderLocker *locker)
     x_rw_lock_reader_unlock((XRWLock *)locker);
 }
 X_GNUC_END_IGNORE_DEPRECATIONS
+
+#ifdef x_autoptr
+#define X_RW_LOCK_READER_AUTO_LOCK(mutex, var)                  \
+    XLIB_AVAILABLE_MACRO_IN_2_80 x_autoptr(XRWLockReaderLocker) \
+    X_GNUC_UNUSED var = x_rw_lock_reader_locker_new(mutex)
+#endif
 
 X_END_DECLS
 
