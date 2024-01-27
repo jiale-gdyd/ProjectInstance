@@ -423,10 +423,11 @@ xchar *x_ascii_strdown(const xchar *str, xssize len)
     x_return_val_if_fail(str != NULL, NULL);
 
     if (len < 0) {
-        len = (xssize)strlen(str);
+        result = x_strdup(str);
+    } else {
+        result = x_strndup(str, (xsize)len);
     }
 
-    result = x_strndup(str, (xsize) len);
     for (s = result; *s; s++) {
         *s = x_ascii_tolower(*s);
     }
@@ -441,10 +442,11 @@ xchar *x_ascii_strup(const xchar *str, xssize len)
     x_return_val_if_fail(str != NULL, NULL);
 
     if (len < 0) {
-        len = (xssize)strlen(str);
+        result = x_strdup(str);
+    } else {
+        result = x_strndup(str, (xsize)len);
     }
 
-    result = x_strndup(str, (xsize) len);
     for (s = result; *s; s++) {
         *s = x_ascii_toupper(*s);
     }
