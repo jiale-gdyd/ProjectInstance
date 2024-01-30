@@ -3,9 +3,9 @@
 #include <xlib/xlib/xlib-private.h>
 #include <xlib/xlib/xutilsprivate.h>
 
-XLibPrivateVTable *xlib__private__(void)
+const XLibPrivateVTable *xlib__private__(void)
 {
-    static XLibPrivateVTable table = {
+    static const XLibPrivateVTable table = {
         x_wakeup_new,
         x_wakeup_free,
         x_wakeup_get_pollfd,

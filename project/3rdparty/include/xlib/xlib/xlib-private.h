@@ -65,7 +65,7 @@ typedef struct {
 } XLibPrivateVTable;
 
 XLIB_AVAILABLE_IN_ALL
-XLibPrivateVTable *xlib__private__(void);
+const XLibPrivateVTable *xlib__private__(void);
 
 xboolean x_uint_equal(xconstpointer v1, xconstpointer v2);
 xuint x_uint_hash(xconstpointer v);
