@@ -45,6 +45,7 @@ enum {
 #define OPTIONAL_FLAG_HAS_SIGNAL_HANDLER                (1 << 1)
 #define OPTIONAL_FLAG_HAS_NOTIFY_HANDLER                (1 << 2)
 #define OPTIONAL_FLAG_LOCK                              (1 << 3)
+#define OPTIONAL_FLAG_EVER_HAD_WEAK_REF                 (1 << 4)
 
 #define OPTIONAL_BIT_LOCK_WEAK_REFS                     1
 #define OPTIONAL_BIT_LOCK_NOTIFY                        2
@@ -101,9 +102,9 @@ static xchar *x_value_object_collect_value(XValue *value, xuint n_collect_values
 static xchar *x_value_object_lcopy_value(const XValue *value, xuint n_collect_values, XTypeCValue *collect_values, xuint collect_flags);
 static void x_object_dispatch_properties_changed(XObject *object, xuint n_pspecs, XParamSpec **pspecs);
 static xuint object_floating_flag_handler(XObject *object, xint job);
+static inline void object_set_optional_flags(XObject *object, xuint flags);
 
 static void object_interface_check_properties(xpointer check_data, xpointer x_iface);
-static void weak_locations_free_unlocked(XSList **weak_locations);
 
 typedef struct _XObjectNotifyQueue XObjectNotifyQueue;
 
@@ -122,7 +123,6 @@ static XParamSpecPool *pspec_pool = NULL;
 static xulong xobject_signals[LAST_SIGNAL] = { 0, };
 static xuint (*floating_flag_handler)(XObject *, xint) = object_floating_flag_handler;
 
-static XRWLock weak_locations_lock;
 static XQuark quark_weak_locations = 0;
 
 #if HAVE_PRIVATE
@@ -139,6 +139,137 @@ X_ALWAYS_INLINE static inline xuint *object_get_optional_flags_p(XObject *object
 #else
     return &x_object_get_instance_private(object)->optional_flags;
 #endif
+}
+
+typedef struct {
+    xatomicrefcount ref_count;
+    xint            lock_flags;
+    XSList          *list;
+} WeakRefData;
+
+static void weak_ref_data_clear_list(WeakRefData *wrdata, XObject *object);
+
+static WeakRefData *weak_ref_data_ref(WeakRefData *wrdata)
+{
+#if X_ENABLE_DEBUG
+    x_assert(wrdata);
+#endif
+    x_atomic_ref_count_inc(&wrdata->ref_count);
+    return wrdata;
+}
+
+static void weak_ref_data_unref(WeakRefData *wrdata)
+{
+    if (!wrdata) {
+        return;
+    }
+
+    if (!x_atomic_ref_count_dec(&wrdata->ref_count)) {
+        return;
+    }
+
+#if X_ENABLE_DEBUG
+    x_assert(!wrdata->list);
+#endif
+
+    x_free_sized(wrdata, sizeof(WeakRefData));
+}
+
+static void weak_ref_data_lock(WeakRefData *wrdata)
+{
+    if (wrdata) {
+        x_bit_lock(&wrdata->lock_flags, 0);
+    }
+}
+
+static void weak_ref_data_unlock(WeakRefData *wrdata)
+{
+    if (wrdata) {
+        x_bit_unlock(&wrdata->lock_flags, 0);
+    }
+}
+
+static xpointer weak_ref_data_get_or_create_cb(XQuark key_id, xpointer *data, XDestroyNotify *destroy_notify, xpointer user_data)
+{
+    WeakRefData *wrdata = *data;
+    XObject *object = user_data;
+
+    if (!wrdata) {
+        wrdata = x_new(WeakRefData, 1);
+        *wrdata = (WeakRefData) {
+            .ref_count = 1,
+            .lock_flags = 0,
+            .list = NULL,
+        };
+        *data = wrdata;
+        *destroy_notify = (XDestroyNotify)weak_ref_data_unref;
+
+        object_set_optional_flags(object, OPTIONAL_FLAG_EVER_HAD_WEAK_REF);
+    }
+
+    return wrdata;
+}
+
+static WeakRefData *weak_ref_data_get_or_create(XObject *object)
+{
+    if (!object) {
+        return NULL;
+    }
+
+    return _x_datalist_id_update_atomic(&object->qdata, quark_weak_locations, weak_ref_data_get_or_create_cb, object);
+}
+
+static WeakRefData *weak_ref_data_get(XObject *object)
+{
+    return x_datalist_id_get_data(&object->qdata, quark_weak_locations);
+}
+
+static WeakRefData *weak_ref_data_get_surely(XObject *object)
+{
+    WeakRefData *wrdata;
+
+    wrdata = weak_ref_data_get(object);
+#if X_ENABLE_DEBUG
+    x_assert(wrdata);
+#endif
+    return wrdata;
+}
+
+static xboolean weak_ref_data_has(XObject *object, WeakRefData *wrdata, WeakRefData **out_new_wrdata)
+{
+    WeakRefData *wrdata2;
+
+    if (!object) {
+#if x_ENABLE_DEBUG
+        x_assert(!out_new_wrdata);
+#endif
+        return !wrdata;
+    }
+
+    if (!wrdata) {
+        if (out_new_wrdata) {
+            *out_new_wrdata = weak_ref_data_ref(weak_ref_data_get(object));
+        }
+#if X_ENABLE_DEBUG
+        x_assert(out_new_wrdata ? *out_new_wrdata : weak_ref_data_get(object));
+#endif
+        return FALSE;
+    }
+
+    wrdata2 = weak_ref_data_get_surely(object);
+    if (wrdata == wrdata2) {
+        if (out_new_wrdata) {
+            *out_new_wrdata = NULL;
+        }
+
+        return TRUE;
+    }
+
+    if (out_new_wrdata) {
+        *out_new_wrdata = weak_ref_data_ref(wrdata2);
+    }
+
+    return FALSE;
 }
 
 #if defined(X_ENABLE_DEBUG) && defined(X_THREAD_LOCAL)
@@ -826,14 +957,23 @@ static void x_object_dispatch_properties_changed(XObject *object, xuint n_pspecs
 
 void x_object_run_dispose(XObject *object)
 {
+    WeakRefData *wrdata;
+
     x_return_if_fail(X_IS_OBJECT(object));
     x_return_if_fail(x_atomic_int_get(&object->ref_count) > 0);
 
     x_object_ref(object);
+
     TRACE(XOBJECT_OBJECT_DISPOSE(object, X_TYPE_FROM_INSTANCE(object), 0));
     X_OBJECT_GET_CLASS(object)->dispose(object);
     TRACE(XOBJECT_OBJECT_DISPOSE_END(object, X_TYPE_FROM_INSTANCE(object), 0));
-    x_datalist_id_remove_data(&object->qdata, quark_weak_locations);
+    if ((object_get_optional_flags(object) & OPTIONAL_FLAG_EVER_HAD_WEAK_REF)) {
+        wrdata = weak_ref_data_get_surely(object);
+        weak_ref_data_lock(wrdata);
+        weak_ref_data_clear_list(wrdata, object);
+        weak_ref_data_unlock(wrdata);
+    }
+
     x_object_unref(object);
 }
 
@@ -2214,51 +2354,37 @@ xpointer (x_object_ref)(xpointer _object)
 
 static xboolean _object_unref_clear_weak_locations(XObject *object, xint *p_old_ref, xboolean do_unref)
 {
-    XSList **weak_locations;
+    xboolean success;
+    WeakRefData *wrdata;
 
+    if (!(object_get_optional_flags(object) & OPTIONAL_FLAG_EVER_HAD_WEAK_REF)) {
+        if (do_unref) {
+            if (!x_atomic_int_compare_and_exchange((xint *)&object->ref_count, 1, 0)) {
+#if X_ENABLE_DEBUG
+                x_assert_not_reached();
+#endif
+            }
+        }
+
+        return TRUE;
+    }
+
+    wrdata = weak_ref_data_get_surely(object);
+
+    weak_ref_data_lock(wrdata);
     if (do_unref) {
-        xboolean unreffed = FALSE;
-
-        x_rw_lock_reader_lock(&weak_locations_lock);
-        weak_locations = x_datalist_id_get_data(&object->qdata, quark_weak_locations);
-        if (!weak_locations) {
-            unreffed = x_atomic_int_compare_and_exchange_full((int *)&object->ref_count, 1, 0, p_old_ref);
-            x_rw_lock_reader_unlock(&weak_locations_lock);
-            return unreffed;
-        }
-        x_rw_lock_reader_unlock(&weak_locations_lock);
-
-        x_rw_lock_writer_lock(&weak_locations_lock);
-        if (!x_atomic_int_compare_and_exchange_full((int *)&object->ref_count, 1, 0, p_old_ref)) {
-            x_rw_lock_writer_unlock(&weak_locations_lock);
-            return FALSE;
-        }
-
-        weak_locations = x_datalist_id_remove_no_notify(&object->qdata, quark_weak_locations);
-        x_clear_pointer(&weak_locations, weak_locations_free_unlocked);
-
-        x_rw_lock_writer_unlock(&weak_locations_lock);
-        return TRUE;
+        success = x_atomic_int_compare_and_exchange_full((xint *)&object->ref_count, 1, 0, p_old_ref);
+    } else {
+        *p_old_ref = x_atomic_int_get((xint *)&object->ref_count);
+        success = (*p_old_ref == 1);
     }
 
-    weak_locations = x_datalist_id_get_data(&object->qdata, quark_weak_locations);
-    if (weak_locations != NULL) {
-        x_rw_lock_writer_lock(&weak_locations_lock);
-
-        *p_old_ref = x_atomic_int_get(&object->ref_count);
-        if (*p_old_ref != 1) {
-            x_rw_lock_writer_unlock(&weak_locations_lock);
-            return FALSE;
-        }
-
-        weak_locations = x_datalist_id_remove_no_notify(&object->qdata, quark_weak_locations);
-        x_clear_pointer(&weak_locations, weak_locations_free_unlocked);
-
-        x_rw_lock_writer_unlock(&weak_locations_lock);
-        return TRUE;
+    if (success) {
+        weak_ref_data_clear_list(wrdata, object);
     }
+    weak_ref_data_unlock(wrdata);
 
-    return TRUE;
+    return success;
 }
 
 void x_object_unref(xpointer _object)
@@ -2319,6 +2445,8 @@ retry_beginning:
     TRACE(XOBJECT_OBJECT_DISPOSE(object, X_TYPE_FROM_INSTANCE(object), 1));
     X_OBJECT_GET_CLASS(object)->dispose(object);
     TRACE(XOBJECT_OBJECT_DISPOSE_END(object, X_TYPE_FROM_INSTANCE(object), 1));
+
+    old_ref = x_atomic_int_get(&object->ref_count);
 
 retry_decrement:
     if (old_ref > 1 && nqueue) {
@@ -2770,11 +2898,146 @@ static void x_initially_unowned_class_init(XInitiallyUnownedClass *klass)
 
 }
 
+#define WEAK_REF_LOCK_BIT   0
+
+static XObject *_weak_ref_clean_pointer(xpointer ptr)
+{
+    return x_pointer_bit_lock_mask_ptr(ptr, WEAK_REF_LOCK_BIT, FALSE, 0, NULL);
+}
+
+static void _weak_ref_lock(XWeakRef *weak_ref, XObject **out_object)
+{
+    if (out_object) {
+        xuintptr ptr;
+
+        x_pointer_bit_lock_and_get(&weak_ref->priv.p, WEAK_REF_LOCK_BIT, &ptr);
+        *out_object = _weak_ref_clean_pointer((xpointer)ptr);
+    } else {
+        x_pointer_bit_lock(&weak_ref->priv.p, WEAK_REF_LOCK_BIT);
+    }
+}
+
+static void _weak_ref_unlock(XWeakRef *weak_ref)
+{
+    x_pointer_bit_unlock(&weak_ref->priv.p, WEAK_REF_LOCK_BIT);
+}
+
+static void _weak_ref_unlock_and_set(XWeakRef *weak_ref, XObject *object)
+{
+    x_pointer_bit_unlock_and_set(&weak_ref->priv.p, WEAK_REF_LOCK_BIT, object, 0);
+}
+
+static void weak_ref_data_clear_list(WeakRefData *wrdata, XObject *object)
+{
+    while (wrdata->list) {
+        xpointer ptr;
+        XWeakRef *weak_ref = wrdata->list->data;
+
+        wrdata->list = x_slist_remove(wrdata->list, weak_ref);
+
+        ptr = x_atomic_pointer_get(&weak_ref->priv.p);
+#if X_ENABLE_DEBUG
+        x_assert(X_IS_OBJECT(_weak_ref_clean_pointer(ptr)));
+        x_assert(!object || object == _weak_ref_clean_pointer(ptr));
+#endif
+        if (X_LIKELY(ptr == _weak_ref_clean_pointer(ptr))) {
+            if (x_atomic_pointer_compare_and_exchange(&weak_ref->priv.p, ptr, NULL)) {
+                continue;
+            }
+        }
+
+        _weak_ref_lock(weak_ref, NULL);
+        _weak_ref_unlock_and_set(weak_ref, NULL);
+    }
+}
+
+static void _weak_ref_set(XWeakRef *weak_ref, XObject *new_object, xboolean called_by_init)
+{
+    XObject *old_object;
+    WeakRefData *old_wrdata;
+    WeakRefData *new_wrdata;
+
+    new_wrdata = weak_ref_data_get_or_create(new_object);
+
+#if X_ENABLE_DEBUG
+    x_assert(!new_object || object_get_optional_flags(new_object) & OPTIONAL_FLAG_EVER_HAD_WEAK_REF);
+#endif
+
+    if (called_by_init) {
+        old_wrdata = NULL;
+#if X_ENABLE_DEBUG
+        x_assert(new_object);
+#endif
+    } else {
+        _weak_ref_lock(weak_ref, &old_object);
+
+        if (old_object == new_object) {
+            _weak_ref_unlock(weak_ref);
+            return;
+        }
+
+        old_wrdata = old_object ? weak_ref_data_ref(weak_ref_data_get(old_object)) : NULL;
+        _weak_ref_unlock (weak_ref);
+    }
+
+    if (new_wrdata && old_wrdata && (((xuintptr)(xpointer)old_wrdata) < ((xuintptr)((xpointer)new_wrdata)))) {
+        weak_ref_data_lock(old_wrdata);
+        weak_ref_data_lock(new_wrdata);
+    } else {
+        weak_ref_data_lock(new_wrdata);
+        weak_ref_data_lock(old_wrdata);
+    }
+    _weak_ref_lock(weak_ref, &old_object);
+
+    if (!weak_ref_data_has(old_object, old_wrdata, NULL)) {
+        if (old_object) {
+            weak_ref_data_unlock(old_wrdata);
+            weak_ref_data_unlock(new_wrdata);
+            _weak_ref_unlock(weak_ref);
+            weak_ref_data_unref(old_wrdata);
+            return;
+        }
+    }
+
+    if (old_object) {
+#if X_ENABLE_DEBUG
+        x_assert(x_slist_find(old_wrdata->list, weak_ref));
+#endif
+        if (!old_wrdata->list) {
+            x_critical("unexpected missing XWeakRef data");
+        } else {
+            old_wrdata->list = x_slist_remove(old_wrdata->list, weak_ref);
+        }
+    }
+
+    weak_ref_data_unlock(old_wrdata);
+
+    if (new_object) {
+#if X_ENABLE_DEBUG
+        x_assert(!x_slist_find(new_wrdata->list, weak_ref));
+#endif
+        if (x_atomic_int_get(&new_object->ref_count) < 1) {
+            x_critical("calling x_weak_ref_set() with already destroyed object");
+            new_object = NULL;
+        } else {
+            new_wrdata->list = x_slist_prepend(new_wrdata->list, weak_ref);
+        }
+    }
+
+    _weak_ref_unlock_and_set(weak_ref, new_object);
+    weak_ref_data_unlock(new_wrdata);
+
+    weak_ref_data_unref(old_wrdata);
+}
+
 void x_weak_ref_init(XWeakRef *weak_ref, xpointer object)
 {
-    weak_ref->priv.p = NULL;
+    x_return_if_fail(weak_ref);
+    x_return_if_fail(object == NULL || X_IS_OBJECT(object));
+
+    x_atomic_pointer_set(&weak_ref->priv.p, NULL);
     if (object) {
-        x_weak_ref_set(weak_ref, object);
+        _weak_ref_set(weak_ref, object, TRUE);
     }
 }
 
@@ -2787,18 +3050,43 @@ void x_weak_ref_clear(XWeakRef *weak_ref)
 xpointer x_weak_ref_get(XWeakRef *weak_ref)
 {
     XObject *object;
+    WeakRefData *wrdata;
+    WeakRefData *new_wrdata;
     xpointer toggle_data = NULL;
     XToggleNotify toggle_notify = NULL;
 
     x_return_val_if_fail(weak_ref, NULL);
 
-    x_rw_lock_reader_lock(&weak_locations_lock);
-    object = weak_ref->priv.p;
+    _weak_ref_lock(weak_ref, &object);
+    wrdata = object ? weak_ref_data_ref(weak_ref_data_get(object)) : NULL;
+    _weak_ref_unlock(weak_ref);
 
-    if (object) {
-        object = object_ref(object, &toggle_notify, &toggle_data);
+    if (!wrdata) {
+        return NULL;
     }
-    x_rw_lock_reader_unlock(&weak_locations_lock);
+
+retry:
+    weak_ref_data_lock(wrdata);
+    _weak_ref_lock(weak_ref, &object);
+
+    if (!object) {
+        new_wrdata = NULL;
+    } else {
+        if (weak_ref_data_has(object, wrdata, &new_wrdata)) {
+            object = object_ref(object, &toggle_notify, &toggle_data);
+        } else {
+
+        }
+    }
+
+    _weak_ref_unlock(weak_ref);
+    weak_ref_data_unlock(wrdata);
+    weak_ref_data_unref(wrdata);
+
+    if (new_wrdata) {
+        wrdata = new_wrdata;
+        goto retry;
+    }
 
     if (toggle_notify) {
         toggle_notify(toggle_data, object, FALSE);
@@ -2807,79 +3095,10 @@ xpointer x_weak_ref_get(XWeakRef *weak_ref)
     return object;
 }
 
-static void weak_locations_free_unlocked(XSList **weak_locations)
-{
-    if (*weak_locations) {
-        XSList *weak_location;
-
-        for (weak_location = *weak_locations; weak_location;) {
-            XWeakRef *weak_ref_location = (XWeakRef *)weak_location->data;
-
-            weak_ref_location->priv.p = NULL;
-            weak_location = x_slist_delete_link(weak_location, weak_location);
-        }
-    }
-
-    x_free(weak_locations);
-}
-
-static void weak_locations_free(xpointer data)
-{
-    XSList **weak_locations = (XSList **)data;
-
-    x_rw_lock_writer_lock(&weak_locations_lock);
-    weak_locations_free_unlocked(weak_locations);
-    x_rw_lock_writer_unlock(&weak_locations_lock);
-}
-
 void x_weak_ref_set(XWeakRef *weak_ref, xpointer object)
 {
-    XObject *new_object;
-    XObject *old_object;
-    XSList **weak_locations;
-
     x_return_if_fail(weak_ref != NULL);
     x_return_if_fail(object == NULL || X_IS_OBJECT(object));
 
-    new_object = (XObject *)object;
-
-    x_rw_lock_writer_lock(&weak_locations_lock);
-
-    old_object = (XObject *)weak_ref->priv.p;
-    if (new_object != old_object) {
-        weak_ref->priv.p = new_object;
-
-        if (old_object != NULL) {
-            weak_locations = (XSList **)x_datalist_id_get_data(&old_object->qdata, quark_weak_locations);
-            if (weak_locations == NULL) {
-                x_critical("unexpected missing XWeakRef");
-            } else {
-                *weak_locations = x_slist_remove(*weak_locations, weak_ref);
-
-                if (!*weak_locations) {
-                    weak_locations_free_unlocked(weak_locations);
-                    x_datalist_id_remove_no_notify(&old_object->qdata, quark_weak_locations);
-                }
-            }
-        }
-
-        if (new_object != NULL) {
-            if (x_atomic_int_get(&new_object->ref_count) < 1) {
-                weak_ref->priv.p = NULL;
-                x_rw_lock_writer_unlock(&weak_locations_lock);
-                x_critical("calling x_weak_ref_set() with already destroyed object");
-                return;
-            }
-
-            weak_locations = (XSList **)x_datalist_id_get_data(&new_object->qdata, quark_weak_locations);
-            if (weak_locations == NULL) {
-                weak_locations = x_new0(XSList *, 1);
-                x_datalist_id_set_data_full(&new_object->qdata, quark_weak_locations, weak_locations, weak_locations_free);
-            }
-
-            *weak_locations = x_slist_prepend(*weak_locations, weak_ref);
-        }
-    }
-
-    x_rw_lock_writer_unlock(&weak_locations_lock);
+    _weak_ref_set(weak_ref, object, FALSE);
 }

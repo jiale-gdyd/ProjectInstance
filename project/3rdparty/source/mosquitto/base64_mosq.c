@@ -20,6 +20,7 @@
 #ifdef WITH_TLS
 int base64__encode(const unsigned char *in, size_t in_len, char **encoded)
 {
+    int rc = 1;
     BIO *bmem, *b64;
     BUF_MEM *bptr = NULL;
 
@@ -30,35 +31,29 @@ int base64__encode(const unsigned char *in, size_t in_len, char **encoded)
 
     BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
     bmem = BIO_new(BIO_s_mem());
-    if (bmem == NULL) {
-        BIO_free_all(b64);
-        return 1;
+    if (bmem) {
+        b64 = BIO_push(b64, bmem);
+        BIO_write(b64, in, (int)in_len);
+
+        if (BIO_flush(b64) == 1) {
+            BIO_get_mem_ptr(b64, &bptr);
+            *encoded = malloc(bptr->length+1);
+            if (*encoded) {
+                memcpy(*encoded, bptr->data, bptr->length);
+                (*encoded)[bptr->length] = '\0';
+                rc = 0;
+            }
+        }
     }
 
-    b64 = BIO_push(b64, bmem);
-    BIO_write(b64, in, (int)in_len);
-    if (BIO_flush(b64) != 1) {
-        BIO_free_all(b64);
-        return 1;
-    }
-
-    BIO_get_mem_ptr(b64, &bptr);
-    *encoded = (char *)malloc(bptr->length + 1);
-    if (!(*encoded)) {
-        BIO_free_all(b64);
-        return 1;
-    }
-
-    memcpy(*encoded, bptr->data, bptr->length);
-    (*encoded)[bptr->length] = '\0';
     BIO_free_all(b64);
-
-    return 0;
+    return rc;
 }
 
 int base64__decode(const char *in, unsigned char **decoded, unsigned int *decoded_len)
 {
     int len;
+    int rc = 1;
     size_t slen;
     BIO *bmem, *b64;
 
@@ -68,39 +63,28 @@ int base64__decode(const char *in, unsigned char **decoded, unsigned int *decode
     if (!b64) {
         return 1;
     }
+
     BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
-
     bmem = BIO_new(BIO_s_mem());
-    if (!bmem) {
-        BIO_free_all(b64);
-        return 1;
+    if (bmem) {
+        b64 = BIO_push(b64, bmem);
+        BIO_write(bmem, in, (int)slen);
+
+        if (BIO_flush(bmem) == 1) {
+            *decoded = calloc(slen, 1);
+
+            if (*decoded) {
+                len = BIO_read(b64, *decoded, (int)slen);
+                if (len > 0) {
+                    *decoded_len = (unsigned int)len;
+                    rc = 0;
+                } else {
+                    SAFE_FREE(*decoded);
+                }
+            }
+        }
     }
 
-    b64 = BIO_push(b64, bmem);
-    BIO_write(bmem, in, (int)slen);
-
-    if (BIO_flush(bmem) != 1) {
-        BIO_free_all(b64);
-        return 1;
-    }
-
-    *decoded = (unsigned char *)calloc(slen, 1);
-    if (!(*decoded)) {
-        BIO_free_all(b64);
-        return 1;
-    }
-
-    len = BIO_read(b64, *decoded, (int)slen);
-    BIO_free_all(b64);
-
-    if (len <= 0) {
-        SAFE_FREE(*decoded);
-        *decoded_len = 0;
-
-        return 1;
-    }
-
-    *decoded_len = (unsigned int)len;
-    return 0;
+    return rc;
 }
 #endif

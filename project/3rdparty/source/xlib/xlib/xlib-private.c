@@ -2,6 +2,7 @@
 #include <xlib/xlib/xlib-init.h>
 #include <xlib/xlib/xlib-private.h>
 #include <xlib/xlib/xutilsprivate.h>
+#include <xlib/xlib/xdatasetprivate.h>
 
 const XLibPrivateVTable *xlib__private__(void)
 {
@@ -27,6 +28,8 @@ const XLibPrivateVTable *xlib__private__(void)
         x_uri_get_default_scheme_port,
 
         x_set_prgname_once,
+
+        x_datalist_id_update_atomic,
     };
 
     return &table;

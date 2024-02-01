@@ -3,6 +3,7 @@
 
 #include "../xlib.h"
 #include "xwakeup.h"
+#include "xdatasetprivate.h"
 
 #define X_CONTAINER_OF(ptr, type, field)    ((type *)X_STRUCT_MEMBER_P(ptr, -X_STRUCT_OFFSET(type, field)))
 
@@ -62,6 +63,8 @@ typedef struct {
     int (*x_uri_get_default_scheme_port)(const char *scheme);
 
     xboolean (*x_set_prgname_once)(const xchar *prgname);
+
+    xpointer (*x_datalist_id_update_atomic)(XData **datalist, XQuark key_id, XDataListUpdateAtomicFunc callback, xpointer user_data);
 } XLibPrivateVTable;
 
 XLIB_AVAILABLE_IN_ALL
@@ -75,5 +78,8 @@ xuint x_uint_hash(xconstpointer v);
 #else
 #undef X_THREAD_LOCAL
 #endif
+
+#define _x_datalist_id_update_atomic(datalist, key_id, callback, user_data)     \
+    (XLIB_PRIVATE_CALL(x_datalist_id_update_atomic)((datalist), (key_id), (callback), (user_data)))
 
 #endif

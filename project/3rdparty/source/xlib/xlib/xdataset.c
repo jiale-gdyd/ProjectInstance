@@ -469,6 +469,57 @@ xpointer x_datalist_id_remove_no_notify(XData **datalist, XQuark key_id)
     return ret_data;
 }
 
+xpointer x_datalist_id_update_atomic(XData **datalist, XQuark key_id, XDataListUpdateAtomicFunc callback, xpointer user_data)
+{
+    XData *d;
+    xuint32 idx;
+    XDataElt *data;
+    xpointer result;
+    xpointer new_data;
+    xboolean to_unlock = TRUE;
+    XDestroyNotify new_destroy;
+
+    d = x_datalist_lock_and_get(datalist);
+    data = datalist_find(d, key_id, &idx);
+    if (data) {
+        new_data = data->data;
+        new_destroy = data->destroy;
+    } else {
+        new_data = NULL;
+        new_destroy = NULL;
+    }
+
+    result = callback(key_id, &new_data, &new_destroy, user_data);
+    if (data && !new_data) {
+        d->len--;
+        if (d->len == 0) {
+            x_datalist_unlock_and_set(datalist, NULL);
+            x_free(d);
+            to_unlock = FALSE;
+        } else {
+            if (idx != d->len) {
+                *data = d->data[d->len];
+            }
+        }
+    } else if (data) {
+        data->data = new_data;
+        data->destroy = new_destroy;
+    } else if (!data && !new_data) {
+
+    } else {
+        if (datalist_append(&d, key_id, new_data, new_destroy)) {
+            x_datalist_unlock_and_set(datalist, d);
+            to_unlock = FALSE;
+        }
+    }
+
+    if (to_unlock) {
+        x_datalist_unlock(datalist);
+    }
+
+    return result;
+}
+
 xpointer x_dataset_id_get_data(xconstpointer dataset_location, XQuark key_id)
 {
     xpointer retval = NULL;
