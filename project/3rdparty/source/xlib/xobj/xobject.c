@@ -142,19 +142,38 @@ X_ALWAYS_INLINE static inline xuint *object_get_optional_flags_p(XObject *object
 }
 
 typedef struct {
-    xatomicrefcount ref_count;
-    xint            lock_flags;
-    XSList          *list;
+  xint    atomic_field;
+  xuint16 len;
+  xuint16 alloc;
+
+  union {
+    XWeakRef *one;
+    XWeakRef **many;
+  } list;
 } WeakRefData;
+
+#define WEAK_REF_DATA_LOCK_BIT      30
 
 static void weak_ref_data_clear_list(WeakRefData *wrdata, XObject *object);
 
 static WeakRefData *weak_ref_data_ref(WeakRefData *wrdata)
 {
+    xint ref;
+
 #if X_ENABLE_DEBUG
     x_assert(wrdata);
 #endif
-    x_atomic_ref_count_inc(&wrdata->ref_count);
+
+    ref = x_atomic_int_add(&wrdata->atomic_field, 1);
+
+#if X_ENABLE_DEBUG
+    x_assert(ref < X_MAXINT32);
+
+    ref = (ref + 1) & ~(1 << WEAK_REF_DATA_LOCK_BIT);
+    x_assert(ref > 0 && ref < (1 << WEAK_REF_DATA_LOCK_BIT));
+#endif
+    (void)ref;
+
     return wrdata;
 }
 
@@ -164,12 +183,12 @@ static void weak_ref_data_unref(WeakRefData *wrdata)
         return;
     }
 
-    if (!x_atomic_ref_count_dec(&wrdata->ref_count)) {
+    if (!x_atomic_int_dec_and_test(&wrdata->atomic_field)) {
         return;
     }
 
 #if X_ENABLE_DEBUG
-    x_assert(!wrdata->list);
+    x_assert(wrdata->len == 0);
 #endif
 
     x_free_sized(wrdata, sizeof(WeakRefData));
@@ -178,14 +197,14 @@ static void weak_ref_data_unref(WeakRefData *wrdata)
 static void weak_ref_data_lock(WeakRefData *wrdata)
 {
     if (wrdata) {
-        x_bit_lock(&wrdata->lock_flags, 0);
+        x_bit_lock(&wrdata->atomic_field, WEAK_REF_DATA_LOCK_BIT);
     }
 }
 
 static void weak_ref_data_unlock(WeakRefData *wrdata)
 {
     if (wrdata) {
-        x_bit_unlock(&wrdata->lock_flags, 0);
+        x_bit_unlock(&wrdata->atomic_field, WEAK_REF_DATA_LOCK_BIT);
     }
 }
 
@@ -196,11 +215,8 @@ static xpointer weak_ref_data_get_or_create_cb(XQuark key_id, xpointer *data, XD
 
     if (!wrdata) {
         wrdata = x_new(WeakRefData, 1);
-        *wrdata = (WeakRefData) {
-            .ref_count = 1,
-            .lock_flags = 0,
-            .list = NULL,
-        };
+        wrdata->atomic_field = 1;
+        wrdata->len = 0;
         *data = wrdata;
         *destroy_notify = (XDestroyNotify)weak_ref_data_unref;
 
@@ -233,6 +249,96 @@ static WeakRefData *weak_ref_data_get_surely(XObject *object)
     x_assert(wrdata);
 #endif
     return wrdata;
+}
+
+static xint32 weak_ref_data_list_find(WeakRefData *wrdata, XWeakRef *weak_ref)
+{
+    if (wrdata->len == 1u) {
+        if (wrdata->list.one == weak_ref) {
+            return 0;
+        }
+    } else {
+        xuint16 i;
+
+        for (i = 0; i < wrdata->len; i++) {
+            if (wrdata->list.many[i] == weak_ref) {
+                return i;
+            }
+        }
+    }
+
+    return -1;
+}
+
+static xboolean weak_ref_data_list_add(WeakRefData *wrdata, XWeakRef *weak_ref)
+{
+    if (wrdata->len == 0u) {
+        wrdata->list.one = weak_ref;
+    } else {
+        if (wrdata->len == 1u) {
+            XWeakRef *weak_ref2 = wrdata->list.one;
+
+            wrdata->alloc = 4u;
+            wrdata->list.many = x_new(XWeakRef *, wrdata->alloc);
+            wrdata->list.many[0] = weak_ref2;
+        } else if (wrdata->len == wrdata->alloc) {
+            xuint16 alloc;
+
+            alloc = wrdata->alloc * 2u;
+            if (X_UNLIKELY(alloc < wrdata->len)) {
+                if (wrdata->len == X_MAXUINT16) {
+                    return FALSE;
+                }
+
+                alloc = X_MAXUINT16;
+            }
+
+            wrdata->list.many = x_renew(XWeakRef *, wrdata->list.many, alloc);
+            wrdata->alloc = alloc;
+        }
+
+        wrdata->list.many[wrdata->len] = weak_ref;
+    }
+
+    wrdata->len++;
+    return TRUE;
+}
+
+static XWeakRef *weak_ref_data_list_remove(WeakRefData *wrdata, xuint16 idx, xboolean allow_shrink)
+{
+    XWeakRef *weak_ref;
+
+#if X_ENABLE_DEBUG
+    x_assert(idx < wrdata->len);
+#endif
+
+    wrdata->len--;
+    if (wrdata->len == 0u) {
+        weak_ref = wrdata->list.one;
+    } else {
+        weak_ref = wrdata->list.many[idx];
+
+        if (wrdata->len == 1u) {
+            XWeakRef *weak_ref2 = wrdata->list.many[idx == 0 ? 1 : 0];
+
+            x_free(wrdata->list.many);
+            wrdata->list.one = weak_ref2;
+        } else {
+            wrdata->list.many[idx] = wrdata->list.many[wrdata->len];
+
+            if (allow_shrink && X_UNLIKELY(wrdata->len <= wrdata->alloc / 4u)) {
+                if (wrdata->alloc == X_MAXUINT16) {
+                    wrdata->alloc = ((xuint32)X_MAXUINT16 + 1u) / 2u;
+                } else {
+                    wrdata->alloc /= 2u;
+                }
+
+                wrdata->list.many = x_renew(XWeakRef *, wrdata->list.many, wrdata->alloc);
+            }
+        }
+    }
+
+    return weak_ref;
 }
 
 static xboolean weak_ref_data_has(XObject *object, WeakRefData *wrdata, WeakRefData **out_new_wrdata)
@@ -2929,11 +3035,11 @@ static void _weak_ref_unlock_and_set(XWeakRef *weak_ref, XObject *object)
 
 static void weak_ref_data_clear_list(WeakRefData *wrdata, XObject *object)
 {
-    while (wrdata->list) {
+    while (wrdata->len > 0u) {
         xpointer ptr;
-        XWeakRef *weak_ref = wrdata->list->data;
+        XWeakRef *weak_ref;
 
-        wrdata->list = x_slist_remove(wrdata->list, weak_ref);
+        weak_ref = weak_ref_data_list_remove(wrdata, wrdata->len - 1u, FALSE);
 
         ptr = x_atomic_pointer_get(&weak_ref->priv.p);
 #if X_ENABLE_DEBUG
@@ -3000,13 +3106,13 @@ static void _weak_ref_set(XWeakRef *weak_ref, XObject *new_object, xboolean call
     }
 
     if (old_object) {
-#if X_ENABLE_DEBUG
-        x_assert(x_slist_find(old_wrdata->list, weak_ref));
-#endif
-        if (!old_wrdata->list) {
+        xint32 idx;
+
+        idx = weak_ref_data_list_find(old_wrdata, weak_ref);
+        if (idx < 0) {
             x_critical("unexpected missing XWeakRef data");
         } else {
-            old_wrdata->list = x_slist_remove(old_wrdata->list, weak_ref);
+            weak_ref_data_list_remove(old_wrdata, idx, TRUE);
         }
     }
 
@@ -3014,13 +3120,16 @@ static void _weak_ref_set(XWeakRef *weak_ref, XObject *new_object, xboolean call
 
     if (new_object) {
 #if X_ENABLE_DEBUG
-        x_assert(!x_slist_find(new_wrdata->list, weak_ref));
+        x_assert(weak_ref_data_list_find(new_wrdata, weak_ref) < 0);
 #endif
         if (x_atomic_int_get(&new_object->ref_count) < 1) {
             x_critical("calling x_weak_ref_set() with already destroyed object");
             new_object = NULL;
         } else {
-            new_wrdata->list = x_slist_prepend(new_wrdata->list, weak_ref);
+            if (!weak_ref_data_list_add(new_wrdata, weak_ref)) {
+                x_critical("Too many GWeakRef registered");
+                new_object = NULL;
+            }
         }
     }
 
