@@ -375,6 +375,7 @@ XArray *x_array_remove_range(XArray *farray, xuint index_, xuint length)
 
     x_return_val_if_fail(array, NULL);
     x_return_val_if_fail(index_ <= array->len, NULL);
+    x_return_val_if_fail(index_ <= X_MAXUINT - length, NULL);
     x_return_val_if_fail((index_ + length) <= array->len, NULL);
 
     if (array->clear_func != NULL) {
@@ -913,6 +914,7 @@ XPtrArray *x_ptr_array_remove_range(XPtrArray *array, xuint index_, xuint length
     x_return_val_if_fail(rarray != NULL, NULL);
     x_return_val_if_fail(rarray->len == 0 || (rarray->len != 0 && rarray->pdata != NULL), NULL);
     x_return_val_if_fail(index_ <= rarray->len, NULL);
+    x_return_val_if_fail(index_ <= X_MAXUINT - length, NULL);
     x_return_val_if_fail(length == 0 || index_ + length <= rarray->len, NULL);
 
     if (length == 0) {
@@ -1241,6 +1243,7 @@ XByteArray *x_byte_array_remove_range(XByteArray *array, xuint index_, xuint len
 {
     x_return_val_if_fail(array, NULL);
     x_return_val_if_fail(index_ <= array->len, NULL);
+    x_return_val_if_fail(index_ <= X_MAXUINT - length, NULL);
     x_return_val_if_fail(index_ + length <= array->len, NULL);
 
     return (XByteArray *)x_array_remove_range((XArray *)array, index_, length);

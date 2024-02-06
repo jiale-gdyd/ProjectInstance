@@ -11,6 +11,7 @@
 #include <xlib/xlib/xstrfuncs.h>
 #include <xlib/xlib/xtestutils.h>
 #include <xlib/xlib/xlib_trace.h>
+#include <xlib/xlib/xutilsprivate.h>
 #include <xlib/xlib/xdatasetprivate.h>
 
 #define DATALIST_LOCK_BIT                       2
@@ -82,13 +83,16 @@ static xboolean datalist_append(XData **data, XQuark key_id, xpointer new_data, 
 
     d = *data;
     if (!d) {
-        d = x_malloc(sizeof(XData));
+        d = x_malloc(X_STRUCT_OFFSET(XData, data) + 2u * sizeof(XDataElt));
         d->len = 0;
-        d->alloc = 1;
+        d->alloc = 2u;
         *data = d;
         reallocated = TRUE;
     } else if (d->len == d->alloc) {
         d->alloc = d->alloc * 2u;
+#if X_ENABLE_DEBUG
+        x_assert(d->alloc > d->len);
+#endif
         d = x_realloc(d, X_STRUCT_OFFSET(XData, data) + d->alloc * sizeof(XDataElt));
         *data = d;
         reallocated = TRUE;
@@ -104,6 +108,56 @@ static xboolean datalist_append(XData **data, XQuark key_id, xpointer new_data, 
     d->len++;
 
     return reallocated;
+}
+
+static void datalist_remove(XData *data, xuint32 idx)
+{
+#if X_ENABLE_DEBUG
+    x_assert(idx < data->len);
+#endif
+
+    data->len--;
+    if (idx != data->len) {
+        data->data[idx] = data->data[data->len];
+    }
+}
+
+static xboolean datalist_shrink(XData **data, XData **d_to_free)
+{
+    XData *d;
+    xuint32 v;
+    xuint32 alloc_by_4;
+
+    d = *data;
+    alloc_by_4 = d->alloc / 4u;
+
+    if (X_LIKELY(d->len > alloc_by_4)) {
+        return FALSE;
+    }
+
+    if (d->len == 0) {
+        *d_to_free = d;
+        *data = NULL;
+        return TRUE;
+    }
+
+    v = d->len;
+    if (v != alloc_by_4) {
+        v = x_nearest_pow(v);
+    }
+    v *= 2u;
+
+#if X_ENABLE_DEBUG
+    x_assert(v > d->len);
+    x_assert(v <= d->alloc / 2u);
+#endif
+
+    d->alloc = v;
+    d = x_realloc(d, X_STRUCT_OFFSET(XData, data) + (v * sizeof(XDataElt)));
+    *d_to_free = NULL;
+    *data = d;
+
+    return TRUE;
 }
 
 static XDataElt *datalist_find(XData *data, XQuark key_id, xuint32 *out_idx)
@@ -138,17 +192,20 @@ void x_datalist_clear(XData **datalist)
     x_return_if_fail(datalist != NULL);
 
     data = x_datalist_lock_and_get(datalist);
+    if (!data) {
+        x_datalist_unlock(datalist);
+        return;
+    }
+
     x_datalist_unlock_and_set(datalist, NULL);
 
-    if (data) {
-        for (i = 0; i < data->len; i++) {
-            if (data->data[i].data && data->data[i].destroy) {
-                data->data[i].destroy(data->data[i].data);
-            }
+    for (i = 0; i < data->len; i++) {
+        if (data->data[i].data && data->data[i].destroy) {
+            data->data[i].destroy(data->data[i].data);
         }
-
-        x_free(data);
     }
+
+    x_free(data);
 }
 
 static inline XDataset *x_dataset_lookup(xconstpointer	dataset_location)
@@ -230,18 +287,20 @@ static inline xpointer x_data_set_internal(XData **datalist, XQuark key_id, xpoi
 
     if (new_data == NULL) {
         if (data) {
+            XData *d_to_free;
+
             old = *data;
-            if (idx != (d->len - 1u)) {
-                *data = d->data[d->len - 1u];
-            }
-            d->len--;
 
-            if (d->len == 0) {
-                x_datalist_unlock_and_set(datalist, NULL);
-                x_free (d);
+            datalist_remove(d, idx);
+            if (datalist_shrink(&d, &d_to_free)) {
+                x_datalist_unlock_and_set(datalist, d);
 
-                if (dataset) {
+                if (dataset && !d) {
                     x_dataset_destroy_internal(dataset);
+                }
+
+                if (d_to_free) {
+                    x_free(d_to_free);
                 }
             } else {
                 x_datalist_unlock(datalist);
@@ -432,7 +491,6 @@ void x_datalist_id_set_data_full(XData **datalist, XQuark key_id, xpointer data,
 
 void x_datalist_id_remove_multiple(XData **datalist, XQuark *keys, xsize n_keys)
 {
-    x_return_if_fail(n_keys <= 16);
     x_data_remove_internal(datalist, keys, n_keys);
 }
 
@@ -491,15 +549,15 @@ xpointer x_datalist_id_update_atomic(XData **datalist, XQuark key_id, XDataListU
 
     result = callback(key_id, &new_data, &new_destroy, user_data);
     if (data && !new_data) {
-        d->len--;
-        if (d->len == 0) {
-            x_datalist_unlock_and_set(datalist, NULL);
-            x_free(d);
-            to_unlock = FALSE;
-        } else {
-            if (idx != d->len) {
-                *data = d->data[d->len];
+        XData *d_to_free;
+
+        datalist_remove(d, idx);
+        if (datalist_shrink(&d, &d_to_free)) {
+            x_datalist_unlock_and_set(datalist, d);
+            if (d_to_free) {
+                x_free(d_to_free);
             }
+            to_unlock = FALSE;
         }
     } else if (data) {
         data->data = new_data;
@@ -574,9 +632,8 @@ xboolean x_datalist_id_replace_data(XData **datalist, XQuark key_id, xpointer ol
     xuint32 idx;
     XDataElt *data;
     xpointer val = NULL;
-    XData *new_d = NULL;
-    xboolean free_d = FALSE;
-    xboolean set_new_d = FALSE;
+    xboolean set_d = FALSE;
+    XData *d_to_free = NULL;
 
     x_return_val_if_fail(datalist != NULL, FALSE);
     x_return_val_if_fail(key_id != 0, FALSE);
@@ -598,14 +655,9 @@ xboolean x_datalist_id_replace_data(XData **datalist, XQuark key_id, xpointer ol
                 data->data = newval;
                 data->destroy = destroy;
             } else {
-                if (idx != (d->len - 1u)) {
-                    *data = d->data[d->len - 1u];
-                }
-                d->len--;
-
-                if (d->len == 0) {
-                    set_new_d = TRUE;
-                    free_d = TRUE;
+                datalist_remove(d, idx);
+                if (datalist_shrink(&d, &d_to_free)) {
+                    set_d = TRUE;
                 }
             }
         }
@@ -613,19 +665,18 @@ xboolean x_datalist_id_replace_data(XData **datalist, XQuark key_id, xpointer ol
 
     if ((val == NULL) && (oldval == NULL) && (newval != NULL)) {
         if (datalist_append(&d, key_id, newval, destroy)) {
-            new_d = d;
-            set_new_d = TRUE;
+            set_d = TRUE;
         }
     }
 
-    if (set_new_d) {
-        x_datalist_unlock_and_set(datalist, new_d);
+    if (set_d) {
+        x_datalist_unlock_and_set(datalist, d);
     } else {
         x_datalist_unlock(datalist);
     }
 
-    if (free_d) {
-        x_free(d);
+    if (d_to_free) {
+        x_free(d_to_free);
     }
 
     return val == oldval;

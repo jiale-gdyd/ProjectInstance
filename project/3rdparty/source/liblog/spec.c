@@ -485,7 +485,8 @@ struct liblog_spec *liblog_spec_new(char *pattern_start, char **pattern_next, in
                     p += 3;
                 } else {
                     nread = 0;
-                    nscan = sscanf(p, "d(%[^)])%n", a_spec->time_fmt, &nread);
+                    p++;
+                    nscan = sscanf(p, "(%[^)])%n", a_spec->time_fmt, &nread);
                     if (nscan != 1) {
                         nread = 0;
                     }
