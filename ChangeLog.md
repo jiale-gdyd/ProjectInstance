@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2024-02-06
+  * rkmpp: fix[h265e]: fix hw stream size check error
+
 ## 2024-01-19
   * libdrm: bump version to 2.4.120
 
