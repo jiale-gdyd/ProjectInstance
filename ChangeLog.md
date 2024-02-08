@@ -2,6 +2,7 @@
 
 ## 2024-02-08
   * libdrm: amdgpu: add marketing names from amd-6.0.1
+  * rkmpp : docs: Update 1.0.4 CHANGELOG.md
 
 ## 2024-02-06
   * rkmpp: fix[h265e]: fix hw stream size check error

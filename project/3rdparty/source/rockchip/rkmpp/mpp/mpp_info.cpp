@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2024-02-06 fix[h265e]: fix hw stream size check error";
+static const char *mpp_last_commit_message = "2024-02-07 docs: Update 1.0.4 CHANGELOG.md";
 
 void show_mpp_version(void)
 {
