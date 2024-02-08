@@ -1434,16 +1434,22 @@ static xint test_has_prefix(xconstpointer a, xconstpointer b)
     return x_strcmp0(test_run_name_local, test_path_skipped_local);
 }
 
-static xboolean test_case_run(XTestCase *tc)
+static xboolean test_should_run(const char *test_path, const char *cmp_path);
+
+static xboolean test_case_run(XTestCase *tc, const char *test_run_name, const char *path)
 {
+    xchar *old_base = NULL;
+    xboolean free_test_data = TRUE;
     xboolean success = X_TEST_RUN_SUCCESS;
-    xchar *old_base = x_strdup(test_uri_base);
     XSList **old_free_list, *filename_free_list = NULL;
 
+    old_base = x_strdup(test_uri_base);
     old_free_list = test_filename_free_list;
     test_filename_free_list = &filename_free_list;
 
-    if (++test_run_count <= test_startup_skip_count) {
+    if (!test_should_run(test_run_name, path)) {
+        success = X_TEST_RUN_SKIPPED;
+    } else if (++test_run_count <= test_startup_skip_count) {
         x_test_log(X_TEST_LOG_SKIP_CASE, test_run_name, NULL, 0, NULL);
     } else if (test_run_list) {
         x_print("%s\n", test_run_name);
@@ -1490,6 +1496,7 @@ static xboolean test_case_run(XTestCase *tc)
                     tc->fixture_teardown(fixture, tc->test_data);
                 }
 
+                free_test_data = FALSE;
                 if (tc->fixture_size) {
                     x_free(fixture);
                 }
@@ -1509,6 +1516,10 @@ static xboolean test_case_run(XTestCase *tc)
         x_test_log(X_TEST_LOG_STOP_CASE, test_run_name, test_run_msg, X_N_ELEMENTS(largs), largs);
         x_clear_pointer(&test_run_msg, x_free);
         x_timer_destroy(test_run_timer);
+    }
+
+    if (free_test_data && tc->fixture_size == 0 && tc->fixture_teardown != NULL) {
+        tc->fixture_teardown(tc->test_data, tc->test_data);
     }
 
     x_slist_free_full(filename_free_list, x_free);
@@ -1561,10 +1572,8 @@ static int x_test_run_suite_internal(XTestSuite *suite, const char *path)
 
         test_run_name = x_build_path("/", old_name, tc->name, NULL);
         test_run_name_path = x_build_path(X_DIR_SEPARATOR_S, old_name_path, tc->name, NULL);
-        if (test_should_run(test_run_name, path)) {
-            if (!test_case_run(tc)) {
-                n_bad++;
-            }
+        if (!test_case_run(tc, test_run_name, path)) {
+            n_bad++;
         }
 
         x_free(test_run_name);
