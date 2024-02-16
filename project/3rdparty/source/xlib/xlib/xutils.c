@@ -200,7 +200,7 @@ static xchar **x_system_config_dirs = NULL;
 
 #define X_USER_DIRS_EXPIRE              15 * 60
 
-static UserDatabaseEntry *x_get_user_database_entry (void)
+static UserDatabaseEntry *x_get_user_database_entry(void)
 {
     static UserDatabaseEntry *entry;
 
@@ -209,8 +209,8 @@ static UserDatabaseEntry *x_get_user_database_entry (void)
 
         {
             xint error;
-            xchar *logname;
             struct passwd pwd;
+            const char *logname;
             xpointer buffer = NULL;
             struct passwd *pw = NULL;
 
@@ -222,7 +222,7 @@ static UserDatabaseEntry *x_get_user_database_entry (void)
 #else
             xlong bufsize = 64;
 #endif
-            logname = (xchar *)x_getenv("LOGNAME");
+            logname = x_getenv("LOGNAME");
 
             do {
                 x_free(buffer);

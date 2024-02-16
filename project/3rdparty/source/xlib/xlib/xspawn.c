@@ -446,13 +446,9 @@ X_NORETURN static void write_err_and_exit(xint fd, xint msg)
     _exit(1);
 }
 
-static int set_cloexec(void *data, xint fd)
+static void set_cloexec(int fd)
 {
-    if (fd >= XPOINTER_TO_INT(data)) {
-        fcntl(fd, F_SETFD, FD_CLOEXEC);
-    }
-
-    return 0;
+    fcntl(fd, F_SETFD, FD_CLOEXEC);
 }
 
 static void unset_cloexec(int fd)
@@ -499,121 +495,6 @@ static int dupfd_cloexec(int old_fd, int new_fd_min)
 #endif
 
     return fd;
-}
-
-X_GNUC_UNUSED static int close_func_with_invalid_fds(void *data, int fd)
-{
-    if (fd >= XPOINTER_TO_INT(data)) {
-        close(fd);
-    }
-
-    return 0;
-}
-
-struct linux_dirent64 {
-    xuint64        d_ino;
-    xuint64        d_off;
-    unsigned short d_reclen;
-    unsigned char  d_type;
-    char           d_name[];
-};
-
-static xint filename_to_fd(const char *p)
-{
-    char c;
-    int fd = 0;
-    const int cutoff = X_MAXINT / 10;
-    const int cutlim = X_MAXINT % 10;
-
-    if (*p == '\0') {
-        return -1;
-    }
-
-    while ((c = *p++) != '\0') {
-        if (c < '0' || c > '9') {
-            return -1;
-        }
-
-        c -= '0';
-
-        if (fd > cutoff || (fd == cutoff && c > cutlim)) {
-            return -1;
-        }
-
-        fd = fd * 10 + c;
-    }
-
-    return fd;
-}
-
-static int safe_fdwalk_with_invalid_fds(int (*cb)(void *data, int fd), void *data);
-
-static int safe_fdwalk(int (*cb)(void *data, int fd), void *data)
-{
-    xint fd;
-    xint res = 0;
-
-    int dir_fd = open("/proc/self/fd", O_RDONLY | O_DIRECTORY);
-    if (dir_fd >= 0) {
-        union {
-            char buf[4096];
-            struct linux_dirent64 alignment;
-        } u;
-
-        int pos, nread;
-        struct linux_dirent64 *de;
-
-        while ((nread = syscall(SYS_getdents64, dir_fd, u.buf, sizeof(u.buf))) > 0) {
-            for (pos = 0; pos < nread; pos += de->d_reclen) {
-                de = (struct linux_dirent64 *)(u.buf + pos);
-
-                fd = filename_to_fd(de->d_name);
-                if (fd < 0 || fd == dir_fd) {
-                    continue;
-                }
-
-                if ((res = cb(data, fd)) != 0) {
-                    break;
-                }
-            }
-        }
-
-        x_close(dir_fd, NULL);
-        return res;
-    }
-
-    return safe_fdwalk_with_invalid_fds(cb, data);
-}
-
-static int safe_fdwalk_with_invalid_fds(int (*cb)(void *data, int fd), void *data)
-{
-    xint fd;
-    xint res = 0;
-    xint open_max = -1;
-
-    if (open_max < 0) {
-        open_max = 4096;
-    }
-
-    for (fd = 0; fd < open_max; fd++) {
-        if ((res = cb (data, fd)) != 0) {
-            break;
-        }
-    }
-
-    return res;
-}
-
-static int safe_fdwalk_set_cloexec(int lowfd)
-{
-    int ret = safe_fdwalk(set_cloexec, XINT_TO_POINTER(lowfd));
-    return ret;
-}
-
-static int safe_closefrom(int lowfd)
-{
-    int ret = safe_fdwalk(close_func_with_invalid_fds, XINT_TO_POINTER(lowfd));
-    return ret;
 }
 
 static xint safe_dup2(xint fd1, xint fd2)
@@ -694,7 +575,7 @@ static void do_exec(xint child_err_report_fd, xint stdin_fd, xint stdout_fd, xin
             write_err_and_exit(child_err_report_fd, CHILD_DUPFD_FAILED);
         }
 
-        set_cloexec(XINT_TO_POINTER(0), stdin_fd);
+        set_cloexec(stdin_fd);
     } else if (!child_inherits_stdin) {
         xint read_null = safe_open("/dev/null", O_RDONLY);
         if (read_null < 0) {
@@ -725,7 +606,7 @@ static void do_exec(xint child_err_report_fd, xint stdin_fd, xint stdout_fd, xin
             write_err_and_exit(child_err_report_fd, CHILD_DUPFD_FAILED);
         }
 
-        set_cloexec(XINT_TO_POINTER(0), stdout_fd);
+        set_cloexec(stdout_fd);
     } else if (stdout_to_null) {
         xint write_null = safe_open("/dev/null", O_WRONLY);
         if (write_null < 0) {
@@ -750,7 +631,7 @@ static void do_exec(xint child_err_report_fd, xint stdin_fd, xint stdout_fd, xin
             write_err_and_exit(child_err_report_fd, CHILD_DUPFD_FAILED);
         }
 
-        set_cloexec(XINT_TO_POINTER(0), stderr_fd);
+        set_cloexec(stderr_fd);
     } else if (stderr_to_null) {
         xint write_null = safe_open("/dev/null", O_WRONLY);
         if (write_null < 0) {
@@ -770,19 +651,19 @@ static void do_exec(xint child_err_report_fd, xint stdin_fd, xint stdout_fd, xin
                 write_err_and_exit(child_err_report_fd, CHILD_DUPFD_FAILED);
             }
 
-            set_cloexec(XINT_TO_POINTER (0), 3);
-            if (safe_closefrom(4) < 0) {
+            set_cloexec(3);
+            if (x_closefrom(4) < 0) {
                 write_err_and_exit(child_err_report_fd, CHILD_CLOSE_FAILED);
             }
 
             child_err_report_fd = 3;
         } else {
-            if (safe_fdwalk_set_cloexec(3) < 0) {
+            if (x_fdwalk_set_cloexec(3) < 0) {
                 write_err_and_exit(child_err_report_fd, CHILD_CLOSE_FAILED);
             }
         }
     } else {
-        set_cloexec(XINT_TO_POINTER(0), child_err_report_fd);
+        set_cloexec(child_err_report_fd);
     }
 
     if (n_fds > 0) {

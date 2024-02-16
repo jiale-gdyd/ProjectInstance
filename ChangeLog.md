@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2024-02-16
+  * libdrm: meson: make build system happy by replacing deprecated feature
+
 ## 2024-02-08
   * libdrm: amdgpu: add marketing names from amd-6.0.1
   * rkmpp : docs: Update 1.0.4 CHANGELOG.md

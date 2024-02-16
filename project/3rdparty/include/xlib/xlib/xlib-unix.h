@@ -103,6 +103,12 @@ static inline void x_unix_pipe_clear(XUnixPipe *self)
 
 X_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(XUnixPipe, x_unix_pipe_clear)
 
+XLIB_AVAILABLE_IN_2_80
+int x_closefrom(int lowfd);
+
+XLIB_AVAILABLE_IN_2_80
+int x_fdwalk_set_cloexec(int lowfd);
+
 X_GNUC_END_IGNORE_DEPRECATIONS
 
 X_END_DECLS

@@ -3567,14 +3567,23 @@ static int process_device(drmDevicePtr *device, const char *d_name, int req_subs
     struct stat sbuf;
     unsigned int maj, min;
     char node[PATH_MAX + 1];
-    int node_type, subsystem_type;
+    int node_type, subsystem_type, written;
+    const int max_node_length = ALIGN(drmGetMaxNodeName(), sizeof(void *));
 
     node_type = drmGetNodeType(d_name);
     if (node_type < 0) {
         return -1;
     }
 
-    snprintf(node, PATH_MAX, "%s/%s", DRM_DIR_NAME, d_name);
+    written = snprintf(node, PATH_MAX, "%s/%s", DRM_DIR_NAME, d_name);
+    if (written < 0) {
+        return -1;
+    }
+
+    if ((written + 1) > max_node_length) {
+        return -1;
+    }
+
     if (stat(node, &sbuf)) {
         return -1;
     }
