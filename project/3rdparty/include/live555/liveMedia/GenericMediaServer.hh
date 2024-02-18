@@ -184,7 +184,6 @@ protected:
   int fServerSocketIPv4, fServerSocketIPv6;
   Port fServerPort;
   unsigned fReclamationSeconds;
-
   HashTable* fServerMediaSessions; // maps 'stream name' strings to "ServerMediaSession" objects
   HashTable* fClientConnections; // the "ClientConnection" objects that we're using
   HashTable* fClientSessions; // maps 'session id' strings to "ClientSession" objects
