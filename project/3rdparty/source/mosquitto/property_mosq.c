@@ -1,6 +1,5 @@
 #include <errno.h>
 #include <string.h>
-#include <assert.h>
 #include <strings.h>
 #include <mosquitto/mosquitto.h>
 #include <mosquitto/mqtt_protocol.h>
