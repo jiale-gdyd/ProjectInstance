@@ -86,13 +86,6 @@ int net__init(void)
 void net__cleanup(void)
 {
 #ifdef WITH_TLS
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
-    CRYPTO_cleanup_all_ex_data();
-    ERR_free_strings();
-    ERR_remove_thread_state(NULL);
-    EVP_cleanup();
-#endif
-
 #if !defined(OPENSSL_NO_ENGINE) && OPENSSL_API_LEVEL < 30000
     ENGINE_cleanup();
 #endif
@@ -108,13 +101,8 @@ void net__init_tls(void)
         return;
     }
 
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
-    SSL_load_error_strings();
-    SSL_library_init();
-    OpenSSL_add_all_algorithms();
-#else
     OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS | OPENSSL_INIT_LOAD_CONFIG, NULL);
-#endif
+
 #if !defined(OPENSSL_NO_ENGINE) && OPENSSL_API_LEVEL < 30000
     ENGINE_load_builtin_engines();
 #endif
@@ -388,24 +376,8 @@ static int net__tls_load_ca(struct mosquitto *mosq)
         SSL_CTX_set_default_verify_paths(mosq->ssl_ctx);
     }
 
-#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
-    if (mosq->tls_cafile || mosq->tls_capath) {
-        ret = SSL_CTX_load_verify_locations(mosq->ssl_ctx, mosq->tls_cafile, mosq->tls_capath);
-        if (ret == 0) {
-            if (mosq->tls_cafile && mosq->tls_capath) {
-                log__printf(mosq, MOSQ_LOG_ERR, "Error: Unable to load CA certificates, check cafile \"%s\" and capath \"%s\".", mosq->tls_cafile, mosq->tls_capath);
-            }  else if(mosq->tls_cafile) {
-                log__printf(mosq, MOSQ_LOG_ERR, "Error: Unable to load CA certificates, check cafile \"%s\".", mosq->tls_cafile);
-            } else {
-                log__printf(mosq, MOSQ_LOG_ERR, "Error: Unable to load CA certificates, check capath \"%s\".", mosq->tls_capath);
-            }
-
-            return MOSQ_ERR_TLS;
-        }
-    }
-#else
     if (mosq->tls_cafile) {
-        ret = SSL_CTX_load_verify_file(mosq->ssl_ctx, mosq->tls_cafile);
+        ret = 0;//SSL_CTX_load_verify_file(mosq->ssl_ctx, mosq->tls_cafile);
         if (ret == 0) {
             log__printf(mosq, MOSQ_LOG_ERR, "Error: Unable to load CA certificates, check cafile \"%s\".", mosq->tls_cafile);
             return MOSQ_ERR_TLS;
@@ -413,13 +385,12 @@ static int net__tls_load_ca(struct mosquitto *mosq)
     }
 
     if (mosq->tls_capath) {
-        ret = SSL_CTX_load_verify_dir(mosq->ssl_ctx, mosq->tls_capath);
+        ret = 0;//SSL_CTX_load_verify_dir(mosq->ssl_ctx, mosq->tls_capath);
         if (ret == 0) {
             log__printf(mosq, MOSQ_LOG_ERR, "Error: Unable to load CA certificates, check capath \"%s\".", mosq->tls_capath);
             return MOSQ_ERR_TLS;
         }
     }
-#endif
 
     return MOSQ_ERR_SUCCESS;
 }
@@ -450,11 +421,7 @@ static int net__init_ssl_ctx(struct mosquitto *mosq)
         if (!mosq->ssl_ctx) {
             net__init_tls();
 
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
-            mosq->ssl_ctx = SSL_CTX_new(SSLv23_client_method());
-#else
             mosq->ssl_ctx = SSL_CTX_new(TLS_client_method());
-#endif
             if (!mosq->ssl_ctx) {
                 log__printf(mosq, MOSQ_LOG_ERR, "Error: Unable to create TLS context.");
                 net__print_ssl_error(mosq);
@@ -482,10 +449,9 @@ static int net__init_ssl_ctx(struct mosquitto *mosq)
             return MOSQ_ERR_INVAL;
         }
 
-#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
         // 允许使用DHE密码
         SSL_CTX_set_dh_auto(mosq->ssl_ctx, 1);
-#endif
+
         // 禁用压缩
         SSL_CTX_set_options(mosq->ssl_ctx, SSL_OP_NO_COMPRESSION);
 
@@ -532,7 +498,6 @@ static int net__init_ssl_ctx(struct mosquitto *mosq)
             }
         }
 
-#if (OPENSSL_VERSION_NUMBER >= 0x10101000) && !defined(LIBRESSL_VERSION_NUMBER)
         if (mosq->tls_13_ciphers) {
             ret = SSL_CTX_set_ciphersuites(mosq->ssl_ctx, mosq->tls_13_ciphers);
             if (ret == 0) {
@@ -540,7 +505,7 @@ static int net__init_ssl_ctx(struct mosquitto *mosq)
                 return MOSQ_ERR_TLS;
             }
         }
-#endif
+
         if (mosq->tls_cafile || mosq->tls_capath || mosq->tls_use_os_certs) {
             ret = net__tls_load_ca(mosq);
             if (ret != MOSQ_ERR_SUCCESS) {

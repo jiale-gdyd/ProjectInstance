@@ -14,7 +14,7 @@
 
 #define EXEEXT
 
-#define PACKAGE_VERSION                         "2.79.2"
+#define PACKAGE_VERSION                         "2.79.3"
 #define GETTEXT_PACKAGE                         "xlib20"
 
 #define XIO_MODULE_DIR                          ""
@@ -28,7 +28,7 @@
 
 #define XLIB_MAJOR_VERSION                      2
 #define XLIB_MINOR_VERSION                      79
-#define XLIB_MICRO_VERSION                      2
+#define XLIB_MICRO_VERSION                      3
 
 #define X_VA_COPY                               va_copy
 

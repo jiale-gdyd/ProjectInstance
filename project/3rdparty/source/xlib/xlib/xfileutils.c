@@ -332,10 +332,11 @@ static xboolean get_contents_stdio(const xchar *filename, FILE *f, xchar **conte
 
             tmp = (xchar *)x_try_realloc(str, total_allocated);
             if (tmp == NULL) {
+                char *display_size = x_format_size_full(total_allocated, X_FORMAT_SIZE_LONG_FORMAT);
                 display_filename = x_filename_display_name(filename);
-                x_set_error(error, X_FILE_ERROR, X_FILE_ERROR_NOMEM,
-                    x_dngettext(GETTEXT_PACKAGE, "Could not allocate %" X_XSIZE_MODIFIER "u byte to read file “%s”", "Could not allocate %" X_XSIZE_MODIFIER "u bytes to read file “%s”", total_allocated), total_allocated, display_filename);
+                x_set_error(error, X_FILE_ERROR, X_FILE_ERROR_NOMEM, _("Could not allocate %s to read file “%s”"), display_size, display_filename);
                 x_free(display_filename);
+                x_free(display_size);
 
                 goto error;
             }

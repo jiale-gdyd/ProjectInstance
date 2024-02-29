@@ -296,9 +296,8 @@ int mosquitto_string_option(struct mosquitto *mosq, enum mosq_opt_t option, cons
 #if defined(WITH_TLS) && !defined(OPENSSL_NO_ENGINE) && OPENSSL_API_LEVEL < 30000
             mosquitto__FREE(mosq->tls_engine);
             if (value) {
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
                 OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_DYNAMIC, NULL);
-#endif
+
                 eng = ENGINE_by_id(value);
                 if (!eng) {
                     return MOSQ_ERR_INVAL;
@@ -506,7 +505,7 @@ int mosquitto_int_option(struct mosquitto *mosq, enum mosq_opt_t option, int val
             break;
 
         case MOSQ_OPT_SSL_CTX_WITH_DEFAULTS:
-#if defined(WITH_TLS) && (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+#if defined(WITH_TLS)
             if (value) {
                 mosq->ssl_ctx_defaults = true;
             } else {
@@ -557,11 +556,7 @@ int mosquitto_void_option(struct mosquitto *mosq, enum mosq_opt_t option, void *
 #ifdef WITH_TLS
             mosq->user_ssl_ctx = (SSL_CTX *)value;
             if (mosq->user_ssl_ctx) {
-#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
                 SSL_CTX_up_ref(mosq->user_ssl_ctx);
-#else
-                CRYPTO_add(&(mosq->user_ssl_ctx)->references, 1, CRYPTO_LOCK_SSL_CTX);
-#endif
             }
             break;
 #else
