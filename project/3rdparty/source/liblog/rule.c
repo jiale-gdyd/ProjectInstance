@@ -917,7 +917,8 @@ struct liblog_rule *liblog_rule_new(char *line, struct logc_arraylist *levels, s
             break;
 
         case '$' :
-            sscanf(file_path + 1, "%s", a_rule->record_name);
+            strncpy(a_rule->record_name, file_path + 1, LOG_MAXLEN_PATH);
+            a_rule->record_name[LOG_MAXLEN_PATH] = '\0';
             if (file_limit) {
                 p = strchr(file_limit, '"');
                 if (!p) {

@@ -405,10 +405,11 @@ static xboolean get_contents_regfile(const xchar *filename, struct stat *stat_bu
     buf = (xchar *)x_try_malloc(alloc_size);
 
     if (buf == NULL) {
+        char *display_size = x_format_size_full(alloc_size, X_FORMAT_SIZE_LONG_FORMAT);
         display_filename = x_filename_display_name(filename);
-        x_set_error(error, X_FILE_ERROR, X_FILE_ERROR_NOMEM,
-            x_dngettext(GETTEXT_PACKAGE, "Could not allocate %" X_XSIZE_MODIFIER "u byte to read file “%s”", "Could not allocate %" X_XSIZE_MODIFIER "u bytes to read file “%s”", alloc_size), alloc_size, display_filename);
+        x_set_error(error, X_FILE_ERROR, X_FILE_ERROR_NOMEM, _("Could not allocate %s to read file “%s”"), display_size, display_filename);
         x_free(display_filename);
+        x_free(display_size);
         goto error;
     }
 

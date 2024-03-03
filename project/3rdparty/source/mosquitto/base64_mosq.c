@@ -85,6 +85,7 @@ int base64__decode(const char *in, unsigned char **decoded, unsigned int *decode
         }
     }
 
+    BIO_free_all(b64);
     return rc;
 }
 #endif

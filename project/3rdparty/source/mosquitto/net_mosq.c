@@ -376,8 +376,24 @@ static int net__tls_load_ca(struct mosquitto *mosq)
         SSL_CTX_set_default_verify_paths(mosq->ssl_ctx);
     }
 
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+    if (mosq->tls_cafile || mosq->tls_capath) {
+        ret = SSL_CTX_load_verify_locations(mosq->ssl_ctx, mosq->tls_cafile, mosq->tls_capath);
+        if (ret == 0) {
+            if (mosq->tls_cafile && mosq->tls_capath) {
+                log__printf(mosq, MOSQ_LOG_ERR, "Error: Unable to load CA certificates, check cafile \"%s\" and capath \"%s\".", mosq->tls_cafile, mosq->tls_capath);
+            } else if (mosq->tls_cafile) {
+                log__printf(mosq, MOSQ_LOG_ERR, "Error: Unable to load CA certificates, check cafile \"%s\".", mosq->tls_cafile);
+            } else {
+                log__printf(mosq, MOSQ_LOG_ERR, "Error: Unable to load CA certificates, check capath \"%s\".", mosq->tls_capath);
+            }
+
+            return MOSQ_ERR_TLS;
+        }
+    }
+#else
     if (mosq->tls_cafile) {
-        ret = 0;//SSL_CTX_load_verify_file(mosq->ssl_ctx, mosq->tls_cafile);
+        ret = SSL_CTX_load_verify_file(mosq->ssl_ctx, mosq->tls_cafile);
         if (ret == 0) {
             log__printf(mosq, MOSQ_LOG_ERR, "Error: Unable to load CA certificates, check cafile \"%s\".", mosq->tls_cafile);
             return MOSQ_ERR_TLS;
@@ -385,12 +401,13 @@ static int net__tls_load_ca(struct mosquitto *mosq)
     }
 
     if (mosq->tls_capath) {
-        ret = 0;//SSL_CTX_load_verify_dir(mosq->ssl_ctx, mosq->tls_capath);
+        ret = SSL_CTX_load_verify_dir(mosq->ssl_ctx, mosq->tls_capath);
         if (ret == 0) {
             log__printf(mosq, MOSQ_LOG_ERR, "Error: Unable to load CA certificates, check capath \"%s\".", mosq->tls_capath);
             return MOSQ_ERR_TLS;
         }
     }
+#endif
 
     return MOSQ_ERR_SUCCESS;
 }
