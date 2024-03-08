@@ -32,6 +32,7 @@
 #define XLIB_VERSION_2_78                                       (X_ENCODE_VERSION(2, 78))
 #define XLIB_VERSION_2_80                                       (X_ENCODE_VERSION(2, 80))
 #define XLIB_VERSION_2_82                                       (X_ENCODE_VERSION(2, 82))
+#define XLIB_VERSION_2_84                                       (X_ENCODE_VERSION(2, 84))
 
 #if (XLIB_MINOR_VERSION % 2)
 #define XLIB_VERSION_CUR_STABLE                                 (X_ENCODE_VERSION(XLIB_MAJOR_VERSION, XLIB_MINOR_VERSION + 1))
@@ -1017,6 +1018,40 @@
 #define XLIB_AVAILABLE_MACRO_IN_2_82
 #define XLIB_AVAILABLE_ENUMERATOR_IN_2_82
 #define XLIB_AVAILABLE_TYPE_IN_2_82
+#endif
+
+#if XLIB_VERSION_MIN_REQUIRED >= XLIB_VERSION_2_84
+#define XLIB_DEPRECATED_IN_2_84                                     XLIB_DEPRECATED
+#define XLIB_DEPRECATED_IN_2_84_FOR(f)                              XLIB_DEPRECATED_FOR(f)
+#define XLIB_DEPRECATED_MACRO_IN_2_84                               XLIB_DEPRECATED_MACRO
+#define XLIB_DEPRECATED_MACRO_IN_2_84_FOR(f)                        XLIB_DEPRECATED_MACRO_FOR(f)
+#define XLIB_DEPRECATED_ENUMERATOR_IN_2_84                          XLIB_DEPRECATED_ENUMERATOR
+#define XLIB_DEPRECATED_ENUMERATOR_IN_2_84_FOR(f)                   XLIB_DEPRECATED_ENUMERATOR_FOR(f)
+#define XLIB_DEPRECATED_TYPE_IN_2_84                                XLIB_DEPRECATED_TYPE
+#define XLIB_DEPRECATED_TYPE_IN_2_84_FOR(f)                         XLIB_DEPRECATED_TYPE_FOR(f)
+#else
+#define XLIB_DEPRECATED_IN_2_84                                     _XLIB_EXTERN
+#define XLIB_DEPRECATED_IN_2_84_FOR(f)                              _XLIB_EXTERN
+#define XLIB_DEPRECATED_MACRO_IN_2_84
+#define XLIB_DEPRECATED_MACRO_IN_2_84_FOR(f)
+#define XLIB_DEPRECATED_ENUMERATOR_IN_2_84
+#define XLIB_DEPRECATED_ENUMERATOR_IN_2_84_FOR(f)
+#define XLIB_DEPRECATED_TYPE_IN_2_84
+#define XLIB_DEPRECATED_TYPE_IN_2_84_FOR(f)
+#endif
+
+#if XLIB_VERSION_MAX_ALLOWED < XLIB_VERSION_2_84
+#define XLIB_AVAILABLE_IN_2_84                                      XLIB_UNAVAILABLE(2, 84)
+#define XLIB_AVAILABLE_STATIC_INLINE_IN_2_84                        XLIB_UNAVAILABLE_STATIC_INLINE(2, 84)
+#define XLIB_AVAILABLE_MACRO_IN_2_84                                XLIB_UNAVAILABLE_MACRO(2, 84)
+#define XLIB_AVAILABLE_ENUMERATOR_IN_2_84                           XLIB_UNAVAILABLE_ENUMERATOR(2, 84)
+#define XLIB_AVAILABLE_TYPE_IN_2_84                                 XLIB_UNAVAILABLE_TYPE(2, 84)
+#else
+#define XLIB_AVAILABLE_IN_2_84                                      _XLIB_EXTERN
+#define XLIB_AVAILABLE_STATIC_INLINE_IN_2_84
+#define XLIB_AVAILABLE_MACRO_IN_2_84
+#define XLIB_AVAILABLE_ENUMERATOR_IN_2_84
+#define XLIB_AVAILABLE_TYPE_IN_2_84
 #endif
 
 #endif

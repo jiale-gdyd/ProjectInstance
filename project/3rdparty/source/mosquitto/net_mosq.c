@@ -101,8 +101,6 @@ void net__init_tls(void)
         return;
     }
 
-    OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS | OPENSSL_INIT_LOAD_CONFIG, NULL);
-
 #if !defined(OPENSSL_NO_ENGINE) && OPENSSL_API_LEVEL < 30000
     ENGINE_load_builtin_engines();
 #endif
