@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2024-03-13
+  * rkmpp: feat[vdpp_test]: Add vdpp slt testcase
+
 ## 2024-02-16
   * libdrm: meson: make build system happy by replacing deprecated feature
 

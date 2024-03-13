@@ -3,3 +3,4 @@ obj-y += hal_vp9d_com.o
 obj-y += hal_vp9d_rkv.o
 obj-y += hal_vp9d_vdpu34x.o
 obj-y += hal_vp9d_vdpu382.o
+obj-y += hal_vp9d_vdpu383.o

@@ -5,3 +5,4 @@ obj-y += hal_h264d_vdpu1.o
 obj-y += hal_h264d_vdpu2.o
 obj-y += hal_h264d_vdpu34x.o
 obj-y += hal_h264d_vdpu382.o
+obj-y += hal_h264d_vdpu383.o

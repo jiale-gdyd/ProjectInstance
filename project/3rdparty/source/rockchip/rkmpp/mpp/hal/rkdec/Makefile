@@ -6,3 +6,4 @@ obj-y += vp9d/
 
 obj-y += vdpu34x_com.o
 obj-y += vdpu382_com.o
+obj-y += vdpu383_com.o
