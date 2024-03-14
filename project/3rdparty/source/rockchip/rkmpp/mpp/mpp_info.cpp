@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2024-03-12 feat[vdpp_test]: Add vdpp slt testcase";
+static const char *mpp_last_commit_message = "2024-03-13 fix[h265e]: fix the profile tier cfg";
 
 void show_mpp_version(void)
 {
