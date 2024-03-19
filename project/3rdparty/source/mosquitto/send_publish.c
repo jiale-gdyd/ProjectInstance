@@ -58,7 +58,7 @@ int send__real_publish(struct mosquitto *mosq, uint16_t mid, const char *topic, 
         proplen = 0;
         proplen += property__get_length_all(store_props);
 
-        if (expiry_interval > 0) {
+        if ((expiry_interval > 0) && (expiry_interval != MSG_EXPIRY_INFINITE)) {
             expiry_prop.next = NULL;
             expiry_prop.value.i32 = expiry_interval;
             expiry_prop.identifier = MQTT_PROP_MESSAGE_EXPIRY_INTERVAL;
@@ -104,7 +104,7 @@ int send__real_publish(struct mosquitto *mosq, uint16_t mid, const char *topic, 
     if (mosq->protocol == mosq_p_mqtt5) {
         packet__write_varint(packet, proplen);
         property__write_all(packet, store_props, false);
-        if (expiry_interval > 0) {
+        if ((expiry_interval > 0) && (expiry_interval != MSG_EXPIRY_INFINITE)) {
             property__write_all(packet, &expiry_prop, false);
         }
     }

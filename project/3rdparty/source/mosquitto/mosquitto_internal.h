@@ -26,6 +26,8 @@
 
 #define SAFE_PRINT(A)               (A) ? (A) : "null"
 
+#define MSG_EXPIRY_INFINITE         UINT32_MAX
+
 typedef int mosq_sock_t;
 
 enum mosquitto_msg_direction {

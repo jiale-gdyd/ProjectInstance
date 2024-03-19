@@ -2308,23 +2308,37 @@ typedef struct {
     } toggle_refs[1];
 } ToggleRefStack;
 
-static XToggleNotify toggle_refs_get_notify_unlocked(XObject *object, xpointer *out_data)
+X_ALWAYS_INLINE static inline xboolean toggle_refs_check_and_ref_or_deref(XObject *object, xboolean is_ref, xint *old_ref, XToggleNotify *toggle_notify, xpointer *toggle_data)
 {
+    xboolean success;
     ToggleRefStack *tstackptr;
+    const xint ref_curr = is_ref ? 1 : 2;
+    const xint ref_next = is_ref ? 2 : 1;
 
-    if (!OBJECT_HAS_TOGGLE_REF(object)) {
-        return NULL;
+#ifdef X_ENABLE_DEBUG
+    x_assert(ref_curr == *old_ref);
+#endif
+
+    *toggle_notify = NULL;
+    *toggle_data = NULL;
+
+    object_bit_lock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
+
+    success = x_atomic_int_compare_and_exchange_full((int *)&object->ref_count, ref_curr, ref_next, old_ref);
+    if (success && OBJECT_HAS_TOGGLE_REF(object)) {
+        ToggleRefStack *tstackptr;
+
+        tstackptr = x_datalist_id_get_data(&object->qdata, quark_toggle_refs);
+        if (tstackptr->n_toggle_refs != 1) {
+            x_critical("Unexpected number of toggle-refs. x_object_add_toggle_ref() must be paired with x_object_remove_toggle_ref()");
+        } else {
+            *toggle_notify = tstackptr->toggle_refs[0].notify;
+            *toggle_data = tstackptr->toggle_refs[0].data;
+        }
     }
 
-    tstackptr = (ToggleRefStack *)x_datalist_id_get_data(&object->qdata, quark_toggle_refs);
-
-    if (tstackptr->n_toggle_refs != 1) {
-        x_critical("Unexpected number of toggle-refs. x_object_add_toggle_ref() must be paired with x_object_remove_toggle_ref()");
-        return NULL;
-    }
-
-    *out_data = tstackptr->toggle_refs[0].data;
-    return tstackptr->toggle_refs[0].notify;
+    object_bit_unlock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
+    return success;
 }
 
 void x_object_add_toggle_ref(XObject *object, XToggleNotify notify, xpointer data)
@@ -2415,14 +2429,7 @@ retry:
             goto retry;
         }
     } else if (old_ref == 1) {
-        xboolean do_retry;
-
-        object_bit_lock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
-        toggle_notify = toggle_refs_get_notify_unlocked(object, &toggle_data);
-        do_retry = !x_atomic_int_compare_and_exchange_full((int *)&object->ref_count, old_ref, old_ref + 1, &old_ref);
-        object_bit_unlock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
-
-        if (do_retry) {
+        if (!toggle_refs_check_and_ref_or_deref(object, TRUE, &old_ref, &toggle_notify, &toggle_data)) {
             goto retry;
         }
     } else {
@@ -2497,7 +2504,6 @@ void x_object_unref(xpointer _object)
 {
     xint old_ref;
     XType obj_gtype;
-    xboolean do_retry;
     xpointer toggle_data;
     XObjectNotifyQueue *nqueue;
     XToggleNotify toggle_notify;
@@ -2521,13 +2527,9 @@ retry_beginning:
     }
 
     if (old_ref == 2) {
-        object_bit_lock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
-        toggle_notify = toggle_refs_get_notify_unlocked(object, &toggle_data);
-        if (!x_atomic_int_compare_and_exchange_full((int *)&object->ref_count, old_ref, old_ref - 1, &old_ref)) {
-            object_bit_unlock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
+        if (!toggle_refs_check_and_ref_or_deref(object, FALSE, &old_ref, &toggle_notify, &toggle_data)) {
             goto retry_beginning;
         }
-        object_bit_unlock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
 
         TRACE(XOBJECT_OBJECT_UNREF(object, obj_gtype, old_ref));
         if (toggle_notify) {
@@ -2570,12 +2572,7 @@ retry_decrement:
     }
 
     if (old_ref == 2) {
-        object_bit_lock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
-        toggle_notify = toggle_refs_get_notify_unlocked(object, &toggle_data);
-        do_retry = !x_atomic_int_compare_and_exchange_full((int *)&object->ref_count, old_ref, old_ref - 1, &old_ref);
-        object_bit_unlock(object, OPTIONAL_BIT_LOCK_TOGGLE_REFS);
-
-        if (do_retry) {
+        if (!toggle_refs_check_and_ref_or_deref(object, FALSE, &old_ref, &toggle_notify, &toggle_data)) {
             goto retry_decrement;
         }
 
