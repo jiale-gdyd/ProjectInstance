@@ -1808,7 +1808,9 @@ XVariantDict *x_variant_dict_new(XVariant *from_asv)
 {
     XVariantDict *dict;
 
-    dict = (XVariantDict *)x_slice_alloc(sizeof(struct heap_dict));
+    X_STATIC_ASSERT(sizeof(XVariantDict) >= sizeof(struct heap_dict));
+
+    dict = x_malloc(sizeof(XVariantDict));
     x_variant_dict_init(dict, from_asv);
     GVHD(dict)->magic = GVHD_MAGIC;
     GVHD(dict)->ref_count = 1;
@@ -1956,7 +1958,7 @@ void x_variant_dict_unref(XVariantDict *dict)
 
     if (--GVHD(dict)->ref_count == 0) {
         x_variant_dict_clear(dict);
-        x_slice_free(struct heap_dict,(struct heap_dict *)dict);
+        x_free_sized(dict, sizeof(XVariantDict));
     }
 }
 

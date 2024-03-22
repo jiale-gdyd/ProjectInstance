@@ -1,4 +1,9 @@
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <time.h>
+#include <poll.h>
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
@@ -92,7 +97,7 @@ struct _XMainContext {
     xint              ref_count;
     XHashTable        *sources;
     XPtrArray         *pending_dispatches;
-    xint              timeout;
+    xint64            timeout_usec;
     xuint             next_id;
     XQueue            source_lists;
     xint              in_check_or_prepare;
@@ -185,10 +190,10 @@ static void x_child_source_remove_internal(XSource *child_source, XMainContext *
 static xboolean x_main_context_acquire_unlocked(XMainContext *context);
 static void x_main_context_release_unlocked(XMainContext *context);
 static xboolean x_main_context_prepare_unlocked(XMainContext *context, xint *priority);
-static xint x_main_context_query_unlocked(XMainContext *context, xint max_priority, xint *timeout, XPollFD *fds, xint n_fds);
+static xint x_main_context_query_unlocked(XMainContext *context, xint max_priority, xint64 *timeout_usec, XPollFD *fds, xint n_fds);
 static xboolean x_main_context_check_unlocked(XMainContext *context, xint max_priority, XPollFD *fds, xint n_fds);
 static void x_main_context_dispatch_unlocked(XMainContext *context);
-static void x_main_context_poll_unlocked(XMainContext *context, int timeout, int priority, XPollFD *fds, int n_fds);
+static void x_main_context_poll_unlocked(XMainContext *context, xint64 timeout_usec, int priority, XPollFD *fds, int n_fds);
 
 static void x_main_context_add_poll_unlocked(XMainContext *context, xint priority, XPollFD *fd);
 static void x_main_context_remove_poll_unlocked(XMainContext *context, XPollFD *fd);
@@ -1979,6 +1984,29 @@ xboolean x_main_context_prepare(XMainContext *context, xint *priority)
     return ready;
 }
 
+static inline int round_timeout_to_msec(xint64 timeout_usec)
+{
+    if (timeout_usec == 0) {
+        return 0;
+    }
+
+    if (timeout_usec > 0) {
+        xuint64 timeout_msec = (timeout_usec + 999) / 1000;
+        return (int)MIN(timeout_msec, X_MAXINT);
+    }
+
+    return -1;
+}
+
+static inline xint64 extend_timeout_to_usec(int timeout_msec)
+{
+    if (timeout_msec >= 0) {
+        return (xint64)timeout_msec * 1000;
+    }
+
+    return -1;
+}
+
 static xboolean x_main_context_prepare_unlocked(XMainContext *context, xint *priority)
 {
     xuint i;
@@ -2003,11 +2031,11 @@ static xboolean x_main_context_prepare_unlocked(XMainContext *context, xint *pri
     }
     x_ptr_array_set_size(context->pending_dispatches, 0);
 
-    context->timeout = -1;
+    context->timeout_usec = -1;
 
     x_source_iter_init(&iter, context, TRUE);
     while (x_source_iter_next(&iter, &source)) {
-        xint source_timeout = -1;
+        xint64 source_timeout_usec = -1;
 
         if (SOURCE_DESTROYED(source) || SOURCE_BLOCKED(source)) {
             continue;
@@ -2023,6 +2051,7 @@ static xboolean x_main_context_prepare_unlocked(XMainContext *context, xint *pri
 
             prepare = source->source_funcs->prepare;
             if (prepare) {
+                int source_timeout_msec = -1;
                 xint64 begin_time_nsec X_GNUC_UNUSED;
 
                 context->in_check_or_prepare++;
@@ -2030,8 +2059,10 @@ static xboolean x_main_context_prepare_unlocked(XMainContext *context, xint *pri
 
                 begin_time_nsec = X_TRACE_CURRENT_TIME;
 
-                result = (*prepare)(source, &source_timeout);
-                TRACE(XLIB_MAIN_AFTER_PREPARE(source, prepare, source_timeout));
+                result = (*prepare)(source, &source_timeout_msec);
+                TRACE(XLIB_MAIN_AFTER_PREPARE(source, prepare, source_timeout_msec));
+
+                source_timeout_usec = extend_timeout_to_usec(source_timeout_msec);
 
                 x_trace_mark(begin_time_nsec, X_TRACE_CURRENT_TIME - begin_time_nsec, "XLib", "XSource.prepare", "%s ⇒ %s", (x_source_get_name(source) != NULL) ? x_source_get_name(source) : "(unnamed)", result ? "ready" : "unready");
 
@@ -2048,15 +2079,10 @@ static xboolean x_main_context_prepare_unlocked(XMainContext *context, xint *pri
                 }
 
                 if (source->priv->ready_time <= context->time) {
-                    source_timeout = 0;
+                    source_timeout_usec = 0;
                     result = TRUE;
-                } else {
-                    xint64 timeout;
-
-                    timeout = (source->priv->ready_time - context->time + 999) / 1000;
-                    if (source_timeout < 0 || timeout < source_timeout) {
-                        source_timeout = MIN(timeout, X_MAXINT);
-                    }
+                } else if ((source_timeout_usec < 0) || (source->priv->ready_time < (context->time + source_timeout_usec))) {
+                    source_timeout_usec = MAX(0, source->priv->ready_time - context->time);
                 }
             }
 
@@ -2073,14 +2099,14 @@ static xboolean x_main_context_prepare_unlocked(XMainContext *context, xint *pri
         if (source->flags & X_SOURCE_READY) {
             n_ready++;
             current_priority = source->priority;
-            context->timeout = 0;
+            context->timeout_usec = 0;
         }
-        
-        if (source_timeout >= 0)  {
-            if (context->timeout < 0) {
-                context->timeout = source_timeout;
+
+        if (source_timeout_usec >= 0) {
+            if (context->timeout_usec < 0) {
+                context->timeout_usec = source_timeout_usec;
             } else {
-                context->timeout = MIN(context->timeout, source_timeout);
+                context->timeout_usec = MIN(context->timeout_usec, source_timeout_usec);
             }
         }
     }
@@ -2095,22 +2121,27 @@ static xboolean x_main_context_prepare_unlocked(XMainContext *context, xint *pri
     return (n_ready > 0);
 }
 
-xint x_main_context_query(XMainContext *context, xint max_priority, xint *timeout, XPollFD *fds, xint n_fds)
+xint x_main_context_query(XMainContext *context, xint max_priority, xint *timeout_msec, XPollFD *fds, xint n_fds)
 {
     xint n_poll;
+    xint64 timeout_usec;
 
     if (context == NULL) {
         context = x_main_context_default();
     }
 
     LOCK_CONTEXT(context);
-    n_poll = x_main_context_query_unlocked(context, max_priority, timeout, fds, n_fds);
+    n_poll = x_main_context_query_unlocked(context, max_priority, &timeout_usec, fds, n_fds);
     UNLOCK_CONTEXT(context);
+
+    if (timeout_msec != NULL) {
+        *timeout_msec = round_timeout_to_msec(timeout_usec);
+    }
 
     return n_poll;
 }
 
-static xint x_main_context_query_unlocked(XMainContext *context, xint max_priority, xint *timeout, XPollFD *fds, xint n_fds)
+static xint x_main_context_query_unlocked(XMainContext *context, xint max_priority, xint64 *timeout_usec, XPollFD *fds, xint n_fds)
 {
     xint n_poll;
     xushort events;
@@ -2144,14 +2175,14 @@ static xint x_main_context_query_unlocked(XMainContext *context, xint max_priori
     }
 
     context->poll_changed = FALSE;
-    if (timeout) {
-        *timeout = context->timeout;
-        if (*timeout != 0) {
+    if (timeout_usec) {
+        *timeout_usec = context->timeout_usec;
+        if (*timeout_usec != 0) {
             context->time_is_fresh = FALSE;
         }
     }
 
-    TRACE(xLIB_MAIN_CONTEXT_AFTER_QUERY(context, context->timeout, fds, n_poll));
+    TRACE(xLIB_MAIN_CONTEXT_AFTER_QUERY(context, context->timeout_usec, fds, n_poll));
 
     return n_poll;
 }
@@ -2330,7 +2361,7 @@ static void x_main_context_dispatch_unlocked(XMainContext *context)
 
 static xboolean x_main_context_iterate_unlocked(XMainContext *context, xboolean block, xboolean dispatch, XThread *self)
 {
-    xint timeout;
+    xint64 timeout_usec;
     XPollFD *fds = NULL;
     xboolean some_ready;
     xint max_priority = 0;
@@ -2362,17 +2393,17 @@ static xboolean x_main_context_iterate_unlocked(XMainContext *context, xboolean 
 
     x_main_context_prepare_unlocked(context, &max_priority); 
 
-    while ((nfds = x_main_context_query_unlocked(context, max_priority, &timeout, fds, allocated_nfds)) > allocated_nfds) {
+    while ((nfds = x_main_context_query_unlocked(context, max_priority, &timeout_usec, fds, allocated_nfds)) > allocated_nfds) {
         x_free(fds);
         context->cached_poll_array_size = allocated_nfds = nfds;
         context->cached_poll_array = fds = x_new(XPollFD, nfds);
     }
 
     if (!block) {
-        timeout = 0;
+        timeout_usec = 0;
     }
 
-    x_main_context_poll_unlocked(context, timeout, max_priority, fds, nfds);
+    x_main_context_poll_unlocked(context, timeout_usec, max_priority, fds, nfds);
     some_ready = x_main_context_check_unlocked(context, max_priority, fds, nfds);
 
     if (dispatch) {
@@ -2538,20 +2569,38 @@ XMainContext *x_main_loop_get_context(XMainLoop *loop)
     return loop->context;
 }
 
-static void x_main_context_poll_unlocked(XMainContext *context, int timeout, int priority, XPollFD *fds, int n_fds)
+static void x_main_context_poll_unlocked(XMainContext *context, xint64 timeout_usec, int priority, XPollFD *fds, int n_fds)
 {
     XPollFunc poll_func;
 
-    if (n_fds || timeout != 0) {
+    if (n_fds || (timeout_usec != 0)) {
         int ret, errsv;
 
         poll_func = context->poll_func;
-        UNLOCK_CONTEXT(context);
 
-        ret = (*poll_func)(fds, n_fds, timeout);
-        LOCK_CONTEXT(context);
+        if (poll_func == x_poll) {
+            struct timespec spec;
+            struct timespec *spec_p = NULL;
+
+            if (timeout_usec > -1) {
+                spec.tv_sec = timeout_usec / X_USEC_PER_SEC;
+                spec.tv_nsec = (timeout_usec % X_USEC_PER_SEC) * 1000L;
+                spec_p = &spec;
+            }
+
+            UNLOCK_CONTEXT(context);
+            ret = ppoll((struct pollfd *)fds, n_fds, spec_p, NULL);
+            LOCK_CONTEXT(context);
+        } else {
+            int timeout_msec = round_timeout_to_msec(timeout_usec);
+
+            UNLOCK_CONTEXT (context);
+            ret = (*poll_func)(fds, n_fds, timeout_msec);
+            LOCK_CONTEXT (context);
+        }
+
         errsv = errno;
-        if (ret < 0 && errsv != EINTR) {
+        if ((ret < 0) && (errsv != EINTR)) {
             x_warning("poll(2) failed due to: %s.", x_strerror(errsv));
         }
     }

@@ -14,6 +14,9 @@ XStrvBuilder *x_strv_builder_new(void);
 XLIB_AVAILABLE_IN_2_68
 void x_strv_builder_unref(XStrvBuilder *builder);
 
+XLIB_AVAILABLE_IN_2_82
+XStrv x_strv_builder_unref_to_strv(XStrvBuilder *builder);
+
 XLIB_AVAILABLE_IN_2_68
 XStrvBuilder *x_strv_builder_ref(XStrvBuilder *builder);
 

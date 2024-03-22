@@ -18,6 +18,14 @@ void x_strv_builder_unref(XStrvBuilder *builder)
     x_ptr_array_unref(&builder->array);
 }
 
+XStrv x_strv_builder_unref_to_strv(XStrvBuilder *builder)
+{
+    XStrv res = x_strv_builder_end(builder);
+    x_strv_builder_unref(builder);
+
+    return res;
+}
+
 XStrvBuilder *x_strv_builder_ref(XStrvBuilder *builder)
 {
     return (XStrvBuilder *)x_ptr_array_ref(&builder->array);
