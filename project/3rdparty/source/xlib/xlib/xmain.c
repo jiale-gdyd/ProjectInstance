@@ -3087,6 +3087,9 @@ static void ref_unix_signal_handler_unlocked(int signum)
 #else
         action.sa_flags = SA_NOCLDSTOP;
 #endif
+#ifdef SA_ONSTACK
+        action.sa_flags |= SA_ONSTACK;
+#endif
         sigaction(signum, &action, NULL);
     }
 }
