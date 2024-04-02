@@ -573,8 +573,12 @@ xboolean x_cond_wait_until(XCond *cond, XMutex *mutex, xint64 end_time)
     sampled = cond->i[0];
     x_mutex_unlock(mutex);
 
-#ifdef __NR_futex_time64
+#if defined(HAVE_FUTEX_TIME64)
+#if defined(__BIONIC__)
+    if (__builtin_available (android 30, *)) {
+#else
     {
+#endif
         struct {
             xint64 tv_sec;
             xint64 tv_nsec;
@@ -585,7 +589,7 @@ xboolean x_cond_wait_until(XCond *cond, XMutex *mutex, xint64 end_time)
 
         res = syscall(__NR_futex_time64, &cond->i[0], (xsize)FUTEX_WAIT_PRIVATE, (xsize)sampled, &span_arg);
 
-#ifdef __NR_futex
+#if defined(HAVE_FUTEX)
         if ((res >= 0) || (errno != ENOSYS))
 #endif
         {
@@ -597,7 +601,7 @@ xboolean x_cond_wait_until(XCond *cond, XMutex *mutex, xint64 end_time)
     }
 #endif
 
-#ifdef __NR_futex
+#if defined(HAVE_FUTEX)
     {
 #ifdef __kernel_long_t
 #define KERNEL_SPAN_SEC_TYPE __kernel_long_t

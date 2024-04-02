@@ -54,7 +54,7 @@
 #define HAVE_FUTEX                              1
 
 #if defined(__x86_64__) || defined(__amd64__) || defined(__aarch64__) || defined(__arm64__)
-#define HAVE_FUTEX_TIME64                       1
+// #define HAVE_FUTEX_TIME64                       1
 #endif
 
 #define HAVE_GETAUXVAL                          1

@@ -24,29 +24,48 @@ struct _XRealThread {
 #define FUTEX_WAKE_PRIVATE  FUTEX_WAKE
 #endif
 
-#if defined(__NR_futex) && defined(__NR_futex_time64)
+#if defined(HAVE_FUTEX) && defined(HAVE_FUTEX_TIME64)
+#if defined(__BIONIC__)
+#define x_futex_simple(uaddr, futex_op, ...)                                                    \
+    X_STMT_START {                                                                              \
+        int res = 0;                                                                            \
+        if (__builtin_available(android 30, *)) {                                               \
+            res = syscall(__NR_futex_time64, uaddr, (xsize)futex_op, __VA_ARGS__);              \
+            if (res < 0 && errno == ENOSYS) {                                                   \
+                errno = saved_errno;                                                            \
+                res = syscall(__NR_futex, uaddr, (xsize)futex_op, __VA_ARGS__);                 \
+            }                                                                                   \
+        } else {                                                                                \
+            res = syscall(__NR_futex, uaddr, (xsize)futex_op, __VA_ARGS__);                     \
+        }                                                                                       \
+        if (res < 0 && errno == EAGAIN) {                                                       \
+            errno = saved_errno;                                                                \
+        }                                                                                       \
+    } X_STMT_END
+#else
 #define x_futex_simple(uaddr, futex_op, ...)                                                    \
     X_STMT_START {                                                                              \
         int saved_errno = errno;                                                                \
         int res = syscall(__NR_futex_time64, uaddr, (xsize)futex_op, __VA_ARGS__);              \
         if ((res < 0) && (errno == ENOSYS)) {                                                   \
             errno = saved_errno;                                                                \
-            res = syscall(__NR_futex, uaddr, (gsize) futex_op, __VA_ARGS__);                    \
+            res = syscall(__NR_futex, uaddr, (xsize)futex_op, __VA_ARGS__);                     \
         }                                                                                       \
         if ((res < 0) && (errno == EAGAIN)) {                                                   \
             errno = saved_errno;                                                                \
         }                                                                                       \
     } X_STMT_END
-#elif defined(__NR_futex_time64)
+#endif
+#elif defined(HAVE_FUTEX_TIME64)
 #define x_futex_simple(uaddr, futex_op, ...)                                                    \
     X_STMT_START {                                                                              \
         int saved_errno = errno;                                                                \
-        int res = syscall(__NR_futex_time64, uaddr, (gsize) futex_op, __VA_ARGS__);             \
+        int res = syscall(__NR_futex_time64, uaddr, (xsize)futex_op, __VA_ARGS__);              \
         if ((res < 0) && (errno == EAGAIN)) {                                                   \
             errno = saved_errno;                                                                \
         }                                                                                       \
   } X_STMT_END
-#elif defined(__NR_futex)
+#elif defined(HAVE_FUTEX)
 #define x_futex_simple(uaddr, futex_op, ...)                                                    \
     X_STMT_START {                                                                              \
         int saved_errno = errno;                                                                \
@@ -56,7 +75,7 @@ struct _XRealThread {
         }                                                                                       \
     } X_STMT_END
 #else
-#error "Neither __NR_futex nor __NR_futex_time64 are defined but were found by meson"
+#error "Neither __NR_futex nor __NR_futex_time64 are available"
 #endif
 #endif
 
