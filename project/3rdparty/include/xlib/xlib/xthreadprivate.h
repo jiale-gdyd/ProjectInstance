@@ -25,9 +25,10 @@ struct _XRealThread {
 #endif
 
 #if defined(HAVE_FUTEX) && defined(HAVE_FUTEX_TIME64)
-#if defined(__BIONIC__)
+#if defined(__ANDROID__)
 #define x_futex_simple(uaddr, futex_op, ...)                                                    \
     X_STMT_START {                                                                              \
+        int saved_errno = errno;                                                                \
         int res = 0;                                                                            \
         if (__builtin_available(android 30, *)) {                                               \
             res = syscall(__NR_futex_time64, uaddr, (xsize)futex_op, __VA_ARGS__);              \

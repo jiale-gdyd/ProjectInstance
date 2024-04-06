@@ -1141,7 +1141,7 @@ XLogWriterOutput x_log_writer_syslog(XLogLevelFlags log_level, const XLogField *
     return X_LOG_WRITER_HANDLED;
 }
 
-#if defined(__linux__) && !defined(__BIONIC__) && defined(HAVE_MKOSTEMP) && defined(O_CLOEXEC)
+#if defined(__linux__) && !defined(__ANDROID__) && defined(HAVE_MKOSTEMP) && defined(O_CLOEXEC)
 #define ENABLE_JOURNAL_SENDV
 #endif
 
