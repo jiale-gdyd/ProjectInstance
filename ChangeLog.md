@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2024-04-11
+  * rkmpp: fix[av1d_vdpu]: Fix forced 8bit output failure issue
+
 ## 2024-03-13
   * rkmpp: feat[vdpp_test]: Add vdpp slt testcase
 

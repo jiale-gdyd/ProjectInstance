@@ -1,12 +1,12 @@
 #ifndef LIBDRM_LIBSYNC_H
 #define LIBDRM_LIBSYNC_H
 
+#include <poll.h>
 #include <errno.h>
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/poll.h>
 #include <sys/ioctl.h>
 
 #if defined(__cplusplus)
