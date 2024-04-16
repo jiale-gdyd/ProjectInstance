@@ -46,9 +46,9 @@ extern "C" {
 #undef SQLITE_VERSION_NUMBER
 #endif
 
-#define SQLITE_VERSION                              "3.45.2"
-#define SQLITE_VERSION_NUMBER                       3045002
-#define SQLITE_SOURCE_ID                            "2024-03-12 11:06:23 d8cd6d49b46a395b13955387d05e9e1a2a47e54fb99f3c9b59835bbefad6af77"
+#define SQLITE_VERSION                              "3.45.3"
+#define SQLITE_VERSION_NUMBER                       3045003
+#define SQLITE_SOURCE_ID                            "2024-04-15 13:34:05 8653b758870e6ef0c98d46b3ace27849054af85da891eb121e9aaa537f1e8355"
 
 SQLITE_API SQLITE_EXTERN const char sqlite3_version[];
 
@@ -428,6 +428,7 @@ struct sqlite3_mem_methods {
 #define SQLITE_CONFIG_SMALL_MALLOC                  27
 #define SQLITE_CONFIG_SORTERREF_SIZE                28
 #define SQLITE_CONFIG_MEMDB_MAXSIZE                 29
+#define SQLITE_CONFIG_ROWID_IN_VIEW                 30
 
 #define SQLITE_DBCONFIG_MAINDBNAME                  1000
 #define SQLITE_DBCONFIG_LOOKASIDE                   1001

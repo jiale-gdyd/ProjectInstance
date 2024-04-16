@@ -372,7 +372,7 @@ static XVariantSerialised gvs_variable_sized_array_get_child(XVariantSerialised 
     x_variant_type_info_ref(child.type_info);
     child.depth = value.depth + 1;
 
-    if (index_ > value.checked_offsets_up_to && value.ordered_offsets_up_to == value.checked_offsets_up_to) {
+    if (offsets.array != NULL && index_ > value.checked_offsets_up_to && value.ordered_offsets_up_to == value.checked_offsets_up_to) {
         switch (offsets.offset_size) {
             case 1: {
                 value.ordered_offsets_up_to = find_unordered_xuint8(offsets.array, value.checked_offsets_up_to, index_ + 1);

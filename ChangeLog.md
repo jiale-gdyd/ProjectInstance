@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2024-04-16
+  * rkmpp: fix[hal_h264e]:fix crash after init vepu buffer failure
+
 ## 2024-04-11
   * rkmpp: fix[av1d_vdpu]: Fix forced 8bit output failure issue
 

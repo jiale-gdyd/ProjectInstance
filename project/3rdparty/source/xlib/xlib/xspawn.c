@@ -882,6 +882,10 @@ static xboolean do_posix_spawn(const xchar *const *argv, const xchar *const *env
 
     duped_source_fds = x_new(xint, n_fds);
     for (i = 0; i < n_fds; i++) {
+        duped_source_fds[i] = -1;
+    }
+
+    for (i = 0; i < n_fds; i++) {
         duped_source_fds[i] = dupfd_cloexec(source_fds[i], max_target_fd + 1);
         if (duped_source_fds[i] < 0) {
             goto out_close_fds;

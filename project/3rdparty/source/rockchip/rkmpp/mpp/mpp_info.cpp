@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2024-04-08 fix[av1d_vdpu]: Fix forced 8bit output failure issue";
+static const char *mpp_last_commit_message = "2024-04-15 fix[hal_h264e]:fix crash after init vepu buffer failure";
 
 void show_mpp_version(void)
 {

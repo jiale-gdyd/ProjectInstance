@@ -812,7 +812,7 @@ static xboolean param_value_array_validate(XParamSpec *pspec, XValue *value)
     XValueArray *value_array = (XValueArray *)value->data[0].v_pointer;
 
     if (!value->data[0].v_pointer && aspec->fixed_n_elements) {
-        value->data[0].v_pointer = x_value_array_new(aspec->fixed_n_elements);
+        value_array = value->data[0].v_pointer = x_value_array_new(aspec->fixed_n_elements);
     }
 
     if (value->data[0].v_pointer) {
