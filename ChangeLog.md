@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2024-04-19
+  * rkmpp: fix[h264d_vdpu383]: Fix global parameter config issue
+
 ## 2024-04-16
   * rkmpp: fix[hal_h264e]:fix crash after init vepu buffer failure
 
