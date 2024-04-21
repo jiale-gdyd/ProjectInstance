@@ -116,11 +116,6 @@ static RK_U32 rkv_ver_align(RK_U32 val)
     return MPP_ALIGN(val, 16);
 }
 
-static RK_U32 rkv_hor_align(RK_U32 val)
-{
-    return MPP_ALIGN(val, 16);
-}
-
 static RK_U32 rkv_len_align(RK_U32 val)
 {
     return (2 * MPP_ALIGN(val, 16));
@@ -615,7 +610,7 @@ MPP_RET vdpu383_h264d_init(void *hal, MppHalCfg *cfg)
     memcpy((char *)reg_ctx->bufs_ptr + reg_ctx->offset_cabac,
            (void *)h264_cabac_table, sizeof(h264_cabac_table));
 
-    mpp_slots_set_prop(p_hal->frame_slots, SLOTS_HOR_ALIGN, rkv_hor_align);
+    mpp_slots_set_prop(p_hal->frame_slots, SLOTS_HOR_ALIGN, mpp_align_128_odd_plus_64);
     mpp_slots_set_prop(p_hal->frame_slots, SLOTS_VER_ALIGN, rkv_ver_align);
     mpp_slots_set_prop(p_hal->frame_slots, SLOTS_LEN_ALIGN, rkv_len_align);
 
@@ -836,8 +831,8 @@ MPP_RET vdpu383_h264d_gen_regs(void *hal, HalTaskInfo *task)
     }
 #endif
 
-    prepare_spspps(p_hal, (RK_U64 *)&ctx->spspps, sizeof(ctx->spspps));
-    prepare_framerps(p_hal, (RK_U64 *)&ctx->rps, sizeof(ctx->rps));
+    prepare_spspps(p_hal, (RK_U64 *)&ctx->spspps, sizeof(ctx->spspps) / 8);
+    prepare_framerps(p_hal, (RK_U64 *)&ctx->rps, sizeof(ctx->rps) / 8);
     prepare_scanlist(p_hal, ctx->sclst, sizeof(ctx->sclst));
     set_registers(p_hal, regs, task);
 

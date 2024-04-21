@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2024-04-21
+  * rkmpp: docs: Update 1.0.5 CHANGELOG.md
+
 ## 2024-04-19
   * rkmpp: fix[h264d_vdpu383]: Fix global parameter config issue
 

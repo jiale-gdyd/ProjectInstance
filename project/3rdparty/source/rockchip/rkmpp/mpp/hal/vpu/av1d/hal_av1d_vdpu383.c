@@ -1251,11 +1251,6 @@ static RK_U32 rkv_ver_align(RK_U32 val)
     return MPP_ALIGN(val, 8);
 }
 
-static RK_U32 rkv_hor_align(RK_U32 val)
-{
-    return MPP_ALIGN(val, 16);
-}
-
 static RK_U32 rkv_len_align(RK_U32 val)
 {
     return (2 * MPP_ALIGN(val, 128));
@@ -1357,7 +1352,7 @@ MPP_RET vdpu383_av1d_init(void *hal, MppHalCfg *cfg)
 
     FUN_CHECK(hal_av1d_alloc_res(hal));
 
-    mpp_slots_set_prop(p_hal->slots, SLOTS_HOR_ALIGN, rkv_hor_align);
+    mpp_slots_set_prop(p_hal->slots, SLOTS_HOR_ALIGN, mpp_align_128_odd_plus_64);
     mpp_slots_set_prop(p_hal->slots, SLOTS_VER_ALIGN, rkv_ver_align);
     mpp_slots_set_prop(p_hal->slots, SLOTS_LEN_ALIGN, rkv_len_align);
 
