@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2024-04-25
+ * rkmpp: chore[cmake]: remove duplicate code
+
 ## 2024-04-21
   * rkmpp: docs: Update 1.0.5 CHANGELOG.md
 

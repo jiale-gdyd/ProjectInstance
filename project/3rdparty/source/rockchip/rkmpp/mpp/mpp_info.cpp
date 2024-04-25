@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2024-04-16 fix[h264d_vdpu383]: Fix global parameter config issue";
+static const char *mpp_last_commit_message = "2024-04-24 chore[cmake]: remove duplicate code";
 
 void show_mpp_version(void)
 {

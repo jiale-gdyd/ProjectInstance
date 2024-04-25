@@ -408,7 +408,7 @@ xunichar *x_unicode_canonical_decomposition(xunichar ch, xsize *result_len) X_GN
 
 XLIB_VAR const xchar *const x_utf8_skip;
 
-#define x_utf8_next_char(p)                             (char *)((p) + x_utf8_skip[*(const xuchar *)(p)])
+#define x_utf8_next_char(p)                             ((p) + x_utf8_skip[*(const xuchar *)(p)])
 
 XLIB_AVAILABLE_IN_ALL
 xunichar x_utf8_get_char(const xchar *p) X_GNUC_PURE;
