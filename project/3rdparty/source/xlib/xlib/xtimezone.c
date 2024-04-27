@@ -164,6 +164,8 @@ again:
 
 XTimeZone *x_time_zone_ref(XTimeZone *tz)
 {
+    x_return_val_if_fail(tz != NULL, NULL);
+
     x_assert(tz->ref_count > 0);
     x_atomic_int_inc(&tz->ref_count);
 

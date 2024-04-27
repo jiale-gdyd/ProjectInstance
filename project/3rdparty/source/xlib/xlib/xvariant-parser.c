@@ -217,8 +217,8 @@ static xboolean token_stream_is_numeric(TokenStream *stream)
 
 static xboolean token_stream_peek_string(TokenStream *stream, const xchar *token)
 {
-    xint length = strlen(token);
-    return token_stream_prepare(stream) && stream->stream - stream->thist == length && memcmp(stream->thist, token, length) == 0;
+    size_t length = strlen(token);
+    return token_stream_prepare(stream) && (size_t)(stream->stream - stream->thist == length) && memcmp(stream->thist, token, length) == 0;
 }
 
 static xboolean token_stream_consume(TokenStream *stream, const xchar *token)

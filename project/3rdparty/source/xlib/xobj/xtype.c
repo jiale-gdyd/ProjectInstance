@@ -771,7 +771,7 @@ static xboolean check_interface_info_I(TypeNode *iface, XType instance_type, con
 static void type_data_make_W(TypeNode *node, const XTypeInfo *info, const XTypeValueTable *value_table)
 {
     TypeData *data;
-    xuint vtable_size = 0;
+    size_t vtable_size = 0;
     XTypeValueTable *vtable = NULL;
 
     x_assert(node->data == NULL && info != NULL);
@@ -892,9 +892,9 @@ static void type_data_make_W(TypeNode *node, const XTypeInfo *info, const XTypeV
     }
 
     node->data->common.value_table = vtable;
-    node->mutatable_check_cache = (node->data->common.value_table->value_init != NULL && !((X_TYPE_FLAG_VALUE_ABSTRACT | X_TYPE_FLAG_ABSTRACT) & XPOINTER_TO_UINT(type_get_qdata_L(node, static_quark_type_flags))));
-    
     x_assert(node->data->common.value_table != NULL);
+    node->mutatable_check_cache = (node->data->common.value_table->value_init != NULL && !((X_TYPE_FLAG_VALUE_ABSTRACT | X_TYPE_FLAG_ABSTRACT) & XPOINTER_TO_UINT(type_get_qdata_L(node, static_quark_type_flags))));
+
     x_atomic_int_set((int *)&node->ref_count, 1);
 }
 

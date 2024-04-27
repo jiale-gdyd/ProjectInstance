@@ -2123,8 +2123,8 @@ xboolean x_variant_check_format_string(XVariant *value, const xchar *format_stri
 
 XVariantType *x_variant_format_string_scan_type(const xchar *string, const xchar *limit, const xchar **endptr)
 {
+    xsize i;
     xchar *newt;
-    xchar *dest;
     const xchar *my_end;
 
     if (endptr == NULL) {
@@ -2135,16 +2135,18 @@ XVariantType *x_variant_format_string_scan_type(const xchar *string, const xchar
         return NULL;
     }
 
-    dest = newt = (xchar *)x_malloc(*endptr - string + 1);
+    newt = (xchar *)x_malloc(*endptr - string + 1);
+    i = 0;
     while (string != *endptr) {
         if (*string != '@' && *string != '&' && *string != '^') {
-            *dest++ = *string;
+            newt[i++] = *string;
         }
         string++;
     }
-    *dest = '\0';
+    newt[i++] = '\0';
 
-    return(XVariantType *)X_VARIANT_TYPE(newt);
+    x_assert(x_variant_type_string_is_valid(newt));
+    return (XVariantType *)newt;
 }
 
 static xboolean valid_format_string(const xchar *format_string, xboolean single, XVariant *value)

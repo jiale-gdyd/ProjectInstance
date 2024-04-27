@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2024-04-24 chore[cmake]: remove duplicate code";
+static const char *mpp_last_commit_message = "2024-04-26 fix[allocator]: fix on invalid DMA heap allocator";
 
 void show_mpp_version(void)
 {

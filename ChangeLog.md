@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2024-04-27
+  * rkmpp: fix[allocator]: fix on invalid DMA heap allocator
+
 ## 2024-04-25
  * rkmpp: chore[cmake]: remove duplicate code
 

@@ -105,8 +105,9 @@ xboolean x_file_test(const xchar *filename, XFileTest test)
     }
 
     if ((test & X_FILE_TEST_IS_EXECUTABLE) && (access(filename, X_OK) == 0)) {
-        if (getuid () != 0)
-        return TRUE;
+        if (getuid() != 0) {
+            return TRUE;
+        }
     } else {
         test = (XFileTest)(test & ~X_FILE_TEST_IS_EXECUTABLE);
     }

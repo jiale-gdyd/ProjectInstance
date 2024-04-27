@@ -51,7 +51,7 @@ XString *x_string_new(const xchar *init)
     if (init == NULL || *init == '\0') {
         string = x_string_sized_new(2);
     } else {
-        xint len;
+        size_t len;
 
         len = strlen(init);
         string = x_string_sized_new(len + 2);

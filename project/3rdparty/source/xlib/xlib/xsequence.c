@@ -856,6 +856,8 @@ static XSequenceNode *node_get_by_pos(XSequenceNode *node, xint pos)
         } else {
             node = node->left;
         }
+
+        x_assert(node != NULL);
     }
 
     return node;

@@ -3063,6 +3063,7 @@ static void _weak_ref_set(XWeakRef *weak_ref, XObject *new_object, xboolean call
     new_wrdata = weak_ref_data_get_or_create(new_object);
 
 #if X_ENABLE_DEBUG
+    x_assert(new_wrdata != NULL);
     x_assert(!new_object || object_get_optional_flags(new_object) & OPTIONAL_FLAG_EVER_HAD_WEAK_REF);
 #endif
 

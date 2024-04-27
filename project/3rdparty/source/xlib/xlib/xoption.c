@@ -941,7 +941,7 @@ static xboolean parse_long_option(XOptionContext *context, XOptionGroup *group, 
 
             return retval;
         } else {
-            xint len = strlen(group->entries[j].long_name);
+            size_t len = strlen(group->entries[j].long_name);
 
             if (strncmp(arg, group->entries[j].long_name, len) == 0 && (arg[len] == '=' || arg[len] == 0)) {
                 xchar *value = NULL;

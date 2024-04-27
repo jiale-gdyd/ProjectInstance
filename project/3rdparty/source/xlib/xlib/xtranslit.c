@@ -131,11 +131,11 @@ static xboolean lookup_item_id_for_one_locale(const xchar *key, xuint *item_id)
 static xuint lookup_item_id_for_locale(const xchar *locale)
 {
     xuint id;
-    xuint language_len;
+    size_t language_len;
     const xchar *language;
-    xuint modifier_len = 0;
     const xchar *next_char;
-    xuint territory_len = 0;
+    size_t modifier_len = 0;
+    size_t territory_len = 0;
     const xchar *modifier = NULL;
     const xchar *territory = NULL;
     xchar key[MAX_LOCALE_NAME + 1];

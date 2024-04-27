@@ -433,7 +433,7 @@ static xint output_marks(const char **p_inout, char *out_buffer, xboolean remove
 
 static xint output_special_case(xchar *out_buffer, int offset, int type, int which)
 {
-    xint len;
+    size_t len;
     const xchar *p = special_case_table + offset;
 
     if (type != X_UNICODE_TITLECASE_LETTER) {

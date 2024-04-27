@@ -690,7 +690,7 @@ err_out:
 xunichar *x_utf16_to_ucs4(const xunichar2 *str, xlong len, xlong *items_read, xlong *items_written, XError **error)
 {
     xchar *out;
-    xint n_bytes;
+    size_t n_bytes;
     const xunichar2 *in;
     xchar *result = NULL;
     xunichar high_surrogate;

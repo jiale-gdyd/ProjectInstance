@@ -19,9 +19,9 @@ typedef enum {
 
 struct _XPatternSpec {
     XMatchType match_type;
-    xuint      pattern_length;
-    xuint      min_length;
-    xuint      max_length;
+    size_t     pattern_length;
+    size_t     min_length;
+    size_t     max_length;
     xchar      *pattern;
 };
 

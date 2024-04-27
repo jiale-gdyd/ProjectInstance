@@ -1532,7 +1532,7 @@ static xboolean test_case_run(XTestCase *tc, const char *test_run_name, const ch
 
 static xboolean path_has_prefix(const char *path, const char *prefix)
 {
-    int prefix_len = strlen(prefix);
+    size_t prefix_len = strlen(prefix);
     return (strncmp(path, prefix, prefix_len) == 0 && (path[prefix_len] == '\0' || path[prefix_len] == '/'));
 }
 
@@ -2376,7 +2376,10 @@ static xuint8 *x_test_log_dump(XTestLogMsg *msg, xuint *len)
     xstring_append_int(gstring, 0);
 
     for (ui = 0; ui < msg->n_strings; ui++) {
-        xuint l = strlen(msg->strings[ui]);
+        xuint l;
+        x_assert(msg->strings[ui] != NULL);
+        l = strlen(msg->strings[ui]);
+
         xstring_append_int(gstring, l);
         x_string_append_len(gstring, msg->strings[ui], l);
     }

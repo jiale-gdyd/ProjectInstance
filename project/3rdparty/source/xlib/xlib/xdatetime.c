@@ -1430,7 +1430,7 @@ static void format_number(XString *str, xboolean use_alt_digits, const xchar *pa
         "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
     };
     xint i = 0;
-    const xchar *tmp[10];
+    const xchar *tmp[10] = {NULL, };
     const xchar *const *digits = ascii_digits;
 
     x_return_if_fail(width <= 10);
@@ -1552,7 +1552,7 @@ static inline xboolean string_append(XString *string, const xchar *s, xboolean d
 
 static xboolean x_date_time_format_utf8(XDateTime *datetime, const xchar *utf8_format, XString *outstr, xboolean locale_is_utf8)
 {
-    xuint len;
+    size_t len;
     xunichar c;
     xuint colons;
     const xchar *tz;

@@ -10,20 +10,20 @@
 #include <xlib/xobj/xvaluetypes.h>
 #include <xlib/xobj/xtype-private.h>
 
-#define CLOSURE_MAX_REF_COUNT                   ((1 << 15) - 1)
-#define CLOSURE_MAX_N_GUARDS                    ((1 << 1) - 1)
-#define CLOSURE_MAX_N_FNOTIFIERS                ((1 << 2) - 1)
-#define CLOSURE_MAX_N_INOTIFIERS                ((1 << 8) - 1)
-#define CLOSURE_N_MFUNCS(cl)                    (((cl)->n_guards << 1L))
+#define CLOSURE_MAX_REF_COUNT                       ((1 << 15) - 1)
+#define CLOSURE_MAX_N_GUARDS                        ((1 << 1) - 1)
+#define CLOSURE_MAX_N_FNOTIFIERS                    ((1 << 2) - 1)
+#define CLOSURE_MAX_N_INOTIFIERS                    ((1 << 8) - 1)
+#define CLOSURE_N_MFUNCS(cl)                        (((cl)->n_guards << 1L))
 
-#define CLOSURE_N_NOTIFIERS(cl)                 (CLOSURE_N_MFUNCS(cl) + (cl)->n_fnotifiers + (cl)->n_inotifiers)
+#define CLOSURE_N_NOTIFIERS(cl)                     (CLOSURE_N_MFUNCS(cl) + (cl)->n_fnotifiers + (cl)->n_inotifiers)
 
 typedef union {
     XClosure closure;
     xint     vint;
 } ClosureInt;
 
-#define CHANGE_FIELD(_closure, _field, _OP, _value, _must_set, _SET_OLD, _SET_NEW)              \
+#define ATOMIC_CHANGE_FIELD(_closure, _field, _OP, _value, _must_set, _SET_OLD, _SET_NEW)              \
     X_STMT_START {                                                                              \
         ClosureInt *cunion = (ClosureInt *)_closure;                                            \
         xint new_int, old_int, success;                                                         \
@@ -38,12 +38,12 @@ typedef union {
         } while (!success && _must_set);                                                        \
     } X_STMT_END
 
-#define SWAP(_closure, _field, _value, _oldv)   CHANGE_FIELD(_closure, _field, =, _value, TRUE, *(_oldv) =,     (void) )
-#define SET(_closure, _field, _value)           CHANGE_FIELD(_closure, _field, =, _value, TRUE,     (void),     (void) )
-#define INC(_closure, _field)                   CHANGE_FIELD(_closure, _field, +=,     1, TRUE,     (void),     (void) )
-#define INC_ASSIGN(_closure, _field, _newv)     CHANGE_FIELD(_closure, _field, +=,     1, TRUE,     (void), *(_newv) = )
-#define DEC(_closure, _field)                   CHANGE_FIELD(_closure, _field, -=,     1, TRUE,     (void),     (void) )
-#define DEC_ASSIGN(_closure, _field, _newv)     CHANGE_FIELD(_closure, _field, -=,     1, TRUE,     (void), *(_newv) = )
+#define ATOMIC_SWAP(_closure, _field, _value, _oldv)   ATOMIC_CHANGE_FIELD(_closure, _field, =, _value, TRUE, *(_oldv) =,     (void) )
+#define ATOMIC_SET(_closure, _field, _value)           ATOMIC_CHANGE_FIELD(_closure, _field, =, _value, TRUE,     (void),     (void) )
+#define ATOMIC_INC(_closure, _field)                   ATOMIC_CHANGE_FIELD(_closure, _field, +=,     1, TRUE,     (void),     (void) )
+#define ATOMIC_INC_ASSIGN(_closure, _field, _newv)     ATOMIC_CHANGE_FIELD(_closure, _field, +=,     1, TRUE,     (void), *(_newv) = )
+#define ATOMIC_DEC(_closure, _field)                   ATOMIC_CHANGE_FIELD(_closure, _field, -=,     1, TRUE,     (void),     (void) )
+#define ATOMIC_DEC_ASSIGN(_closure, _field, _newv)     ATOMIC_CHANGE_FIELD(_closure, _field, -=,     1, TRUE,     (void), *(_newv) = )
 
 enum {
     FNOTIFY,
@@ -64,8 +64,8 @@ XClosure *x_closure_new_simple(xuint sizeof_closure, xpointer data)
     allocated = (xchar *)x_malloc0(private_size + sizeof_closure);
     closure = (XClosure *)(allocated + private_size);
 
-    SET(closure, ref_count, 1);
-    SET(closure, floating, TRUE);
+    ATOMIC_SET(closure, ref_count, 1);
+    ATOMIC_SET(closure, floating, TRUE);
     closure->data = data;
 
     return closure;
@@ -80,7 +80,7 @@ static inline void closure_invoke_notifiers(XClosure *closure, xuint notify_type
         case FNOTIFY:
             while (closure->n_fnotifiers) {
                 xuint n;
-                DEC_ASSIGN(closure, n_fnotifiers, &n);
+                ATOMIC_DEC_ASSIGN(closure, n_fnotifiers, &n);
 
                 ndata = closure->notifiers + CLOSURE_N_MFUNCS(closure) + n;
                 closure->marshal = (XClosureMarshal)ndata->notify;
@@ -93,10 +93,10 @@ static inline void closure_invoke_notifiers(XClosure *closure, xuint notify_type
             break;
 
         case INOTIFY:
-            SET(closure, in_inotify, TRUE);
+            ATOMIC_SET(closure, in_inotify, TRUE);
             while (closure->n_inotifiers) {
                 xuint n;
-                DEC_ASSIGN(closure, n_inotifiers, &n);
+                ATOMIC_DEC_ASSIGN(closure, n_inotifiers, &n);
 
                 ndata = closure->notifiers + CLOSURE_N_MFUNCS(closure) + closure->n_fnotifiers + n;
                 closure->marshal = (XClosureMarshal)ndata->notify;
@@ -106,7 +106,7 @@ static inline void closure_invoke_notifiers(XClosure *closure, xuint notify_type
 
             closure->marshal = NULL;
             closure->data = NULL;
-            SET(closure, in_inotify, FALSE);
+            ATOMIC_SET(closure, in_inotify, FALSE);
             break;
 
         case PRE_NOTIFY:
@@ -198,7 +198,7 @@ void x_closure_add_marshal_guards(XClosure *closure, xpointer pre_marshal_data, 
     closure->notifiers[i].notify = pre_marshal_notify;
     closure->notifiers[i + 1].data = post_marshal_data;
     closure->notifiers[i + 1].notify = post_marshal_notify;
-    INC(closure, n_guards);
+    ATOMIC_INC(closure, n_guards);
 }
 
 void x_closure_add_finalize_notifier(XClosure *closure, xpointer notify_data, XClosureNotify notify_func)
@@ -217,7 +217,7 @@ void x_closure_add_finalize_notifier(XClosure *closure, xpointer notify_data, XC
     i = CLOSURE_N_MFUNCS(closure) + closure->n_fnotifiers;
     closure->notifiers[i].data = notify_data;
     closure->notifiers[i].notify = notify_func;
-    INC(closure, n_fnotifiers);
+    ATOMIC_INC(closure, n_fnotifiers);
 }
 
 void x_closure_add_invalidate_notifier(XClosure *closure, xpointer notify_data, XClosureNotify notify_func)
@@ -233,7 +233,7 @@ void x_closure_add_invalidate_notifier(XClosure *closure, xpointer notify_data, 
     i = CLOSURE_N_MFUNCS(closure) + closure->n_fnotifiers + closure->n_inotifiers;
     closure->notifiers[i].data = notify_data;
     closure->notifiers[i].notify = notify_func;
-    INC(closure, n_inotifiers);
+    ATOMIC_INC(closure, n_inotifiers);
 }
 
 static inline xboolean closure_try_remove_inotify(XClosure *closure, xpointer notify_data, XClosureNotify notify_func)
@@ -243,7 +243,7 @@ static inline xboolean closure_try_remove_inotify(XClosure *closure, xpointer no
     nlast = closure->notifiers + CLOSURE_N_NOTIFIERS(closure) - 1;
     for (ndata = nlast + 1 - closure->n_inotifiers; ndata <= nlast; ndata++) {
         if (ndata->notify == notify_func && ndata->data == notify_data) {
-            DEC(closure, n_inotifiers);
+            ATOMIC_DEC(closure, n_inotifiers);
             if (ndata < nlast) {
                 *ndata = *nlast;
             }
@@ -262,7 +262,7 @@ static inline xboolean closure_try_remove_fnotify(XClosure *closure, xpointer no
     nlast = closure->notifiers + CLOSURE_N_NOTIFIERS(closure) - closure->n_inotifiers - 1;
     for (ndata = nlast + 1 - closure->n_fnotifiers; ndata <= nlast; ndata++) {
         if (ndata->notify == notify_func && ndata->data == notify_data) {
-            DEC(closure, n_fnotifiers);
+            ATOMIC_DEC(closure, n_fnotifiers);
             if (ndata < nlast) {
                 *ndata = *nlast;
             }
@@ -286,10 +286,20 @@ XClosure *x_closure_ref(XClosure *closure)
     x_return_val_if_fail(closure->ref_count > 0, NULL);
     x_return_val_if_fail(closure->ref_count < CLOSURE_MAX_REF_COUNT, NULL);
 
-    INC_ASSIGN(closure, ref_count, &new_ref_count);
+    ATOMIC_INC_ASSIGN(closure, ref_count, &new_ref_count);
     x_return_val_if_fail(new_ref_count > 1, NULL);
 
     return closure;
+}
+
+static void closure_invalidate_internal(XClosure *closure)
+{
+    xboolean was_invalid;
+
+    ATOMIC_SWAP(closure, is_invalid, TRUE, &was_invalid);
+    if (!was_invalid) {
+        closure_invoke_notifiers(closure, INOTIFY);
+    }
 }
 
 void x_closure_invalidate(XClosure *closure)
@@ -297,13 +307,8 @@ void x_closure_invalidate(XClosure *closure)
     x_return_if_fail(closure != NULL);
 
     if (!closure->is_invalid) {
-        xboolean was_invalid;
-
         x_closure_ref(closure);
-        SWAP(closure, is_invalid, TRUE, &was_invalid);
-        if (!was_invalid) {
-            closure_invoke_notifiers(closure, INOTIFY);
-        }
+        closure_invalidate_internal(closure);
         x_closure_unref(closure);
     }
 }
@@ -315,11 +320,11 @@ void x_closure_unref(XClosure *closure)
     x_return_if_fail(closure != NULL);
     x_return_if_fail(closure->ref_count > 0);
 
-    if (closure->ref_count == 1) {
-        x_closure_invalidate(closure);
+    if (closure->ref_count == 1 && !closure->is_invalid) {
+        closure_invalidate_internal(closure);
     }
 
-    DEC_ASSIGN(closure, ref_count, &new_ref_count);
+    ATOMIC_DEC_ASSIGN(closure, ref_count, &new_ref_count);
 
     if (new_ref_count == 0) {
         closure_invoke_notifiers(closure, FNOTIFY);
@@ -335,7 +340,7 @@ void x_closure_sink(XClosure *closure)
 
     if (closure->floating) {
         xboolean was_floating;
-        SWAP(closure, floating, FALSE, &was_floating);
+        ATOMIC_SWAP(closure, floating, FALSE, &was_floating);
         if (was_floating) {
             x_closure_unref(closure);
         }
@@ -382,7 +387,7 @@ void x_closure_invoke(XClosure *closure, XValue *return_value, xuint n_param_val
 
         x_return_if_fail(closure->marshal || real_closure->meta_marshal);
 
-        SET(closure, in_marshal, TRUE);
+        ATOMIC_SET(closure, in_marshal, TRUE);
         if (real_closure->meta_marshal) {
             marshal_data = real_closure->meta_marshal_data;
             marshal = real_closure->meta_marshal;
@@ -400,7 +405,7 @@ void x_closure_invoke(XClosure *closure, XValue *return_value, xuint n_param_val
             closure_invoke_notifiers(closure, POST_NOTIFY);
         }
 
-        SET(closure, in_marshal, in_marshal);
+        ATOMIC_SET(closure, in_marshal, in_marshal);
     }
     x_closure_unref(closure);
 }
@@ -431,7 +436,7 @@ void _x_closure_invoke_va(XClosure *closure, XValue *return_value, xpointer inst
 
         x_return_if_fail(closure->marshal || real_closure->meta_marshal);
 
-        SET(closure, in_marshal, TRUE);
+        ATOMIC_SET(closure, in_marshal, TRUE);
         if (real_closure->va_meta_marshal) {
             marshal_data = real_closure->meta_marshal_data;
             marshal = real_closure->va_meta_marshal;
@@ -449,7 +454,7 @@ void _x_closure_invoke_va(XClosure *closure, XValue *return_value, xpointer inst
             closure_invoke_notifiers(closure, POST_NOTIFY);
         }
 
-        SET(closure, in_marshal, in_marshal);
+        ATOMIC_SET(closure, in_marshal, in_marshal);
     }
     x_closure_unref(closure);
 }
@@ -508,7 +513,7 @@ XClosure *x_cclosure_new_swap(XCallback callback_func, xpointer user_data, XClos
         x_closure_add_finalize_notifier(closure, user_data, destroy_data);
     }
     ((XCClosure *)closure)->callback = (xpointer)callback_func;
-    SET(closure, derivative_flag, TRUE);
+    ATOMIC_SET(closure, derivative_flag, TRUE);
 
     return closure;
 }

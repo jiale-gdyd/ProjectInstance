@@ -245,7 +245,8 @@ xuchar *x_base64_decode(const xchar *text, xsize *out_len)
 xuchar *x_base64_decode_inplace(xchar *text, xsize *out_len)
 {
     xuint save = 0;
-    xint input_length, state = 0;
+    xint state = 0;
+    size_t input_length;
 
     x_return_val_if_fail(text != NULL, NULL);
     x_return_val_if_fail(out_len != NULL, NULL);

@@ -4,6 +4,7 @@
 #include <xlib/xlib/xmem.h>
 #include <xlib/xlib/xunicode.h>
 #include <xlib/xlib/xunicomp.h>
+#include <xlib/xlib/xtestutils.h>
 #include <xlib/xlib/xunidecomp.h>
 #include <xlib/xlib/xunicodeprivate.h>
 
@@ -292,11 +293,13 @@ xunichar *_x_utf8_normalize_wc(const xchar *str, xssize max_len, XNormalizeMode 
         }
 
         if (n_wc > 0) {
-            cc = COMBINING_CLASS(wc_buffer[old_n_wc]);
-            if (cc == 0) {
-                x_unicode_canonical_ordering(wc_buffer + last_start, n_wc - last_start);
-                last_start = old_n_wc;
-            }
+            x_assert(n_wc > old_n_wc);
+        }
+
+        cc = COMBINING_CLASS(wc_buffer[old_n_wc]);
+        if (cc == 0) {
+            x_unicode_canonical_ordering(wc_buffer + last_start, n_wc - last_start);
+            last_start = old_n_wc;
         }
 
         p = x_utf8_next_char(p);

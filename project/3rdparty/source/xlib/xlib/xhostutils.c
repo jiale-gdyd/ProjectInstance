@@ -7,6 +7,7 @@
 #include <xlib/xlib/xstring.h>
 #include <xlib/xlib/xlibintl.h>
 #include <xlib/xlib/xstrfuncs.h>
+#include <xlib/xlib/xmessages.h>
 #include <xlib/xlib/xlibconfig.h>
 #include <xlib/xlib/xhostutils.h>
 
@@ -505,7 +506,9 @@ xchar *x_hostname_to_unicode(const xchar *hostname)
 {
     xssize llen;
     XString *out;
-    xsize hostname_max_length_bytes = get_hostname_max_length_bytes ();
+    xsize hostname_max_length_bytes = get_hostname_max_length_bytes();
+
+    x_return_val_if_fail(hostname != NULL, NULL);
 
     if (hostname_max_length_bytes <= X_MAXSIZE / 4 && strlen_greater_than(hostname, 4 * MAX (255, hostname_max_length_bytes))) {
         return NULL;

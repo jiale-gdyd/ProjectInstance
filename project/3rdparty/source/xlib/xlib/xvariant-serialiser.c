@@ -490,6 +490,8 @@ static xboolean gvs_variable_sized_array_is_normal(XVariantSerialised value)
         return FALSE;
     }
 
+    x_assert(value.size != 0 || offsets.length == 0);
+
     child.type_info = x_variant_type_info_element(value.type_info);
     x_variant_type_info_query(child.type_info, &alignment, NULL);
     child.depth = value.depth + 1;
