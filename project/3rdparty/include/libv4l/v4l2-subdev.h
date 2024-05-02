@@ -41,9 +41,10 @@
 
 struct v4l2_subdev_routing {
     __u32 which;
-    __u32 num_routes;
+    __u32 len_routes;
     __u64 routes;
-    __u32 reserved[6];
+    __u32 num_routes;
+    __u32 reserved[11];
 };
 
 struct v4l2_subdev_route {

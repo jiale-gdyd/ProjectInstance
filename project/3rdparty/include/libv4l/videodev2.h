@@ -348,6 +348,8 @@ struct v4l2_pix_format {
 #define V4L2_PIX_FMT_Y10BPACK                                       v4l2_fourcc('Y', '1', '0', 'B')     /* 10  Greyscale bit-packed */
 #define V4L2_PIX_FMT_Y10P                                           v4l2_fourcc('Y', '1', '0', 'P')     /* 10  Greyscale, MIPI RAW10 packed */
 #define V4L2_PIX_FMT_IPU3_Y10                                       v4l2_fourcc('i', 'p', '3', 'y')     /* IPU3 packed 10-bit greyscale */
+#define V4L2_PIX_FMT_Y12P                                           v4l2_fourcc('Y', '1', '2', 'P')     /* 12  Greyscale, MIPI RAW12 packed */
+#define V4L2_PIX_FMT_Y14P                                           v4l2_fourcc('Y', '1', '4', 'P')     /* 14  Greyscale, MIPI RAW14 packed */
 
 #define V4L2_PIX_FMT_PAL8                                           v4l2_fourcc('P', 'A', 'L', '8')     /*  8  8-bit palette */
 #define V4L2_PIX_FMT_UV8                                            v4l2_fourcc('U', 'V', '8', ' ')     /*  8  UV 4:4 */
@@ -589,6 +591,7 @@ struct v4l2_fmtdesc {
 #define V4L2_FMT_FLAG_CSC_YCBCR_ENC                                 0x0080
 #define V4L2_FMT_FLAG_CSC_HSV_ENC                                   V4L2_FMT_FLAG_CSC_YCBCR_ENC
 #define V4L2_FMT_FLAG_CSC_QUANTIZATION                              0x0100
+#define V4L2_FMT_FLAG_META_LINE_BASED                               0x0200
 
 enum v4l2_frmsizetypes {
     V4L2_FRMSIZE_TYPE_DISCRETE   = 1,
@@ -1135,9 +1138,9 @@ struct v4l2_ext_control {
         struct v4l2_ctrl_av1_frame               *p_av1_frame;
         struct v4l2_ctrl_av1_film_grain          *p_av1_film_grain;
         struct v4l2_ctrl_hdr10_cll_info          *p_hdr10_cll_info;
-		struct v4l2_ctrl_hdr10_mastering_display *p_hdr10_mastering_display;
+        struct v4l2_ctrl_hdr10_mastering_display *p_hdr10_mastering_display;
         void                                     *ptr;
-    };
+    } __attribute__ ((packed));
 } __attribute__ ((packed));
 
 struct v4l2_ext_controls {
@@ -1580,8 +1583,11 @@ struct v4l2_sdr_format {
 } __attribute__ ((packed));
 
 struct v4l2_meta_format {
-    __u32 dataformat;
-    __u32 buffersize;
+    __u32    dataformat;
+    __u32    buffersize;
+    uint32_t width;
+    uint32_t height;
+    uint32_t bytesperline;
 } __attribute__ ((packed));
 
 struct v4l2_format {

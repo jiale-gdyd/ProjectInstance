@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2024-05-02
+  * libv4l: sync-with-kernel.sh: add v4l2-dv-timings.h
+
 ## 2024-04-27
   * rkmpp: fix[allocator]: fix on invalid DMA heap allocator
 
