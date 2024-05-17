@@ -2,6 +2,7 @@
 #define __X_MACROS_H__
 
 #include <stddef.h>
+#include <stdbool.h>
 
 #ifdef __GNUC__
 #define X_GNUC_CHECK_VERSION(major, minor)                  ((__GNUC__ > (major)) || ((__GNUC__ == (major)) && (__GNUC_MINOR__ >= (minor))))
@@ -330,11 +331,11 @@
 #endif
 
 #ifndef FALSE
-#define FALSE                                               (0)
+#define FALSE                                               false
 #endif
 
 #ifndef TRUE
-#define TRUE                                                (!FALSE)
+#define TRUE                                                true
 #endif
 
 #undef MAX
