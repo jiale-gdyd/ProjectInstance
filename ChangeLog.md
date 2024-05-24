@@ -1,5 +1,9 @@
 # 变更日志
 
+## 2024-05-17
+  * rkmpp: fix[mpp_enc_async]: fix mpp packet leak when thread quit
+  * xlib : Merge branch 'dont-rm-rf-root' into 'main'
+
 ## 2024-05-02
   * libv4l: sync-with-kernel.sh: add v4l2-dv-timings.h
 

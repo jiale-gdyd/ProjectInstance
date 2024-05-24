@@ -31,10 +31,10 @@
 #include "../../common/hal_bufs.h"
 
 #include "hal_av1d_vdpu_reg.h"
-#include "hal_av1d_common.h"
+#include "../../common/av1/hal_av1d_common.h"
 #include "../../../common/av1d_syntax.h"
-#include "film_grain_noise_table.h"
-#include "av1d_common.h"
+#include "../../common/av1/film_grain_noise_table.h"
+#include "../../common/av1/av1d_common.h"
 
 #define VDPU_FAST_REG_SET_CNT    3
 #define AV1_MAX_TILES 128

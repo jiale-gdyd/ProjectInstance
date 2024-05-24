@@ -46,9 +46,9 @@ extern "C" {
 #undef SQLITE_VERSION_NUMBER
 #endif
 
-#define SQLITE_VERSION                              "3.45.3"
-#define SQLITE_VERSION_NUMBER                       3045003
-#define SQLITE_SOURCE_ID                            "2024-04-15 13:34:05 8653b758870e6ef0c98d46b3ace27849054af85da891eb121e9aaa537f1e8355"
+#define SQLITE_VERSION                              "3.46.0"
+#define SQLITE_VERSION_NUMBER                       3046000
+#define SQLITE_SOURCE_ID                            "2024-05-23 13:25:27 96c92aba00c8375bc32fafcdf12429c58bd8aabfcadab6683e35bbb9cdebf19e"
 
 SQLITE_API SQLITE_EXTERN const char sqlite3_version[];
 
@@ -1393,6 +1393,7 @@ typedef struct sqlite3_changegroup sqlite3_changegroup;
 
 SQLITE_API int sqlite3changegroup_new(sqlite3_changegroup **pp);
 SQLITE_API int sqlite3changegroup_add(sqlite3_changegroup *, int nData, void *pData);
+SQLITE_API int sqlite3changegroup_add_change(sqlite3_changegroup *, sqlite3_changeset_iter *);
 SQLITE_API int sqlite3changegroup_output(sqlite3_changegroup *, int *pnData, void **ppData);
 SQLITE_API int sqlite3changegroup_schema(sqlite3_changegroup *, sqlite3 *, const char *zDb);
 

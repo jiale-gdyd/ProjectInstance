@@ -1,3 +1,4 @@
+obj-y += av1/
 obj-y += h264/
 obj-y += h265/
 obj-y += jpeg/

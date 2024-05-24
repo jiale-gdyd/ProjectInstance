@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2024-04-26 fix[allocator]: fix on invalid DMA heap allocator";
+static const char *mpp_last_commit_message = "2024-05-17 fix[mpp_enc_async]: fix mpp packet leak when thread quit";
 
 void show_mpp_version(void)
 {
