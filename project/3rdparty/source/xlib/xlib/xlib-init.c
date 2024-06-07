@@ -10,11 +10,15 @@
 #include <xlib/xlib/xutils.h>
 #include <xlib/xlib/xmacros.h>
 #include <xlib/xlib/xlib-init.h>
+#include <xlib/xlib/xlib-private.h>
 #include <xlib/xlib/xconstructor.h>
 
 typedef struct { char a; XFunc b; } XFuncAlign;
 typedef struct { char a; xpointer b; } xpointerAlign;
 typedef struct { char a; XCompareDataFunc b; } XCompareDataFuncAlign;
+
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(int) == 1);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(unsigned int) == 0);
 
 X_STATIC_ASSERT(CHAR_BIT == 8);
 
@@ -57,6 +61,8 @@ X_STATIC_ASSERT(X_STRUCT_OFFSET(TestIntAlign, b) == X_STRUCT_OFFSET(intAlign, b)
 
 X_STATIC_ASSERT(sizeof(xchar) == 1);
 X_STATIC_ASSERT(sizeof(xuchar) == 1);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xuchar) == 0);
+
 X_STATIC_ASSERT(sizeof(xint8) * CHAR_BIT == 8);
 X_STATIC_ASSERT(sizeof(xuint8) * CHAR_BIT == 8);
 X_STATIC_ASSERT(sizeof(xint16) * CHAR_BIT == 16);
@@ -75,12 +81,16 @@ X_STATIC_ASSERT(X_MINSHORT == SHRT_MIN);
 X_STATIC_ASSERT(X_MAXSHORT == SHRT_MAX);
 X_STATIC_ASSERT(sizeof(unsigned short) == sizeof(xushort));
 X_STATIC_ASSERT(X_MAXUSHORT == USHRT_MAX);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xshort) == 1);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xushort) == 0);
 
 X_STATIC_ASSERT(sizeof(int) == sizeof(xint));
 X_STATIC_ASSERT(X_MININT == INT_MIN);
 X_STATIC_ASSERT(X_MAXINT == INT_MAX);
 X_STATIC_ASSERT(sizeof(unsigned int) == sizeof(xuint));
 X_STATIC_ASSERT(X_MAXUINT == UINT_MAX);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xint) == 1);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xuint) == 0);
 
 X_STATIC_ASSERT(sizeof(long) == XLIB_SIZEOF_LONG);
 X_STATIC_ASSERT(sizeof(long) == sizeof(xlong));
@@ -88,6 +98,8 @@ X_STATIC_ASSERT(X_MINLONG == LONG_MIN);
 X_STATIC_ASSERT(X_MAXLONG == LONG_MAX);
 X_STATIC_ASSERT(sizeof(unsigned long) == sizeof(xulong));
 X_STATIC_ASSERT(X_MAXULONG == ULONG_MAX);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xlong) == 1);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xulong) == 0);
 
 X_STATIC_ASSERT(X_HAVE_XINT64 == 1);
 
@@ -96,6 +108,10 @@ X_STATIC_ASSERT(sizeof(size_t) == XLIB_SIZEOF_SIZE_T);
 X_STATIC_ASSERT(sizeof(size_t) == XLIB_SIZEOF_SSIZE_T);
 X_STATIC_ASSERT(sizeof(xsize) == XLIB_SIZEOF_SSIZE_T);
 X_STATIC_ASSERT(sizeof(xsize) == sizeof(size_t));
+
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(size_t) == 0);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xsize) == 0);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xssize) == 1);
 
 typedef struct { char a; xsize b; } xsizeAlign;
 typedef struct { char a; xssize b; } xssizeAlign;
@@ -116,6 +132,8 @@ X_STATIC_ASSERT(sizeof(size_t) == sizeof(uintptr_t));
 // X_STATIC_ASSERT(X_ALIGNOF(size_t) == X_ALIGNOF(uintptr_t));
 X_STATIC_ASSERT(X_STRUCT_OFFSET(size_tAlign, b) == X_STRUCT_OFFSET(uintptr_tAlign, b));
 #endif
+
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xoffset) == 1);
 
 X_STATIC_ASSERT(sizeof(xoffset) == sizeof(xint64));
 // X_STATIC_ASSERT(X_ALIGNOF(xoffset) == X_ALIGNOF(xint64));
@@ -145,6 +163,11 @@ X_STATIC_ASSERT(sizeof(xuintptr) == sizeof(uintptr_t));
 X_STATIC_ASSERT(X_STRUCT_OFFSET(xintptrAlign, b) == X_STRUCT_OFFSET(intptr_tAlign, b));
 X_STATIC_ASSERT(X_STRUCT_OFFSET(xuintptrAlign, b) == X_STRUCT_OFFSET(uintptr_tAlign, b));
 
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xintptr) == 1);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xuintptr) == 0);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(intptr_t) == 1);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(uintptr_t) == 0);
+
 typedef struct { char a; int8_t b; } int8_tAlign;
 typedef struct { char a; uint8_t b; } uint8_tAlign;
 typedef struct { char a; xint8 b; } xint8Align;
@@ -156,6 +179,11 @@ X_STATIC_ASSERT(sizeof(xuint8) == sizeof(uint8_t));
 // X_STATIC_ASSERT(X_ALIGNOF(xuint8) == X_ALIGNOF(uint8_t));
 X_STATIC_ASSERT(X_STRUCT_OFFSET(xint8Align, b) == X_STRUCT_OFFSET(int8_tAlign, b));
 X_STATIC_ASSERT(X_STRUCT_OFFSET(xuint8Align, b) == X_STRUCT_OFFSET(uint8_tAlign, b));
+
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xint8) == 1);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xuint8) == 0);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(int8_t) == 1);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(uint8_t) == 0);
 
 typedef struct { char a; int16_t b; } int16_tAlign;
 typedef struct { char a; uint16_t b; } uint16_tAlign;
@@ -169,6 +197,9 @@ X_STATIC_ASSERT(sizeof(xuint16) == sizeof(uint16_t));
 X_STATIC_ASSERT(X_STRUCT_OFFSET(xint16Align, b) == X_STRUCT_OFFSET(int16_tAlign, b));
 X_STATIC_ASSERT(X_STRUCT_OFFSET(xuint16Align, b) == X_STRUCT_OFFSET(uint16_tAlign, b));
 
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(int16_t) == 1);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(uint16_t) == 0);
+
 typedef struct { char a; int32_t b; } int32_tAlign;
 typedef struct { char a; uint32_t b; } uint32_tAlign;
 typedef struct { char a; xint32 b; } xint32Align;
@@ -181,6 +212,11 @@ X_STATIC_ASSERT(sizeof(xuint32) == sizeof(uint32_t));
 X_STATIC_ASSERT(X_STRUCT_OFFSET(xint32Align, b) == X_STRUCT_OFFSET(int32_tAlign, b));
 X_STATIC_ASSERT(X_STRUCT_OFFSET(xuint32Align, b) == X_STRUCT_OFFSET(uint32_tAlign, b));
 
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xint32) == 1);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xuint32) == 0);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(int32_t) == 1);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(uint32_t) == 0);
+
 typedef struct { char a; int64_t b; } int64_tAlign;
 typedef struct { char a; uint64_t b; } uint64_tAlign;
 typedef struct { char a; xuint64 b; } xuint64Align;
@@ -191,6 +227,11 @@ X_STATIC_ASSERT(sizeof(xuint64) == sizeof(uint64_t));
 // X_STATIC_ASSERT(X_ALIGNOF(xuint64) == X_ALIGNOF(uint64_t));
 X_STATIC_ASSERT(X_STRUCT_OFFSET(xint64Align, b) == X_STRUCT_OFFSET(int64_tAlign, b));
 X_STATIC_ASSERT(X_STRUCT_OFFSET(xuint64Align, b) == X_STRUCT_OFFSET(uint64_tAlign, b));
+
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xint64) == 1);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(xuint64) == 0);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(int64_t) == 1);
+X_STATIC_ASSERT(X_SIGNEDNESS_OF(uint64_t) == 0);
 
 xboolean x_mem_gc_friendly = FALSE;
 XLogLevelFlags x_log_always_fatal = (XLogLevelFlags)X_LOG_FATAL_MASK;

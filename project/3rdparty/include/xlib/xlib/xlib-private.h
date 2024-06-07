@@ -5,6 +5,7 @@
 #include "xwakeup.h"
 #include "xdatasetprivate.h"
 
+#define X_SIGNEDNESS_OF(T)                  (((T) -1) <= 0)
 #define X_CONTAINER_OF(ptr, type, field)    ((type *)X_STRUCT_MEMBER_P(ptr, -X_STRUCT_OFFSET(type, field)))
 
 static inline void x_ignore_leak(xconstpointer p)
