@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2024-06-14
+  * rkmpp: docs: Update 1.0.6 CHANGELOG.md
+
 ## 2024-05-17
   * rkmpp: fix[mpp_enc_async]: fix mpp packet leak when thread quit
   * xlib : Merge branch 'dont-rm-rf-root' into 'main'

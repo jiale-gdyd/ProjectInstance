@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2024-05-17 fix[mpp_enc_async]: fix mpp packet leak when thread quit";
+static const char *mpp_last_commit_message = "2024-06-12 docs: Update 1.0.6 CHANGELOG.md";
 
 void show_mpp_version(void)
 {
