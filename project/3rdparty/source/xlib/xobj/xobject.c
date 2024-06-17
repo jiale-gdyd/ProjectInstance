@@ -1788,7 +1788,7 @@ static XObject *x_object_constructor(XType type, xuint n_construct_properties, X
             XParamSpec *pspec = construct_params->pspec;
 
             construct_params++;
-            object_set_property(object, pspec, value, nqueue, TRUE);
+            object_set_property(object, pspec, value, nqueue, FALSE);
         }
 
         x_object_notify_queue_thaw(object, nqueue, FALSE);
