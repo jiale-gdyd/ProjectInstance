@@ -470,6 +470,7 @@ static void x_array_maybe_expand(XRealArray *array, xuint len)
     want_len = array->len + len + array->zero_terminated;
     if (want_len > array->elt_capacity) {
         xsize want_alloc = x_nearest_pow(x_array_elt_len(array, want_len));
+        x_assert(want_alloc >= x_array_elt_len(array, want_len));
         want_alloc = MAX(want_alloc, MIN_ARRAY_SIZE);
 
         array->data = (xuint8 *)x_realloc(array->data, want_alloc);
