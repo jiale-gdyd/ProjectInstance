@@ -27,8 +27,8 @@
 #define XLIB_INTERFACE_AGE                      0
 
 #define XLIB_MAJOR_VERSION                      2
-#define XLIB_MINOR_VERSION                      80
-#define XLIB_MICRO_VERSION                      1
+#define XLIB_MINOR_VERSION                      81
+#define XLIB_MICRO_VERSION                      0
 
 #define X_VA_COPY                               va_copy
 

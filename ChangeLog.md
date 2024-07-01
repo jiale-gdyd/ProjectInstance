@@ -1,5 +1,9 @@
 # 变更日志
 
+## 2024-07-01
+  * rkmpp : fix[hal_av1d_vdpu383]: add segid reg base config
+  * libdrm: Fix FTBS on undefined clock_gettime() and asprintf()
+
 ## 2024-06-14
   * rkmpp: docs: Update 1.0.6 CHANGELOG.md
 

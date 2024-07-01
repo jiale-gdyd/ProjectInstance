@@ -356,6 +356,7 @@ static __inline__ __u64 drm_fourcc_canonicalize_nvidia_format_mod(__u64 modifier
 #define AMD_FMT_MOD_TILE_VER_GFX10                      2
 #define AMD_FMT_MOD_TILE_VER_GFX10_RBPLUS               3
 #define AMD_FMT_MOD_TILE_VER_GFX11                      4
+#define AMD_FMT_MOD_TILE_VER_GFX12                      5
 
 #define AMD_FMT_MOD_TILE_GFX9_64K_S                     9
 #define AMD_FMT_MOD_TILE_GFX9_64K_D                     10
@@ -363,6 +364,9 @@ static __inline__ __u64 drm_fourcc_canonicalize_nvidia_format_mod(__u64 modifier
 #define AMD_FMT_MOD_TILE_GFX9_64K_D_X                   26
 #define AMD_FMT_MOD_TILE_GFX9_64K_R_X                   27
 #define AMD_FMT_MOD_TILE_GFX11_256K_R_X                 31
+
+#define AMD_FMT_MOD_TILE_GFX12_64K_2D                   3
+#define AMD_FMT_MOD_TILE_GFX12_256K_2D                  4
 
 #define AMD_FMT_MOD_DCC_BLOCK_64B                       0
 #define AMD_FMT_MOD_DCC_BLOCK_128B                      1
@@ -388,6 +392,9 @@ static __inline__ __u64 drm_fourcc_canonicalize_nvidia_format_mod(__u64 modifier
 #define AMD_FMT_MOD_DCC_INDEPENDENT_128B_MASK           0x1
 #define AMD_FMT_MOD_DCC_MAX_COMPRESSED_BLOCK_SHIFT      18
 #define AMD_FMT_MOD_DCC_MAX_COMPRESSED_BLOCK_MASK       0x3
+
+#define AMD_FMT_MOD_GFX12_DCC_MAX_COMPRESSED_BLOCK_SHIFT     3
+#define AMD_FMT_MOD_GFX12_DCC_MAX_COMPRESSED_BLOCK_MASK      0x3
 
 #define AMD_FMT_MOD_DCC_CONSTANT_ENCODE_SHIFT           20
 #define AMD_FMT_MOD_DCC_CONSTANT_ENCODE_MASK            0x1

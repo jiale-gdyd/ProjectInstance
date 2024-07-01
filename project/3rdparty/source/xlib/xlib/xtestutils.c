@@ -1439,7 +1439,6 @@ static xboolean test_should_run(const char *test_path, const char *cmp_path);
 static xboolean test_case_run(XTestCase *tc, const char *test_run_name, const char *path)
 {
     xchar *old_base = NULL;
-    xboolean free_test_data = TRUE;
     xboolean success = X_TEST_RUN_SUCCESS;
     XSList **old_free_list, *filename_free_list = NULL;
 
@@ -1496,7 +1495,7 @@ static xboolean test_case_run(XTestCase *tc, const char *test_run_name, const ch
                     tc->fixture_teardown(fixture, tc->test_data);
                 }
 
-                free_test_data = FALSE;
+                tc->fixture_teardown = NULL;
                 if (tc->fixture_size) {
                     x_free(fixture);
                 }
@@ -1516,10 +1515,6 @@ static xboolean test_case_run(XTestCase *tc, const char *test_run_name, const ch
         x_test_log(X_TEST_LOG_STOP_CASE, test_run_name, test_run_msg, X_N_ELEMENTS(largs), largs);
         x_clear_pointer(&test_run_msg, x_free);
         x_timer_destroy(test_run_timer);
-    }
-
-    if (free_test_data && tc->fixture_size == 0 && tc->fixture_teardown != NULL) {
-        tc->fixture_teardown(tc->test_data, tc->test_data);
     }
 
     x_slist_free_full(filename_free_list, x_free);
@@ -1663,6 +1658,10 @@ int x_test_run_suite(XTestSuite *suite)
 
 void x_test_case_free(XTestCase *test_case)
 {
+    if ((test_case->fixture_size == 0) && (test_case->fixture_teardown != NULL)) {
+        test_case->fixture_teardown(test_case->test_data, test_case->test_data);
+    }
+
     x_free(test_case->name);
     x_slice_free(XTestCase, test_case);
 }

@@ -523,6 +523,7 @@
 
 #define _XLIB_AUTOPTR_FUNC_NAME(TypeName)                   xlib_autoptr_cleanup_##TypeName
 #define _XLIB_AUTOPTR_CLEAR_FUNC_NAME(TypeName)             xlib_autoptr_clear_##TypeName
+#define _XLIB_AUTOPTR_DESTROY_FUNC_NAME(TypeName)           xlib_autoptr_destroy_##TypeName
 #define _XLIB_AUTOPTR_TYPENAME(TypeName)                    TypeName##_autoptr
 #define _XLIB_AUTOPTR_LIST_FUNC_NAME(TypeName)              xlib_listautoptr_cleanup_##TypeName
 #define _XLIB_AUTOPTR_LIST_TYPENAME(TypeName)               TypeName##_listautoptr
@@ -550,18 +551,22 @@
     {                                                                                                                           \
         _XLIB_AUTOPTR_CLEAR_FUNC_NAME(TypeName)(*_ptr);                                                                         \
     }                                                                                                                           \
+    static X_GNUC_UNUSED inline void _XLIB_AUTOPTR_DESTROY_FUNC_NAME(TypeName)(void *_ptr)                                      \
+    {                                                                                                                           \
+        (cleanup)((ParentName *)_ptr);                                                                                          \
+    }                                                                                                                           \
     static X_GNUC_UNUSED inline void _XLIB_AUTOPTR_LIST_FUNC_NAME(TypeName)(XList **_l)                                         \
     {                                                                                                                           \
-        x_list_free_full(*_l, (XDestroyNotify)(void(*)(void))cleanup);                                                          \
+        x_list_free_full(*_l, _XLIB_AUTOPTR_DESTROY_FUNC_NAME(TypeName));                                                       \
     }                                                                                                                           \
     static X_GNUC_UNUSED inline void _XLIB_AUTOPTR_SLIST_FUNC_NAME(TypeName)(XSList **_l)                                       \
     {                                                                                                                           \
-        x_slist_free_full(*_l, (XDestroyNotify)(void(*)(void))cleanup);                                                         \
+        x_slist_free_full(*_l, _XLIB_AUTOPTR_DESTROY_FUNC_NAME(TypeName));                                                      \
     }                                                                                                                           \
     static X_GNUC_UNUSED inline void _XLIB_AUTOPTR_QUEUE_FUNC_NAME(TypeName)(XQueue **_q)                                       \
     {                                                                                                                           \
         if (*_q) {                                                                                                              \
-            x_queue_free_full(*_q, (XDestroyNotify)(void(*)(void))cleanup);                                                     \
+            x_queue_free_full(*_q, _XLIB_AUTOPTR_DESTROY_FUNC_NAME(TypeName));                                                  \
         }                                                                                                                       \
     }                                                                                                                           \
     X_GNUC_END_IGNORE_DEPRECATIONS
