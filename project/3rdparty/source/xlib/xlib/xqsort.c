@@ -207,5 +207,10 @@ static void msort_r(void *b, size_t n, size_t s, XCompareDataFunc cmp, void *arg
 
 void x_qsort_with_data(xconstpointer pbase, xint total_elems, xsize size, XCompareDataFunc compare_func, xpointer user_data)
 {
-    msort_r((xpointer)pbase, total_elems, size, compare_func, user_data);
+    x_sort_array(pbase, total_elems, size, compare_func, user_data);
+}
+
+void x_sort_array(const void *array, size_t n_elements, size_t element_size, XCompareDataFunc compare_func, void *user_data)
+{
+    msort_r((void *)array, n_elements, element_size, compare_func, user_data);
 }

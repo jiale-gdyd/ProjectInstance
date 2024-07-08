@@ -405,7 +405,7 @@ void x_array_sort(XArray *farray, XCompareFunc compare_func)
     x_return_if_fail(array != NULL);
 
     if (array->len > 0) {
-        x_qsort_with_data(array->data, array->len, array->elt_size, (XCompareDataFunc)compare_func, NULL);
+        x_sort_array(array->data, array->len, array->elt_size, (XCompareDataFunc)compare_func, NULL);
     }
 }
 
@@ -415,7 +415,7 @@ void x_array_sort_with_data(XArray *farray, XCompareDataFunc compare_func, xpoin
     x_return_if_fail(array != NULL);
 
     if (array->len > 0) {
-        x_qsort_with_data(array->data, array->len, array->elt_size, compare_func, user_data);
+        x_sort_array(array->data, array->len, array->elt_size, compare_func, user_data);
     }
 }
 
@@ -646,7 +646,7 @@ xpointer *x_ptr_array_steal(XPtrArray *array, xsize *len)
     return segment;
 }
 
-XPtrArray *x_ptr_array_copy (XPtrArray *array, XCopyFunc func, xpointer user_data)
+XPtrArray *x_ptr_array_copy(XPtrArray *array, XCopyFunc func, xpointer user_data)
 {
     XPtrArray *new_array;
     XRealPtrArray *rarray = (XRealPtrArray *)array;
@@ -1036,24 +1036,23 @@ void x_ptr_array_extend_and_steal(XPtrArray  *array_to_extend, XPtrArray *array)
 
 void x_ptr_array_insert(XPtrArray *array, xint index_, xpointer data)
 {
+    xuint real_index;
     XRealPtrArray *rarray = (XRealPtrArray *)array;
 
     x_return_if_fail(rarray);
     x_return_if_fail(index_ >= -1);
-    x_return_if_fail(index_ <= (xint)rarray->len);
+    x_return_if_fail(index_ < 0 || (xuint)index_ <= rarray->len);
 
     x_ptr_array_maybe_expand(rarray, 1u + rarray->null_terminated);
 
-    if (index_ < 0) {
-        index_ = rarray->len;
-    }
+    real_index = (index_ >= 0) ? (xuint)index_ : rarray->len;
 
-    if ((xuint)index_ < rarray->len) {
-        memmove(&(rarray->pdata[index_ + 1]), &(rarray->pdata[index_]), (rarray->len - index_) * sizeof (xpointer));
+    if (real_index < rarray->len) {
+        memmove(&(rarray->pdata[real_index + 1]), &(rarray->pdata[real_index]), (rarray->len - real_index) * sizeof (xpointer));
     }
 
     rarray->len++;
-    rarray->pdata[index_] = data;
+    rarray->pdata[real_index] = data;
 
     ptr_array_maybe_null_terminate(rarray);
 }
@@ -1063,7 +1062,7 @@ void x_ptr_array_sort(XPtrArray *array, XCompareFunc compare_func)
     x_return_if_fail(array != NULL);
 
     if (array->len > 0) {
-        x_qsort_with_data(array->pdata, array->len, sizeof(xpointer), (XCompareDataFunc)compare_func, NULL);
+        x_sort_array(array->pdata, array->len, sizeof(xpointer), (XCompareDataFunc)compare_func, NULL);
     }
 }
 
@@ -1072,7 +1071,7 @@ void x_ptr_array_sort_with_data(XPtrArray *array, XCompareDataFunc compare_func,
     x_return_if_fail(array != NULL);
 
     if (array->len > 0) {
-        x_qsort_with_data(array->pdata, array->len, sizeof(xpointer), compare_func, user_data);
+        x_sort_array(array->pdata, array->len, sizeof(xpointer), compare_func, user_data);
     }
 }
 

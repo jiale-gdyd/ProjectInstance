@@ -165,7 +165,7 @@ XValueArray *x_value_array_sort_with_data(XValueArray *value_array, XCompareData
     x_return_val_if_fail(compare_func != NULL, NULL);
 
     if (value_array->n_values) {
-        x_qsort_with_data(value_array->values, value_array->n_values, sizeof(value_array->values[0]), compare_func, user_data);
+        x_sort_array(value_array->values, value_array->n_values, sizeof(value_array->values[0]), compare_func, user_data);
     }
 
     return value_array;

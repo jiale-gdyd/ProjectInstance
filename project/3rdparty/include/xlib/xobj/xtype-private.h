@@ -53,7 +53,7 @@ xboolean _x_object_has_signal_handler(XObject *object);
 
 void _x_object_set_has_signal_handler(XObject *object, xuint signal_id);
 
-#define _X_DEFINE_TYPE_EXTENDED_WITH_PRELUDE(TN, t_n, T_P, _f_, _P_, _C_)   _X_DEFINE_TYPE_EXTENDED_BEGIN_PRE(TN, t_n, T_P) {_P_;} _X_DEFINE_TYPE_EXTENDED_BEGIN_REGISTER(TN, t_n, T_P, _f_){_C_;} _X_DEFINE_TYPE_EXTENDED_END()
+#define _X_DEFINE_TYPE_EXTENDED_WITH_PRELUDE(TN, t_n, T_P, _f_, _P_, _C_)   _X_DEFINE_TYPE_EXTENDED_BEGIN_PRE(TN, t_n) {_P_;} _X_DEFINE_TYPE_EXTENDED_BEGIN_REGISTER(TN, t_n, T_P, _f_){_C_;} _X_DEFINE_TYPE_EXTENDED_END()
 
 X_END_DECLS
 

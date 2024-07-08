@@ -464,7 +464,7 @@ xuint x_type_get_type_registration_serial(void);
 #define _x_type_once_init_leave     x_once_init_leave
 #endif
 
-#define _X_DEFINE_TYPE_EXTENDED_BEGIN_PRE(TypeName, type_name, TYPE_PARENT)             \
+#define _X_DEFINE_TYPE_EXTENDED_BEGIN_PRE(TypeName, type_name)                          \
                                                                                         \
     static void type_name##_init(TypeName *self);                                       \
     static void type_name##_class_init(TypeName##Class *klass);                         \
@@ -511,7 +511,7 @@ xuint x_type_get_type_registration_serial(void);
 }
 
 #define _X_DEFINE_TYPE_EXTENDED_BEGIN(TypeName, type_name, TYPE_PARENT, flags)      \
-    _X_DEFINE_TYPE_EXTENDED_BEGIN_PRE(TypeName, type_name, TYPE_PARENT)             \
+    _X_DEFINE_TYPE_EXTENDED_BEGIN_PRE(TypeName, type_name)                          \
     _X_DEFINE_TYPE_EXTENDED_BEGIN_REGISTER(TypeName, type_name, TYPE_PARENT, flags) \
 
 #define _X_DEFINE_INTERFACE_EXTENDED_BEGIN(TypeName, type_name, TYPE_PREREQ)                            \

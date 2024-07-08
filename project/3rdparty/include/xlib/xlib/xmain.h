@@ -71,15 +71,18 @@ struct _XSourceCallbackFuncs
 };
 
 typedef void (*XSourceDummyMarshal)(void);
+typedef xboolean (*XSourceFuncsPrepareFunc)(XSource *source, xint *timeout_);
+typedef xboolean (*XSourceFuncsCheckFunc)(XSource *source);
+typedef xboolean (*XSourceFuncsDispatchFunc)(XSource *source, XSourceFunc callback, xpointer user_data);
+typedef void (*XSourceFuncsFinalizeFunc)(XSource *source);
 
 struct _XSourceFuncs {
-    xboolean (*prepare)(XSource *source, xint *timeout_);
-    xboolean (*check)(XSource *source);
-    xboolean (*dispatch)(XSource *source, XSourceFunc callback, xpointer user_data);
-    void (*finalize)(XSource *source);
-
-    XSourceFunc         closure_callback;
-    XSourceDummyMarshal closure_marshal;
+    XSourceFuncsPrepareFunc  prepare;
+    XSourceFuncsCheckFunc    check;
+    XSourceFuncsDispatchFunc dispatch;
+    XSourceFuncsFinalizeFunc finalize;
+    XSourceFunc              closure_callback;
+    XSourceDummyMarshal      closure_marshal;
 };
 
 #define X_PRIORITY_HIGH                         -100
