@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2024-06-27 fix[hal_av1d_vdpu383]: add segid reg base config";
+static const char *mpp_last_commit_message = "2024-07-08 fix[mpp_bitread]: Fix negative shift error";
 
 void show_mpp_version(void)
 {

@@ -149,7 +149,7 @@ static xpointer _x_module_open(const xchar *file_name, xboolean bind_lazy, xbool
     xpointer handle;
 
     lock_dlerror();
-    handle = dlopen(file_name, (bind_local ? 0 : RTLD_GLOBAL) | (bind_lazy ? RTLD_LAZY : RTLD_NOW));
+    handle = dlopen(file_name, (bind_local ? RTLD_LOCAL : RTLD_GLOBAL) | (bind_lazy ? RTLD_LAZY : RTLD_NOW));
     if (!handle) {
         const xchar *message = (const xchar *)fetch_dlerror(TRUE);
 

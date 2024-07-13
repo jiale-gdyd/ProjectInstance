@@ -1,5 +1,8 @@
 # 变更日志
 
+## 2024-07-13
+  * rkmpp: fix[mpp_bitread]: Fix negative shift error
+
 ## 2024-07-01
   * rkmpp : fix[hal_av1d_vdpu383]: add segid reg base config
   * libdrm: Fix FTBS on undefined clock_gettime() and asprintf()
