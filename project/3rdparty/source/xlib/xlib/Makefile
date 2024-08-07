@@ -79,6 +79,7 @@ obj-y += xasyncqueue.o
 obj-y += xtrashstack.o
 obj-y += xmappedfile.o
 obj-y += xunicollate.o
+obj-y += xspawn-posix.o
 obj-y += xstringchunk.o
 obj-y += xstrvbuilder.o
 obj-y += xlib-private.o

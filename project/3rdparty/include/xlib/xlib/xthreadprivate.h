@@ -96,4 +96,38 @@ xuint x_thread_n_created(void);
 
 xpointer x_private_set_alloc0(XPrivate *key, xsize size);
 
+void x_mutex_init_impl(XMutex *mutex);
+void x_mutex_clear_impl(XMutex *mutex);
+void x_mutex_lock_impl(XMutex *mutex);
+void x_mutex_unlock_impl(XMutex *mutex);
+xboolean x_mutex_trylock_impl(XMutex *mutex);
+
+void x_rec_mutex_init_impl(XRecMutex *rec_mutex);
+void x_rec_mutex_clear_impl(XRecMutex *rec_mutex);
+void x_rec_mutex_lock_impl(XRecMutex *mutex);
+void x_rec_mutex_unlock_impl(XRecMutex *rec_mutex);
+xboolean x_rec_mutex_trylock_impl(XRecMutex *rec_mutex);
+
+void x_rw_lock_init_impl(XRWLock *rw_lock);
+void x_rw_lock_clear_impl(XRWLock *rw_lock);
+void x_rw_lock_writer_lock_impl(XRWLock *rw_lock);
+xboolean x_rw_lock_writer_trylock_impl(XRWLock *rw_lock);
+void x_rw_lock_writer_unlock_impl(XRWLock *rw_lock);
+void x_rw_lock_reader_lock_impl(XRWLock *rw_lock);
+xboolean x_rw_lock_reader_trylock_impl(XRWLock *rw_lock);
+void x_rw_lock_reader_unlock_impl(XRWLock *rw_lock);
+
+void x_cond_init_impl(XCond *cond);
+void x_cond_clear_impl(XCond *cond);
+void x_cond_wait_impl(XCond *cond, XMutex *mutex);
+void x_cond_signal_impl(XCond *cond);
+void x_cond_broadcast_impl(XCond *cond);
+xboolean x_cond_wait_until_impl(XCond *cond, XMutex *mutex, xint64 end_time);
+
+xpointer x_private_get_impl(XPrivate *key);
+void x_private_set_impl(XPrivate *key, xpointer value);
+void x_private_replace_impl(XPrivate *key, xpointer value);
+
+void x_thread_yield_impl(void);
+
 #endif

@@ -801,7 +801,7 @@ struct liblog_rule *liblog_rule_new(char *line, struct logc_arraylist *levels, s
 
     p = NULL;
     switch (file_path[0]) {
-        case '-' :
+        case '-':
             if (file_path[1] != '"') {
                 logc_error(" - must set before a file output");
                 goto err;
@@ -811,7 +811,7 @@ struct liblog_rule *liblog_rule_new(char *line, struct logc_arraylist *levels, s
             p = file_path + 1;
             a_rule->file_open_flags = O_SYNC;
 
-        case '"' :
+        case '"':
             if (!p) {
                 p = file_path;
             }
@@ -881,7 +881,7 @@ struct liblog_rule *liblog_rule_new(char *line, struct logc_arraylist *levels, s
             }
             break;
 
-        case '|' :
+        case '|':
             a_rule->pipe_fp = popen(output + 1, "w");
             if (!a_rule->pipe_fp) {
                 logc_error("popen fail, errno[%d]", errno);
@@ -896,7 +896,7 @@ struct liblog_rule *liblog_rule_new(char *line, struct logc_arraylist *levels, s
             a_rule->output = liblog_rule_output_pipe;
             break;
 
-        case '>' :
+        case '>':
             if (LOG_STRNCMP(file_path + 1, ==, "syslog", 6)) {
                 a_rule->syslog_facility = syslog_facility_atoi(file_limit);
                 if (a_rule->syslog_facility == -187) {
@@ -916,7 +916,7 @@ struct liblog_rule *liblog_rule_new(char *line, struct logc_arraylist *levels, s
             }
             break;
 
-        case '$' :
+        case '$':
             strncpy(a_rule->record_name, file_path + 1, LOG_MAXLEN_PATH);
             a_rule->record_name[LOG_MAXLEN_PATH] = '\0';
             if (file_limit) {
@@ -978,7 +978,7 @@ struct liblog_rule *liblog_rule_new(char *line, struct logc_arraylist *levels, s
             }
             break;
 
-        default :
+        default:
             logc_error("the 1st char[%c] of file_path[%s] is wrong", file_path[0], file_path);
             goto err;
     }

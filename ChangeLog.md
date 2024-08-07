@@ -1,5 +1,9 @@
 # 变更日志
 
+## 2024-08-07
+  * rkmpp: fix[265e]:Fix the st refernce frame err in tsvc
+  * xlib : Merge branch 'fix-up-gapplication-docs-a-little' into 'main'
+
 ## 2024-07-13
   * rkmpp: fix[mpp_bitread]: Fix negative shift error
 

@@ -4,6 +4,12 @@
 #include "xspawn.h"
 #include "xlibintl.h"
 
+xboolean x_spawn_sync_impl(const xchar *working_directory, xchar **argv, xchar **envp, XSpawnFlags flags, XSpawnChildSetupFunc child_setup, xpointer user_data, xchar **standard_output, xchar **standard_error, xint *wait_status, XError **error);
+xboolean x_spawn_async_with_pipes_and_fds_impl(const xchar *working_directory, const xchar *const *argv, const xchar *const *envp, XSpawnFlags flags, XSpawnChildSetupFunc child_setup, xpointer user_data, xint stdin_fd, xint stdout_fd, xint stderr_fd, const xint *source_fds, const xint *target_fds, xsize n_fds, XPid *child_pid_out, xint *stdin_pipe_out, xint *stdout_pipe_out, xint *stderr_pipe_out, XError **error);
+xboolean x_spawn_check_wait_status_impl(xint wait_status, XError **error);
+
+void x_spawn_close_pid_impl(XPid pid);
+
 static inline xint _x_spawn_exec_err_to_x_error(xint en)
 {
     switch (en) {

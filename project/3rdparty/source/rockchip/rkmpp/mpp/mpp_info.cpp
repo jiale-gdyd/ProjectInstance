@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2024-07-08 fix[mpp_bitread]: Fix negative shift error";
+static const char *mpp_last_commit_message = "2024-07-27 fix[265e]:Fix the st refernce frame err in tsvc";
 
 void show_mpp_version(void)
 {

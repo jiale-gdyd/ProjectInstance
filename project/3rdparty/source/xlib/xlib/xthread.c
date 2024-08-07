@@ -321,3 +321,143 @@ void x_thread_init_with_errorcheck_mutexes(xpointer vtable)
     x_assert(vtable == NULL);
     x_warning("XThread system no longer supports errorcheck mutexes.");
 }
+
+void x_mutex_init(XMutex *mutex)
+{
+    x_mutex_init_impl(mutex);
+}
+
+void x_mutex_clear(XMutex *mutex)
+{
+    x_mutex_clear_impl(mutex);
+}
+
+void x_mutex_lock(XMutex *mutex)
+{
+    x_mutex_lock_impl(mutex);
+}
+
+void x_mutex_unlock(XMutex *mutex)
+{
+    x_mutex_unlock_impl(mutex);
+}
+
+xboolean x_mutex_trylock(XMutex *mutex)
+{
+    return x_mutex_trylock_impl(mutex);
+}
+
+void x_rec_mutex_init(XRecMutex *rec_mutex)
+{
+    x_rec_mutex_init_impl(rec_mutex);
+}
+
+void x_rec_mutex_clear(XRecMutex *rec_mutex)
+{
+    x_rec_mutex_clear_impl(rec_mutex);
+}
+
+void x_rec_mutex_lock(XRecMutex *mutex)
+{
+    x_rec_mutex_lock_impl(mutex);
+}
+
+void x_rec_mutex_unlock(XRecMutex *rec_mutex)
+{
+    x_rec_mutex_unlock_impl(rec_mutex);
+}
+
+xboolean x_rec_mutex_trylock(XRecMutex *rec_mutex)
+{
+    return x_rec_mutex_trylock_impl(rec_mutex);
+}
+
+void x_rw_lock_init(XRWLock *rw_lock)
+{
+    x_rw_lock_init_impl(rw_lock);
+}
+
+void x_rw_lock_clear(XRWLock *rw_lock)
+{
+    x_rw_lock_clear_impl(rw_lock);
+}
+
+void x_rw_lock_writer_lock(XRWLock *rw_lock)
+{
+    x_rw_lock_writer_lock_impl(rw_lock);
+}
+
+xboolean x_rw_lock_writer_trylock(XRWLock *rw_lock)
+{
+    return x_rw_lock_writer_trylock_impl(rw_lock);
+}
+
+void x_rw_lock_writer_unlock(XRWLock *rw_lock)
+{
+    x_rw_lock_writer_unlock_impl(rw_lock);
+}
+
+void x_rw_lock_reader_lock(XRWLock *rw_lock)
+{
+    x_rw_lock_reader_lock_impl(rw_lock);
+}
+
+xboolean x_rw_lock_reader_trylock(XRWLock *rw_lock)
+{
+    return x_rw_lock_reader_trylock_impl(rw_lock);
+}
+
+void x_rw_lock_reader_unlock(XRWLock *rw_lock)
+{
+    x_rw_lock_reader_unlock_impl(rw_lock);
+}
+
+void x_cond_init(XCond *cond)
+{
+    x_cond_init_impl(cond);
+}
+
+void x_cond_clear(XCond *cond)
+{
+    x_cond_clear_impl(cond);
+}
+
+void x_cond_wait(XCond *cond, XMutex *mutex)
+{
+    x_cond_wait_impl(cond, mutex);
+}
+
+void x_cond_signal(XCond *cond)
+{
+    x_cond_signal_impl(cond);
+}
+
+void x_cond_broadcast(XCond *cond)
+{
+    x_cond_broadcast_impl(cond);
+}
+
+xboolean x_cond_wait_until(XCond *cond, XMutex *mutex, xint64 end_time)
+{
+    return x_cond_wait_until_impl(cond, mutex, end_time);
+}
+
+xpointer x_private_get(XPrivate *key)
+{
+    return x_private_get_impl(key);
+}
+
+void x_private_set(XPrivate *key, xpointer value)
+{
+    x_private_set_impl(key, value);
+}
+
+void x_private_replace(XPrivate *key, xpointer value)
+{
+    x_private_replace_impl(key, value);
+}
+
+void x_thread_yield(void)
+{
+    x_thread_yield_impl();
+}
