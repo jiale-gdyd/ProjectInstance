@@ -916,8 +916,12 @@ xboolean x_hash_table_steal_extended(XHashTable *hash_table, xconstpointer looku
     }
 
     if (stolen_value != NULL) {
-        *stolen_value = x_hash_table_fetch_key_or_value(hash_table->values, node_index, hash_table->have_big_values);
-        x_hash_table_assign_key_or_value(hash_table->values, node_index, hash_table->have_big_values, NULL);
+        if (stolen_key && (hash_table->keys == hash_table->values)) {
+            *stolen_value = *stolen_key;
+        } else {
+            *stolen_value = x_hash_table_fetch_key_or_value(hash_table->values, node_index, hash_table->have_big_values);
+            x_hash_table_assign_key_or_value(hash_table->values, node_index, hash_table->have_big_values, NULL);
+        }
     }
 
     x_hash_table_remove_node(hash_table, node_index, FALSE);

@@ -32,8 +32,8 @@ XLIB_VAR char *__xlib_assert_msg;
 char *__xlib_assert_msg = NULL;
 
 #define X_TEST_STATUS_TIMED_OUT             1024
-#define TAP_SUBTEST_PREFIX                  "#    "
-#define TAP_VERSION                         X_STRINGIFY(13)
+#define TAP_VERSION                         X_STRINGIFY(14)
+#define TAP_SUBTEST_PREFIX                  "    "
 
 struct XTestCase {
     xchar *name;

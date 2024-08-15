@@ -39,8 +39,12 @@ xchar *x_string_free_and_steal(XString *string) X_GNUC_WARN_UNUSED_RESULT;
 
 #if X_GNUC_CHECK_VERSION (2, 0) && (XLIB_VERSION_MIN_REQUIRED >= XLIB_VERSION_2_76)
 
+#if !defined(__cplusplus) || !X_GNUC_CHECK_VERSION(6, 1) || X_GNUC_CHECK_VERSION(7, 3)
+
 #define x_string_free(str, free_segment)        \
     (__builtin_constant_p(free_segment) ? ((free_segment) ? (x_string_free)((str), (free_segment)) : x_string_free_and_steal(str)) : (x_string_free)((str), (free_segment)))
+
+#endif
 
 #endif
 

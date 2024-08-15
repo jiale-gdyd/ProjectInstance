@@ -9,11 +9,11 @@ X_BEGIN_DECLS
 typedef struct _XObjectNotifyQueue XObjectNotifyQueue;
 typedef struct _XObjectNotifyContext XObjectNotifyContext;
 
-typedef void (*GObjectNotifyQueueDispatcher)(XObject *object, xuint n_pspecs, XParamSpec **pspecs);
+typedef void (*XObjectNotifyQueueDispatcher)(XObject *object, xuint n_pspecs, XParamSpec **pspecs);
 
 struct _XObjectNotifyContext {
     XQuark                       quark_notify_queue;
-    GObjectNotifyQueueDispatcher dispatcher;
+    XObjectNotifyQueueDispatcher dispatcher;
     XTrashStack                  *_nqueue_trash;
 };
 
@@ -97,7 +97,7 @@ static inline void x_object_notify_queue_thaw(XObject *object, XObjectNotifyQueu
     x_free(free_me);
 }
 
-static inline void x_object_notify_queue_clear(XObject *object, XObjectNotifyQueue *nqueue)
+static inline void x_object_notify_queue_clear(XObject *object X_GNUC_UNUSED, XObjectNotifyQueue *nqueue)
 {
     x_return_if_fail(nqueue->freeze_count > 0);
 
@@ -110,7 +110,7 @@ static inline void x_object_notify_queue_clear(XObject *object, XObjectNotifyQue
     X_UNLOCK(notify_lock);
 }
 
-static inline void x_object_notify_queue_add(XObject *object, XObjectNotifyQueue *nqueue, XParamSpec *pspec)
+static inline void x_object_notify_queue_add(XObject *object X_GNUC_UNUSED, XObjectNotifyQueue *nqueue, XParamSpec *pspec)
 {
     if (pspec->flags & X_PARAM_READABLE) {
         XParamSpec *redirect;
