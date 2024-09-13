@@ -26,6 +26,9 @@ xsize x_ref_string_length(char *str);
 
 typedef char XRefString;
 
+XLIB_AVAILABLE_IN_2_84
+xboolean x_ref_string_equal(const char *str1, const char *str2);
+
 X_END_DECLS
 
 #endif

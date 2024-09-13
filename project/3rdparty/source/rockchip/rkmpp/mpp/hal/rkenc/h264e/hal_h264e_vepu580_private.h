@@ -84,6 +84,12 @@ typedef struct HalH264eVepu580Ctx_t {
 
     /* finetune */
     void                    *tune;
+    MppBuffer               qpmap_base_cfg_buf;
+    MppBuffer               qpmap_qp_cfg_buf;
+    RK_U8*                  md_flag_buf;
+    RK_S32                  qpmap_base_cfg_size;
+    RK_S32                  qpmap_qp_cfg_size;
+    RK_S32                  md_flag_size;
 
     /* two-pass deflicker */
     MppBuffer               buf_pass1;

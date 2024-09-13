@@ -70,7 +70,8 @@ KBUILD_CXXFLAGS += -Wall -O2 \
                 -Wno-unknown-pragmas \
                 -Wno-char-subscripts \
                 -Wno-array-bounds \
-                -Wno-format-extra-args
+                -Wno-format-extra-args \
+                -Wno-int-in-bool-context
 
 KBUILD_CFLAGS += -Wall -O2 \
             -Wno-trigraphs \

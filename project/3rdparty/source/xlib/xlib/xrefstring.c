@@ -109,3 +109,12 @@ xsize x_ref_string_length(char *str)
     x_return_val_if_fail(str != NULL, 0);
     return x_atomic_rc_box_get_size(str) - 1;
 }
+
+xboolean x_ref_string_equal(const char *str1, const char *str2)
+{
+    if (x_atomic_rc_box_get_size((char *)str1) != x_atomic_rc_box_get_size((char *)str2)) {
+        return FALSE;
+    }
+
+    return strcmp(str1, str2) == 0;
+}

@@ -17,7 +17,7 @@ config LIBLOG
 config LIBLOG_COLOR
     tristate "Enable liblog color"
     depends on LIBLOG
-    default y
+    default n
     help
       liblog supports colored output.
 

@@ -56,13 +56,43 @@ typedef struct vepu580_h265_fbk_t {
     RK_U32 st_ctu_num;
 } Vepu580H265Fbk;
 
-typedef struct Vepu580RoiH265BsCfg_t {
+typedef struct Vepu580RoiHevcBsCfg_t {
     RK_U8 amv_en        : 1;
     RK_U8 qp_adj        : 1;
     RK_U8 force_split   : 1;
     RK_U8 force_intra   : 2;
     RK_U8 force_inter   : 2;
-} Vepu580RoiH265BsCfg;
+} Vepu580RoiHevcBsCfg;
+
+typedef struct Vepu580MdInfo_t {
+    RK_U8 vld;
+    RK_U16 sad[16];
+} Vepu580MdInfo;
+
+typedef struct Vepu580RoiHevcQpCfg_t {
+    RK_U16 reserved     : 4;
+    /*
+     * Qp area index
+     * The choosed qp area index.
+     */
+    RK_U16 qp_area_idx  : 4;
+    /*
+     * Qp_adj
+     * Qp_adj
+     * in absolute qp mode qp_adj is the final qp used by encoder
+     * in relative qp mode qp_adj is a adjustment to final qp
+     */
+    RK_S16 qp_adj       : 7;
+    /*
+     * Qp_adj_mode
+     * Qp adjustment mode
+     * 1 - absolute qp mode:
+     *     the 16x16 MB qp is set to the qp_adj value
+     * 0 - relative qp mode
+     *     the 16x16 MB qp is adjusted by qp_adj value
+     */
+    RK_U16 qp_adj_mode  : 1;
+} Vepu580RoiHevcQpCfg;
 
 typedef struct Vepu580H265eFrmCfg_t {
     RK_S32              frame_count;
@@ -159,6 +189,12 @@ typedef struct H265eV580HalContext_t {
 
     /* finetune */
     void                *tune;
+    MppBuffer           qpmap_base_cfg_buf;
+    MppBuffer           qpmap_qp_cfg_buf;
+    RK_U8*              md_flag_buf;
+    RK_S32              qpmap_base_cfg_size;
+    RK_S32              qpmap_qp_cfg_size;
+    RK_S32              md_flag_size;
 } H265eV580HalContext;
 
 #define TILE_BUF_SIZE  MPP_ALIGN(128 * 1024, 256)

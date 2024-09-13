@@ -1,5 +1,10 @@
 # 变更日志
 
+## 2024-09-12
+  * rkmpp : fix[h265d_vdpu383]: fix dec err when ps_update_flag=0
+  * libv4l: v4l-utils: sync with latest kernel
+  * xlib  : Merge branch 'main' into 'main'
+
 ## 2024-08-07
   * rkmpp: fix[265e]:Fix the st refernce frame err in tsvc
   * xlib : Merge branch 'fix-up-gapplication-docs-a-little' into 'main'

@@ -364,6 +364,7 @@ X_NORETURN static void write_err_and_exit(xint fd, xint msg)
 
     write_all(fd, &msg, sizeof(msg));
     write_all(fd, &en, sizeof(en));
+    close(fd);
 
     _exit(1);
 }

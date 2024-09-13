@@ -547,11 +547,19 @@ static MPP_RET dpb_mark_malloc(H264dVideoCtx_t *p_Vid, H264_StorePic_t *dec_pic)
                     impl->color_primaries = p->colour_primaries;
                     impl->color_trc = p->transfer_characteristics;
                     impl->colorspace = p->matrix_coefficients;
+                    if (impl->color_trc == MPP_FRAME_TRC_SMPTEST2084)
+                        impl->fmt |= MPP_FRAME_HDR;
                 } else {
                     impl->color_primaries = MPP_FRAME_PRI_UNSPECIFIED;
                     impl->color_trc = MPP_FRAME_TRC_UNSPECIFIED;
                     impl->colorspace = MPP_FRAME_SPC_UNSPECIFIED;
                 }
+            }
+
+            if (p_Vid->p_Cur->hdr_dynamic && p_Vid->p_Cur->hdr_dynamic_meta) {
+                impl->hdr_dynamic_meta = p_Vid->p_Cur->hdr_dynamic_meta;
+                p_Vid->p_Cur->hdr_dynamic = 0;
+                impl->fmt |= MPP_FRAME_HDR;
             }
 
             impl->poc = dec_pic->poc;
@@ -1549,12 +1557,6 @@ static void check_refer_picture_lists(H264_SLICE_t *currSlice)
             p_err->cur_err_flag |= check_ref_dbp_err(p_Dec, p_Dec->refpic_info_b[1], active_l1) ? 1 : 0;
             H264D_DBG(H264D_DBG_DPB_REF_ERR, "list1 dpb: cur_err_flag=%d, pps_refs=%d, over_flag=%d, num_ref_l1=%d\n",
                       p_err->cur_err_flag, pps_refs, over_flag, active_l1);
-        }
-        //!< B_SLICE only has one refer
-        if ((currSlice->active_sps->vui_seq_parameters.num_reorder_frames > 1)
-            && (currSlice->p_Dpb->ref_frames_in_buffer < 2)) {
-            p_err->cur_err_flag |= 1;
-            H264D_DBG(H264D_DBG_DPB_REF_ERR, "[DPB_REF_ERR] error, B frame only has one refer");
         }
     }
 

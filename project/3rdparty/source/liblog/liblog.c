@@ -879,11 +879,11 @@ void liblog_vprintf(struct liblog_category *category, const char *file, size_t f
 #if defined(CONFIG_LIBLOG)
     struct liblog_thread *a_thread;
 
-    if (liblog_category_needless_level(category, level)) {
-        return;
-    }
-
     pthread_rwlock_rdlock(&liblog_env_lock);
+
+    if (liblog_category_needless_level(category, level)) {
+        goto exit;
+    }
 
     if (!liblog_env_is_init) {
         logc_error("never call liblog_init() or liblog_default_init() before");
@@ -920,11 +920,11 @@ void liblog_printf_hex(struct liblog_category *category, const char *file, size_
 #if defined(CONFIG_LIBLOG)
     struct liblog_thread *a_thread;
 
-    if (liblog_category_needless_level(category, level)) {
-        return;
-    }
-
     pthread_rwlock_rdlock(&liblog_env_lock);
+
+    if (liblog_category_needless_level(category, level)) {
+        goto exit;
+    }
 
     if (!liblog_env_is_init) {
         logc_error("never call liblog_init() or liblog_default_init() before");
@@ -961,11 +961,11 @@ void liblog_default_vprintf(const char *file, size_t filelen, const char *func, 
 #if defined(CONFIG_LIBLOG)
     struct liblog_thread *a_thread;
 
-    if (liblog_category_needless_level(liblog_default_category, level)) {
-        return;
-    }
-
     pthread_rwlock_rdlock(&liblog_env_lock);
+
+    if (liblog_category_needless_level(liblog_default_category, level)) {
+        goto exit;
+    }
 
     if (!liblog_env_is_init) {
         logc_error("never call liblog_init() or liblog_default_init() before");
@@ -1007,11 +1007,11 @@ void liblog_default_printf_hex(const char *file, size_t filelen, const char *fun
 #if defined(CONFIG_LIBLOG)
     struct liblog_thread *a_thread;
 
-    if (liblog_category_needless_level(liblog_default_category, level)) {
-        return;
-    }
-
     pthread_rwlock_rdlock(&liblog_env_lock);
+
+    if (liblog_category_needless_level(liblog_default_category, level)) {
+        goto exit;
+    }
 
     if (!liblog_env_is_init) {
         logc_error("never call liblog_init() or liblog_default_init() before");
@@ -1054,11 +1054,11 @@ void liblog_printf(struct liblog_category *category, const char *file, size_t fi
     va_list args;
     struct liblog_thread *a_thread;
 
-    if (category && liblog_category_needless_level(category, level)) {
-        return;
-    }
-
     pthread_rwlock_rdlock(&liblog_env_lock);
+
+    if (category && liblog_category_needless_level(category, level)) {
+        goto exit;
+    }
 
     if (!liblog_env_is_init) {
         logc_error("never call liblog_init() or liblog_default_init() before");
@@ -1236,7 +1236,13 @@ liblog_set_record_exit:
 int liblog_level_enabled(struct liblog_category *category, int level)
 {
 #if defined(CONFIG_LIBLOG)
-    return (category && (liblog_category_needless_level(category, level) == 0));
+    int enable = 0;
+
+    pthread_rwlock_rdlock(&liblog_env_lock);
+    enable = category && ((liblog_category_needless_level(category, level) == 0));
+    pthread_rwlock_unlock(&liblog_env_lock);
+
+    return enable;
 #else
     return 0;
 #endif

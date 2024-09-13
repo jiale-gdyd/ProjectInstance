@@ -492,7 +492,9 @@ static int liblog_conf_build_with_file(struct liblog_conf *a_conf)
         }
     }
 
-    a_conf->level = liblog_level_list_atoi(a_conf->levels, a_conf->log_level);
+    if (a_conf->log_level[0] != '\0') {
+        a_conf->level = liblog_level_list_atoi(a_conf->levels, a_conf->log_level);
+    }
 
 exit:
     fclose(fp);

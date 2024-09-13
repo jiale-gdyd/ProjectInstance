@@ -14,7 +14,7 @@
 
 #define EXEEXT
 
-#define PACKAGE_VERSION                         "2.81.2"
+#define PACKAGE_VERSION                         "2.83.0"
 #define GETTEXT_PACKAGE                         "xlib20"
 
 #define XIO_MODULE_DIR                          ""
@@ -23,12 +23,12 @@
 #define XLIB_LOCALSTATEDIR                      ""
 #define XLIB_RUNSTATEDIR                        "/run"
 
-#define XLIB_BINARY_AGE                         8102
+#define XLIB_BINARY_AGE                         8300
 #define XLIB_INTERFACE_AGE                      0
 
 #define XLIB_MAJOR_VERSION                      2
-#define XLIB_MINOR_VERSION                      81
-#define XLIB_MICRO_VERSION                      2
+#define XLIB_MINOR_VERSION                      83
+#define XLIB_MICRO_VERSION                      0
 
 #define X_VA_COPY                               va_copy
 

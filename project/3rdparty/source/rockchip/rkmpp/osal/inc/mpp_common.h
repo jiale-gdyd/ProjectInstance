@@ -44,6 +44,8 @@
 #define MPP_ALIGN_GEN(x, a)     (((x)+(a)-1)/(a)*(a))
 #define MPP_VSWAP(a, b)         { a ^= b; b ^= a; a ^= b; }
 
+#define MPP_GENMASK(h, l) (((1ULL << ((h) + 1)) - 1) & ~((1ULL << (l)) - 1))
+
 #define MPP_RB16(x)  ((((const RK_U8*)(x))[0] << 8) | ((const RK_U8*)(x))[1])
 #define MPP_WB16(p, d) do { \
         ((RK_U8*)(p))[1] = (d); \
@@ -216,7 +218,20 @@ static __inline RK_U32 mpp_is_32bit()
 static __inline RK_S32 mpp_dup(RK_S32 fd)
 {
     /* avoid stdin / stdout / stderr so start from 3 */
+#ifdef F_DUPFD_CLOEXEC
     return fcntl(fd, F_DUPFD_CLOEXEC, 3);
+#else
+    RK_S32 new_fd = -1;
+
+    new_fd = fcntl(fd, F_DUPFD, 3);
+    if (new_fd == -1)
+        return -1;
+
+    if (fcntl(new_fd, F_SETFD, FD_CLOEXEC) == -1)
+        return -1;
+
+    return new_fd;
+#endif
 }
 
 RK_S32 axb_div_c(RK_S32 a, RK_S32 b, RK_S32 c);
