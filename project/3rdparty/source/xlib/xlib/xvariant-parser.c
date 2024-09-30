@@ -295,8 +295,13 @@ static xchar *pattern_coalesce(const xchar *left, const xchar *right)
 {
     xchar *out;
     xchar *result;
+    size_t buflen;
+    size_t left_len = strlen(left), right_len = strlen(right);
 
-    out = result = (xchar *)x_malloc(strlen(left) + strlen(right));
+    x_assert(left_len < X_MAXSIZE - right_len);
+    buflen = left_len + right_len + 1;
+    out = result = x_malloc(buflen);
+
     while (*left && *right) {
         if (*left == *right) {
             *out++ = *left++;
@@ -326,6 +331,8 @@ again:
             }
         }
     }
+
+    x_assert(out < result + buflen);
 
     if (*left || *right) {
         x_free(result);
@@ -688,7 +695,7 @@ static XVariant *array_get_value(AST *ast, const XVariantType  *type, XError **e
         return ast_type_error(ast, type, error);
     }
 
-    x_variant_builder_init(&builder, type);
+    x_variant_builder_init_static(&builder, type);
     childtype = x_variant_type_element(type);
 
     for (i = 0; i < array->n_children; i++) {
@@ -801,7 +808,7 @@ static XVariant *tuple_get_value(AST *ast, const XVariantType *type, XError **er
         return ast_type_error(ast, type, error);
     }
 
-    x_variant_builder_init(&builder, type);
+    x_variant_builder_init_static(&builder, type);
     childtype = x_variant_type_first(type);
 
     for (i = 0; i < tuple->n_children; i++) {
@@ -1013,7 +1020,7 @@ static XVariant *dictionary_get_value(AST *ast, const XVariantType *type, XError
             return ast_type_error(ast, type, error);
         }
 
-        x_variant_builder_init(&builder, type);
+        x_variant_builder_init_static(&builder, type);
 
         subtype = x_variant_type_key(type);
         if (!(subvalue = ast_get_value(dict->keys[0], subtype, error))) {
@@ -1043,7 +1050,7 @@ static XVariant *dictionary_get_value(AST *ast, const XVariantType *type, XError
         key = x_variant_type_key(entry);
         val = x_variant_type_value(entry);
 
-        x_variant_builder_init(&builder, type);
+        x_variant_builder_init_static(&builder, type);
 
         for (i = 0; i < dict->n_children; i++) {
             XVariant *subvalue;

@@ -45,7 +45,7 @@ extern "C" {
 #define RGA_REG_CMD_LEN                             0x1c
 #define RGA_CMD_BUF_SIZE                            0x700
 
-#define RGA_TASK_NUM_MAX                            50
+#define RGA_TASK_NUM_MAX                            256
 
 #define RGA_SCHED_PRIORITY_DEFAULT                  0
 #define RGA_SCHED_PRIORITY_MAX                      6
@@ -92,6 +92,13 @@ enum {
     nearby   = 0x0,
     bilinear = 0x1,
     bicubic  = 0x2,
+};
+
+enum rga_scale_interp {
+    RGA_INTERP_DEFAULT = 0x0,
+    RGA_INTERP_LINEAR  = 0x1,
+    RGA_INTERP_BICUBIC = 0x2,
+    RGA_INTERP_AVERAGE = 0x3,
 };
 
 enum {
@@ -328,56 +335,70 @@ struct rga_feature {
     uint32_t user_close_fence : 1;
 };
 
+struct rga_interp {
+    uint8_t horiz : 4;
+    uint8_t verti : 4;
+};
+
+struct rga_rgba5551_alpha {
+    uint16_t flags;
+    uint8_t  alpha0;
+    uint8_t  alpha1;
+};
+
 struct rga_req {
-    uint8_t             render_mode;
-    rga_img_info_t      src;
-    rga_img_info_t      dst;
-    rga_img_info_t      pat;
-    uint64_t            rop_mask_addr;
-    uint64_t            LUT_addr;
-    RECT                clip;
-    int32_t             sina;
-    int32_t             cosa;
-    uint16_t            alpha_rop_flag;
-    uint8_t             scale_mode;
-    uint32_t            color_key_max;
-    uint32_t            color_key_min;
-    uint32_t            fg_color;
-    uint32_t            bg_color;
-    COLOR_FILL          gr_color;
-    line_draw_t         line_draw_info;
-    FADING              fading;
-    uint8_t             PD_mode;
-    uint8_t             alpha_global_value;
-    uint16_t            rop_code;
-    uint8_t             bsfilter_flag;
-    uint8_t             palette_mode;
-    uint8_t             yuv2rgb_mode;
-    uint8_t             endian_mode;
-    uint8_t             rotate_mode;
-    uint8_t             color_fill_mode;
-    MMU                 mmu_info;
-    uint8_t             alpha_rop_mode;
-    uint8_t             src_trans_mode;
-    uint8_t             dither_mode;
-    full_csc_t          full_csc;
-    int32_t             in_fence_fd;
-    uint8_t             core;
-    uint8_t             priority;
-    int32_t             out_fence_fd;
-    uint8_t             handle_flag;
-    rga_mosaic_info_t   mosaic_info;
-    uint8_t             uvhds_mode;
-    uint8_t             uvvds_mode;
-    rga_osd_info_t      osd_info;
-    rga_pre_intr_info_t pre_intr_info;
-    uint8_t             fg_global_alpha;
-    uint8_t             bg_global_alpha;
+    uint8_t                   render_mode;
+    rga_img_info_t            src;
+    rga_img_info_t            dst;
+    rga_img_info_t            pat;
+    uint64_t                  rop_mask_addr;
+    uint64_t                  LUT_addr;
+    RECT                      clip;
+    int32_t                   sina;
+    int32_t                   cosa;
+    uint16_t                  alpha_rop_flag;
+    union {
+        struct rga_interp     interp;
+        uint8_t               scale_mode;
+    };
+    uint32_t                  color_key_max;
+    uint32_t                  color_key_min;
+    uint32_t                  fg_color;
+    uint32_t                  bg_color;
+    COLOR_FILL                gr_color;
+    line_draw_t               line_draw_info;
+    FADING                    fading;
+    uint8_t                   PD_mode;
+    uint8_t                   alpha_global_value;
+    uint16_t                  rop_code;
+    uint8_t                   bsfilter_flag;
+    uint8_t                   palette_mode;
+    uint8_t                   yuv2rgb_mode;
+    uint8_t                   endian_mode;
+    uint8_t                   rotate_mode;
+    uint8_t                   color_fill_mode;
+    MMU                       mmu_info;
+    uint8_t                   alpha_rop_mode;
+    uint8_t                   src_trans_mode;
+    uint8_t                   dither_mode;
+    full_csc_t                full_csc;
+    int32_t                   in_fence_fd;
+    uint8_t                   core;
+    uint8_t                   priority;
+    int32_t                   out_fence_fd;
+    uint8_t                   handle_flag;
+    rga_mosaic_info_t         mosaic_info;
+    uint8_t                   uvhds_mode;
+    uint8_t                   uvvds_mode;
+    rga_osd_info_t            osd_info;
+    rga_pre_intr_info_t       pre_intr_info;
+    uint8_t                   fg_global_alpha;
+    uint8_t                   bg_global_alpha;
 
-    struct rga_feature  feature;
-    struct rga_csc_clip full_csc_clip;
-
-    uint8_t             reservr[43];
+    struct rga_feature        feature;
+    struct rga_csc_clip       full_csc_clip;
+    struct rga_rgba5551_alpha rgba5551_alpha;
+    uint8_t                   reservr[39];
 };
 
 struct rga_user_request {

@@ -11,7 +11,7 @@
 #include <xlib/xobj/xtype-private.h>
 #include <xlib/xobj/xvaluecollector.h>
 
-#define X_FLOAT_EPSILON                     (1e-30)
+#define X_FLOAT_EPSILON                     (1e-30f)
 #define X_DOUBLE_EPSILON                    (1e-90)
 
 static void param_char_init(XParamSpec *pspec)
@@ -537,7 +537,7 @@ static void param_double_set_default(XParamSpec *pspec, XValue *value)
 static xboolean param_double_is_valid(XParamSpec *pspec, const XValue *value)
 {
     XParamSpecDouble *dspec = X_PARAM_SPEC_DOUBLE(pspec);
-    xfloat oval = value->data[0].v_double;
+    xdouble oval = value->data[0].v_double;
 
     return dspec->minimum <= oval && oval <= dspec->maximum;
 }

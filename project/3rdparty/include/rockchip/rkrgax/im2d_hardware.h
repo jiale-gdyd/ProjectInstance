@@ -11,6 +11,7 @@ typedef enum {
     IM_RGA_HW_VERSION_RGA_2_LITE0_INDEX,
     IM_RGA_HW_VERSION_RGA_2_LITE1_INDEX,
     IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX,
+    IM_RGA_HW_VERSION_RGA_2_PRO_INDEX,
     IM_RGA_HW_VERSION_RGA_3_INDEX,
     IM_RGA_HW_VERSION_MASK_INDEX,
 } IM_RGA_HW_VERSION_INDEX;
@@ -23,6 +24,7 @@ typedef enum {
     IM_RGA_HW_VERSION_RGA_2_LITE0   = 1 << IM_RGA_HW_VERSION_RGA_2_LITE0_INDEX,
     IM_RGA_HW_VERSION_RGA_2_LITE1   = 1 << IM_RGA_HW_VERSION_RGA_2_LITE1_INDEX,
     IM_RGA_HW_VERSION_RGA_2_ENHANCE = 1 << IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX,
+    IM_RGA_HW_VERSION_RGA_2_PRO     = 1 << IM_RGA_HW_VERSION_RGA_2_PRO_INDEX,
     IM_RGA_HW_VERSION_RGA_3         = 1 << IM_RGA_HW_VERSION_RGA_3_INDEX,
     IM_RGA_HW_VERSION_MASK          = ~((~(unsigned int)0x0 << IM_RGA_HW_VERSION_MASK_INDEX) | 1),
 } IM_RGA_HW_VERSION;
@@ -30,7 +32,8 @@ typedef enum {
 typedef enum {
     IM_RGA_SUPPORT_FORMAT_ERROR_INDEX = 0,
     IM_RGA_SUPPORT_FORMAT_RGB_INDEX,
-    IM_RGA_SUPPORT_FORMAT_RGB_OTHER_INDEX,
+    IM_RGA_SUPPORT_FORMAT_ARGB_16BIT_INDEX,
+    IM_RGA_SUPPORT_FORMAT_RGBA_16BIT_INDEX,
     IM_RGA_SUPPORT_FORMAT_BPP_INDEX,
     IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT_INDEX,
     IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT_INDEX,
@@ -45,13 +48,17 @@ typedef enum {
     IM_RGA_SUPPORT_FORMAT_YUV_400_INDEX,
     IM_RGA_SUPPORT_FORMAT_Y4_INDEX,
     IM_RGA_SUPPORT_FORMAT_RGBA2BPP_INDEX,
+    IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT_INDEX,
+    IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT_INDEX,
+    IM_RGA_SUPPORT_FORMAT_Y8_INDEX,
     IM_RGA_SUPPORT_FORMAT_MASK_INDEX,
 } IM_RGA_SUPPORT_FORMAT_INDEX;
 
 typedef enum {
     IM_RGA_SUPPORT_FORMAT_ERROR                       = 1 << IM_RGA_SUPPORT_FORMAT_ERROR_INDEX,
     IM_RGA_SUPPORT_FORMAT_RGB                         = 1 << IM_RGA_SUPPORT_FORMAT_RGB_INDEX,
-    IM_RGA_SUPPORT_FORMAT_RGB_OTHER                   = 1 << IM_RGA_SUPPORT_FORMAT_RGB_OTHER_INDEX,
+    IM_RGA_SUPPORT_FORMAT_ARGB_16BIT                  = 1 << IM_RGA_SUPPORT_FORMAT_ARGB_16BIT_INDEX,
+    IM_RGA_SUPPORT_FORMAT_RGBA_16BIT                  = 1 << IM_RGA_SUPPORT_FORMAT_RGBA_16BIT_INDEX,
     IM_RGA_SUPPORT_FORMAT_BPP                         = 1 << IM_RGA_SUPPORT_FORMAT_BPP_INDEX,
     IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT  = 1 << IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT_INDEX,
     IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT = 1 << IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT_INDEX,
@@ -66,6 +73,9 @@ typedef enum {
     IM_RGA_SUPPORT_FORMAT_YUV_400                     = 1 << IM_RGA_SUPPORT_FORMAT_YUV_400_INDEX,
     IM_RGA_SUPPORT_FORMAT_Y4                          = 1 << IM_RGA_SUPPORT_FORMAT_Y4_INDEX,
     IM_RGA_SUPPORT_FORMAT_RGBA2BPP                    = 1 << IM_RGA_SUPPORT_FORMAT_RGBA2BPP_INDEX,
+    IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT                 = 1 << IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT_INDEX,
+    IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT  = 1 << IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT_INDEX,
+    IM_RGA_SUPPORT_FORMAT_Y8                          = 1 << IM_RGA_SUPPORT_FORMAT_Y8_INDEX,
     IM_RGA_SUPPORT_FORMAT_MASK                        = ~((~(unsigned int)0x0 << IM_RGA_SUPPORT_FORMAT_MASK_INDEX) | 1),
 } IM_RGA_SUPPORT_FORMAT;
 
@@ -83,6 +93,7 @@ typedef enum {
     IM_RGA_SUPPORT_FEATURE_MOSAIC_INDEX,
     IM_RGA_SUPPORT_FEATURE_OSD_INDEX,
     IM_RGA_SUPPORT_FEATURE_PRE_INTR_INDEX,
+    IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP_INDEX,
     IM_RGA_SUPPORT_FEATURE_MASK_INDEX,
 } IM_RGA_SUPPORT_FEATURE_INDEX;
 
@@ -100,6 +111,7 @@ typedef enum {
     IM_RGA_SUPPORT_FEATURE_MOSAIC        = 1 << IM_RGA_SUPPORT_FEATURE_MOSAIC_INDEX,
     IM_RGA_SUPPORT_FEATURE_OSD           = 1 << IM_RGA_SUPPORT_FEATURE_OSD_INDEX,
     IM_RGA_SUPPORT_FEATURE_PRE_INTR      = 1 << IM_RGA_SUPPORT_FEATURE_PRE_INTR_INDEX,
+    IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP = 1 << IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP_INDEX,
     IM_RGA_SUPPORT_FEATURE_MASK          = ~((~(unsigned int)0x0 << IM_RGA_SUPPORT_FEATURE_MASK_INDEX) | 1),
 } IM_RGA_SUPPORT_FEATURE;
 
@@ -126,7 +138,7 @@ const rga_info_table_entry hw_info_table[] = {
     {   IM_RGA_HW_VERSION_RGA_1         , 8192, 2048, 4, 8, 1,
                                         /* input format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
-                                        IM_RGA_SUPPORT_FORMAT_RGB_OTHER |
+                                        IM_RGA_SUPPORT_FORMAT_ARGB_16BIT |
                                         IM_RGA_SUPPORT_FORMAT_BPP |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT |
@@ -134,7 +146,8 @@ const rga_info_table_entry hw_info_table[] = {
                                         IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT,
                                         /* output format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
-                                        IM_RGA_SUPPORT_FORMAT_RGB_OTHER |
+                                        IM_RGA_SUPPORT_FORMAT_ARGB_16BIT |
+                                        IM_RGA_SUPPORT_FORMAT_RGBA_16BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT |
@@ -148,7 +161,7 @@ const rga_info_table_entry hw_info_table[] = {
     { IM_RGA_HW_VERSION_RGA_1_PLUS      , 8192, 2048, 4, 8, 1,
                                         /* input format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
-                                        IM_RGA_SUPPORT_FORMAT_RGB_OTHER |
+                                        IM_RGA_SUPPORT_FORMAT_ARGB_16BIT |
                                         IM_RGA_SUPPORT_FORMAT_BPP |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT |
@@ -156,7 +169,8 @@ const rga_info_table_entry hw_info_table[] = {
                                         IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT,
                                         /* output format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
-                                        IM_RGA_SUPPORT_FORMAT_RGB_OTHER |
+                                        IM_RGA_SUPPORT_FORMAT_ARGB_16BIT |
+                                        IM_RGA_SUPPORT_FORMAT_RGBA_16BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT |
@@ -169,14 +183,15 @@ const rga_info_table_entry hw_info_table[] = {
     { IM_RGA_HW_VERSION_RGA_2           , 8192, 4096, 4, 16, 2,
                                         /* input format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
-                                        IM_RGA_SUPPORT_FORMAT_RGB_OTHER |
+                                        IM_RGA_SUPPORT_FORMAT_ARGB_16BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT,
                                         /* output format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
-                                        IM_RGA_SUPPORT_FORMAT_RGB_OTHER |
+                                        IM_RGA_SUPPORT_FORMAT_ARGB_16BIT |
+                                        IM_RGA_SUPPORT_FORMAT_RGBA_16BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT |
@@ -190,14 +205,15 @@ const rga_info_table_entry hw_info_table[] = {
     { IM_RGA_HW_VERSION_RGA_2_LITE0     , 8192, 4096, 4, 8, 2,
                                         /* input format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
-                                        IM_RGA_SUPPORT_FORMAT_RGB_OTHER |
+                                        IM_RGA_SUPPORT_FORMAT_ARGB_16BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT,
                                         /* output format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
-                                        IM_RGA_SUPPORT_FORMAT_RGB_OTHER |
+                                        IM_RGA_SUPPORT_FORMAT_ARGB_16BIT |
+                                        IM_RGA_SUPPORT_FORMAT_RGBA_16BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT |
@@ -211,7 +227,7 @@ const rga_info_table_entry hw_info_table[] = {
     { IM_RGA_HW_VERSION_RGA_2_LITE1     , 8192, 4096, 4, 8, 2,
                                         /* input format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
-                                        IM_RGA_SUPPORT_FORMAT_RGB_OTHER |
+                                        IM_RGA_SUPPORT_FORMAT_ARGB_16BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT |
@@ -222,7 +238,8 @@ const rga_info_table_entry hw_info_table[] = {
                                         IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_10_BIT,
                                         /* output format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
-                                        IM_RGA_SUPPORT_FORMAT_RGB_OTHER |
+                                        IM_RGA_SUPPORT_FORMAT_ARGB_16BIT |
+                                        IM_RGA_SUPPORT_FORMAT_RGBA_16BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT |
@@ -235,7 +252,7 @@ const rga_info_table_entry hw_info_table[] = {
     { IM_RGA_HW_VERSION_RGA_2_ENHANCE   , 8192, 4096, 4, 16,  2,
                                         /* input format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
-                                        IM_RGA_SUPPORT_FORMAT_RGB_OTHER |
+                                        IM_RGA_SUPPORT_FORMAT_ARGB_16BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT |
@@ -246,7 +263,8 @@ const rga_info_table_entry hw_info_table[] = {
                                         IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_10_BIT,
                                         /* output format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
-                                        IM_RGA_SUPPORT_FORMAT_RGB_OTHER |
+                                        IM_RGA_SUPPORT_FORMAT_ARGB_16BIT |
+                                        IM_RGA_SUPPORT_FORMAT_RGBA_16BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT |
@@ -257,6 +275,50 @@ const rga_info_table_entry hw_info_table[] = {
                                         IM_RGA_SUPPORT_FEATURE_COLOR_FILL |
                                         IM_RGA_SUPPORT_FEATURE_COLOR_PALETTE |
                                         IM_RGA_SUPPORT_FEATURE_ROP,
+                                        /* reserved */
+                                        {0} },
+    { IM_RGA_HW_VERSION_RGA_2_PRO       , 8192, 8192, 4, 16,  2,
+                                        /* input format */
+                                        IM_RGA_SUPPORT_FORMAT_RGB |
+                                        IM_RGA_SUPPORT_FORMAT_ARGB_16BIT |
+                                        IM_RGA_SUPPORT_FORMAT_YUV_400 |
+                                        IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT |
+                                        IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT |
+                                        IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT |
+                                        IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT |
+                                        IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT |
+                                        IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT |
+                                        IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_10_BIT |
+                                        IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_10_BIT |
+                                        IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_10_BIT |
+                                        IM_RGA_SUPPORT_FORMAT_YUYV_422 |
+                                        IM_RGA_SUPPORT_FORMAT_RGBA2BPP |
+                                        IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT,
+                                        /* output format */
+                                        IM_RGA_SUPPORT_FORMAT_RGB |
+                                        IM_RGA_SUPPORT_FORMAT_ARGB_16BIT |
+                                        IM_RGA_SUPPORT_FORMAT_RGBA_16BIT |
+                                        IM_RGA_SUPPORT_FORMAT_Y4 |
+                                        IM_RGA_SUPPORT_FORMAT_YUV_400 |
+                                        IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT |
+                                        IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT |
+                                        IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT |
+                                        IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT |
+                                        IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT |
+                                        IM_RGA_SUPPORT_FORMAT_YUYV_420 |
+                                        IM_RGA_SUPPORT_FORMAT_YUYV_422 |
+                                        IM_RGA_SUPPORT_FORMAT_Y8,
+                                        /* feature */
+                                        IM_RGA_SUPPORT_FEATURE_COLOR_FILL |
+                                        IM_RGA_SUPPORT_FEATURE_COLOR_PALETTE |
+                                        IM_RGA_SUPPORT_FEATURE_ROP |
+                                        IM_RGA_SUPPORT_FEATURE_QUANTIZE |
+                                        IM_RGA_SUPPORT_FEATURE_SRC1_R2Y_CSC |
+                                        IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC |
+                                        IM_RGA_SUPPORT_FEATURE_MOSAIC |
+                                        IM_RGA_SUPPORT_FEATURE_OSD |
+                                        IM_RGA_SUPPORT_FEATURE_PRE_INTR |
+                                        IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP,
                                         /* reserved */
                                         {0} },
     { IM_RGA_HW_VERSION_RGA_3           , 8176, 8128, 16, 8,  4,

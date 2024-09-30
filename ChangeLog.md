@@ -1,5 +1,12 @@
 # 变更日志
 
+## 2024-09-29
+  * rkmpp    : fix[smt_rc]: Fix first frame QP error
+  * rga      : normal: fix wrong full_csc_clip size in memcpy
+  * asio2    : Fix the code quality check errors in TscanCode
+  * rapidjson: add test for sso optimized string
+  * xlib     : Merge branch '3042-msys2-still-intermittent' into 'main'
+
 ## 2024-09-12
   * rkmpp : fix[h265d_vdpu383]: fix dec err when ps_update_flag=0
   * libv4l: v4l-utils: sync with latest kernel

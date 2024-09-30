@@ -52,7 +52,7 @@ RGA_SINGLETON_STATIC_INSTANCE(RockchipRga)
 RockchipRga::RockchipRga() : mSupportRga(false), mLogOnce(0), mLogAlways(0), mContext(NULL)
 {
     RkRgaInit();
-    rga_error("%s", RGA_API_FULL_VERSION);
+    rga_info("%s", RGA_API_FULL_VERSION);
 }
 
 RockchipRga::~RockchipRga()
@@ -68,7 +68,7 @@ int RockchipRga::RkRgaInit()
     }
 
     ret = RgaInit(&mContext);
-    if(ret == 0) {
+    if (ret >= 0) {
         mSupportRga = true;
     } else {
         mSupportRga = false;
@@ -224,7 +224,7 @@ int RockchipRga::RkRgaGetBufferFd(bo_t *bo_info, int *fd)
     return ret;
 }
 
-int RockchipRga::RkRgaBlit(rga_info *src, rga_info *dst, rga_info *src1)
+int RockchipRga::RkRgaBlit(rga_infos *src, rga_infos *dst, rga_infos *src1)
 {
     int ret = 0;
 
@@ -233,8 +233,6 @@ int RockchipRga::RkRgaBlit(rga_info *src, rga_info *dst, rga_info *src1)
         RkRgaLogOutUserPara(src);
         RkRgaLogOutUserPara(dst);
         RkRgaLogOutUserPara(src1);
-
-        rga_error("This output the user parameters when rga call blit fail");
     }
 
     return ret;
@@ -252,14 +250,14 @@ int RockchipRga::RkRgaFlush()
     return ret;
 }
 
-int RockchipRga::RkRgaCollorFill(rga_info *dst)
+int RockchipRga::RkRgaCollorFill(rga_infos *dst)
 {
     int ret = 0;
     ret = RgaCollorFill(dst);
     return ret;
 }
 
-int RockchipRga::RkRgaCollorPalette(rga_info *src, rga_info *dst, rga_info *lut)
+int RockchipRga::RkRgaCollorPalette(rga_infos *src, rga_infos *dst, rga_infos *lut)
 {
     int ret = 0;
 
@@ -267,14 +265,12 @@ int RockchipRga::RkRgaCollorPalette(rga_info *src, rga_info *dst, rga_info *lut)
     if (ret) {
         RkRgaLogOutUserPara(src);
         RkRgaLogOutUserPara(dst);
-
-        rga_error("This output the user parameters when rga call CollorPalette fail");
     }
 
     return ret;
 }
 
-int RockchipRga::RkRgaLogOutUserPara(rga_info *rgaInfo)
+int RockchipRga::RkRgaLogOutUserPara(rga_infos *rgaInfo)
 {
     if (!rgaInfo) {
         return -EINVAL;

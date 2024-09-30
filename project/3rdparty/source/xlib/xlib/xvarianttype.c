@@ -2,8 +2,8 @@
 #include <xlib/xlib/config.h>
 #include <xlib/xlib/xstrfuncs.h>
 #include <xlib/xlib/xtestutils.h>
-#include <xlib/xlib/xvarianttype.h>
 #include <xlib/xlib/xvariant-internal.h>
+#include <xlib/xlib/xvarianttype-private.h>
 
 static xboolean x_variant_type_check(const XVariantType *type)
 {
@@ -275,46 +275,16 @@ xboolean x_variant_type_is_variant(const XVariantType *type)
 
 xuint x_variant_type_hash(xconstpointer type)
 {
-    xsize i;
-    xsize length;
-    xuint value = 0;
-    const xchar *type_string;
-
     x_return_val_if_fail(x_variant_type_check((const XVariantType *)type), 0);
-
-    type_string = x_variant_type_peek_string((const XVariantType *)type);
-    length = x_variant_type_get_string_length((const XVariantType *)type);
-
-    for (i = 0; i < length; i++) {
-        value = (value << 5) - value + type_string[i];
-    }
-
-    return value;
+    return _x_variant_type_hash(type);
 }
 
 xboolean x_variant_type_equal(xconstpointer type1, xconstpointer type2)
 {
-    xsize size1, size2;
-    const xchar *string1, *string2;
-
     x_return_val_if_fail(x_variant_type_check((const XVariantType *)type1), FALSE);
     x_return_val_if_fail(x_variant_type_check((const XVariantType *)type2), FALSE);
 
-    if (type1 == type2) {
-        return TRUE;
-    }
-
-    size1 = x_variant_type_get_string_length((const XVariantType *)type1);
-    size2 = x_variant_type_get_string_length((const XVariantType *)type2);
-
-    if (size1 != size2) {
-        return FALSE;
-    }
-
-    string1 = x_variant_type_peek_string((const XVariantType *)type1);
-    string2 = x_variant_type_peek_string((const XVariantType *)type2);
-
-    return memcmp(string1, string2, size1) == 0;
+    return _x_variant_type_equal(type1, type2);
 }
 
 xboolean x_variant_type_is_subtype_of(const XVariantType *type, const XVariantType *supertype)
@@ -328,6 +298,21 @@ xboolean x_variant_type_is_subtype_of(const XVariantType *type, const XVariantTy
 
     supertype_string = x_variant_type_peek_string(supertype);
     type_string = x_variant_type_peek_string(type);
+
+    if (type_string[0] == supertype_string[0]) {
+        switch (type_string[0]) {
+            case 'b': case 'y':
+            case 'n': case 'q':
+            case 'i': case 'h': case 'u':
+            case 't': case 'x':
+            case 's': case 'o': case 'g':
+            case 'd':
+                return TRUE;
+
+            default:
+                break;
+        }
+    }
 
     supertype_end = supertype_string + x_variant_type_get_string_length(supertype);
 

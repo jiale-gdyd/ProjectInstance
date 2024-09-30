@@ -1,6 +1,9 @@
 #ifndef RKRGA_IM2D_LOG_H
 #define RKRGA_IM2D_LOG_H
 
+#include <unistd.h>
+#include <sys/syscall.h>
+
 #define IM_ERR_MSG_LEN              512
 
 typedef enum {
@@ -17,6 +20,7 @@ typedef enum {
 #define GET_LOG_LEVEL(level)        ((level) & IM_LOG_LEVEL_MASK)
 #define LOG_LEVEL_CHECK(level)      ((level) >= rga_log_level_get())
 
+const char *rga_get_error_type_str(int type);
 int rga_error_msg_set(const char *format, ...);
 
 int rga_log_level_init(void);
@@ -34,7 +38,7 @@ size_t rga_get_current_time_ms(void);
         }                                                                                                                                                                           \
                                                                                                                                                                                     \
         if (((rga_log_enable_get() > 0) && LOG_LEVEL_CHECK(level)) || (GET_LOG_LEVEL(level) == IM_LOG_ERROR) || ((level) & IM_LOG_FORCE)) {                                         \
-            fprintf(stdout, "%lu " LOG_TAG " %s(%d): " _str "\n", (unsigned long)(rga_get_current_time_ms() - rga_get_start_time_ms()), __FUNCTION__, __LINE__, ## __VA_ARGS__);    \
+            fprintf(stdout, "%lu %6lu %6d %1s %8s: " _str "\n", (unsigned long)(rga_get_current_time_ms() - rga_get_start_time_ms()), syscall(SYS_gettid), getpid(), rga_get_error_type_str(level), LOG_TAG, ## __VA_ARGS__);    \
         }                                                                                                                                                                           \
     } while (0)
 

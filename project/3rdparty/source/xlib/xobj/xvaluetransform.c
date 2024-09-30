@@ -21,7 +21,7 @@ static void value_transform_memcpy_data0(const XValue *src_value, XValue *dest_v
 #define DEFINE_CAST(func_name, from_member, ctype, to_member)                               \
     static void value_transform_##func_name(const XValue *src_value, XValue *dest_value)    \
     {                                                                                       \
-        ctype c_value = src_value->data[0].from_member;                                     \
+        ctype c_value = (ctype)src_value->data[0].from_member;                              \
         dest_value->data[0].to_member = c_value;                                            \
     } extern void xlib_dummy_decl(void)
 

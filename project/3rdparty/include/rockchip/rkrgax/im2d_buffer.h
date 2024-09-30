@@ -104,5 +104,6 @@ IM_API rga_buffer_t wrapbuffer_handle(rga_buffer_handle_t  handle, int width, in
 
 void imsetOpacity(rga_buffer_t *buf, uint8_t alpha);
 void imsetColorSpace(rga_buffer_t *buf, IM_COLOR_SPACE_MODE mode);
+void imsetAlphaBit(rga_buffer_t *buf, uint8_t alpha0, uint8_t alpha1);
 
 #endif

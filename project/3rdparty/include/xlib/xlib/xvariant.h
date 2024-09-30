@@ -357,6 +357,9 @@ XVariantBuilder *x_variant_builder_ref(XVariantBuilder *builder);
 XLIB_AVAILABLE_IN_ALL
 void x_variant_builder_init(XVariantBuilder *builder, const XVariantType *type);
 
+XLIB_AVAILABLE_IN_2_84
+void x_variant_builder_init_static(XVariantBuilder *builder, const XVariantType *type);
+
 XLIB_AVAILABLE_IN_ALL
 XVariant *x_variant_builder_end(XVariantBuilder *builder);
 

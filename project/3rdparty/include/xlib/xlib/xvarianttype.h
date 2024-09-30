@@ -42,7 +42,7 @@ typedef struct _XVariantType XVariantType;
 #endif
 
 XLIB_AVAILABLE_IN_ALL
-xboolean x_variant_type_string_is_valid(const xchar *type_string);
+xboolean x_variant_type_string_is_valid(const xchar *type_string) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_ALL
 xboolean x_variant_type_string_scan(const xchar *string, const xchar *limit, const xchar **endptr);
@@ -66,28 +66,28 @@ XLIB_AVAILABLE_IN_ALL
 xchar *x_variant_type_dup_string(const XVariantType *type);
 
 XLIB_AVAILABLE_IN_ALL
-xboolean x_variant_type_is_definite(const XVariantType *type);
+xboolean x_variant_type_is_definite(const XVariantType *type) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_ALL
-xboolean x_variant_type_is_container(const XVariantType *type);
+xboolean x_variant_type_is_container(const XVariantType *type) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_ALL
-xboolean x_variant_type_is_basic(const XVariantType *type);
+xboolean x_variant_type_is_basic(const XVariantType *type) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_ALL
-xboolean x_variant_type_is_maybe(const XVariantType *type);
+xboolean x_variant_type_is_maybe(const XVariantType *type) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_ALL
-xboolean x_variant_type_is_array(const XVariantType *type);
+xboolean x_variant_type_is_array(const XVariantType *type) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_ALL
-xboolean x_variant_type_is_tuple(const XVariantType *type);
+xboolean x_variant_type_is_tuple(const XVariantType *type) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_ALL
-xboolean x_variant_type_is_dict_entry(const XVariantType *type);
+xboolean x_variant_type_is_dict_entry(const XVariantType *type) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_ALL
-xboolean x_variant_type_is_variant(const XVariantType *type);
+xboolean x_variant_type_is_variant(const XVariantType *type) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_ALL
 xuint x_variant_type_hash(xconstpointer type);
@@ -96,25 +96,25 @@ XLIB_AVAILABLE_IN_ALL
 xboolean x_variant_type_equal(xconstpointer type1, xconstpointer type2);
 
 XLIB_AVAILABLE_IN_ALL
-xboolean x_variant_type_is_subtype_of(const XVariantType *type, const XVariantType *supertype);
+xboolean x_variant_type_is_subtype_of(const XVariantType *type, const XVariantType *supertype) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_ALL
-const XVariantType *x_variant_type_element(const XVariantType *type);
+const XVariantType *x_variant_type_element(const XVariantType *type) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_ALL
-const XVariantType *x_variant_type_first(const XVariantType *type);
+const XVariantType *x_variant_type_first(const XVariantType *type) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_ALL
-const XVariantType *x_variant_type_next(const XVariantType *type);
+const XVariantType *x_variant_type_next(const XVariantType *type) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_ALL
-xsize x_variant_type_n_items(const XVariantType *type);
+xsize x_variant_type_n_items(const XVariantType *type) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_ALL
-const XVariantType *x_variant_type_key(const XVariantType *type);
+const XVariantType *x_variant_type_key(const XVariantType *type) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_ALL
-const XVariantType *x_variant_type_value(const XVariantType *type);
+const XVariantType *x_variant_type_value(const XVariantType *type) X_GNUC_CONST;
 
 XLIB_AVAILABLE_IN_ALL
 XVariantType *x_variant_type_new_array(const XVariantType *element);

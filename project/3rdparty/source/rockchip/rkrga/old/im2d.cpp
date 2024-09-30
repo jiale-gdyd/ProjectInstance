@@ -523,9 +523,9 @@ const char *querystring(int name)
 
     std::ostringstream out;
     static std::string info;
-    rga_info_table_entry rga_info;
+    rga_info_table_entry rga_i;
 
-    usage = rga_get_info(&rga_info);
+    usage = rga_get_info(&rga_i);
     if (IM_STATUS_FAILED == usage) {
         rga_error("rga im2d: rga2 get info failed");
         return "get info failed";
@@ -540,11 +540,11 @@ const char *querystring(int name)
             case RGA_VERSION:
                 out << version_name[RGA_API] << "v" << RGA_API_VERSION << std::endl;
                 // out << version_name[RGA_BUILT] << RGA_API_GIT_BUILD_VERSION << std::endl;
-                out << output_name[name] << output_version[rga_info.version] << std::endl;
+                out << output_name[name] << output_version[rga_i.version] << std::endl;
                 break;
 
             case RGA_MAX_INPUT:
-                switch (rga_info.input_resolution) {
+                switch (rga_i.input_resolution) {
                     case 2048:
                         out << output_name[name] << output_resolution[1] << std::endl;
                         break;
@@ -564,7 +564,7 @@ const char *querystring(int name)
                 break;
 
             case RGA_MAX_OUTPUT:
-                switch (rga_info.output_resolution) {
+                switch (rga_inrga_ifo.output_resolution) {
                     case 2048:
                         out << output_name[name] << output_resolution[1] << std::endl;
                         break;
@@ -584,7 +584,7 @@ const char *querystring(int name)
                 break;
 
             case RGA_SCALE_LIMIT:
-                switch (rga_info.scale_limit) {
+                switch (rga_i.scale_limit) {
                     case 8:
                         out << output_name[name] << output_scale_limit[1] << std::endl;
                         break;
@@ -601,31 +601,31 @@ const char *querystring(int name)
 
             case RGA_INPUT_FORMAT:
                 out << output_name[name];
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_RGB) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_RGB) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_RGB_OTHER) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_RGB_OTHER) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_OTHER_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_BPP) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_BPP) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_BPP_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_8) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_YUV_8) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_8_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_10) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_YUV_10) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_10_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUYV_420) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_YUYV_420) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUYV_420_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUYV_422) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_YUYV_422) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUYV_422_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_400) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_YUV_400) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_400_INDEX];
                 }
-                if (!(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_MASK)) {
+                if (!(rga_i.input_format & IM_RGA_SUPPORT_FORMAT_MASK)) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_ERROR_INDEX];
                 }
                 out << std::endl;
@@ -633,31 +633,31 @@ const char *querystring(int name)
 
             case RGA_OUTPUT_FORMAT:
                 out << output_name[name];
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_RGB) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_RGB) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_RGB_OTHER) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_RGB_OTHER) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_OTHER_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_BPP) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_BPP) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_BPP_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_8) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_YUV_8) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_8_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_10) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_YUV_10) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_10_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUYV_420) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_YUYV_420) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUYV_420_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUYV_422) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_YUYV_422) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUYV_422_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_400) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_YUV_400) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_400_INDEX];
                 }
-                if (!(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_MASK)) {
+                if (!(rga_i.output_format & IM_RGA_SUPPORT_FORMAT_MASK)) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_ERROR_INDEX];
                 }
                 out << std::endl;
@@ -665,35 +665,35 @@ const char *querystring(int name)
 
             case RGA_FEATURE:
                 out << output_name[name];
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_COLOR_FILL) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_COLOR_FILL) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_COLOR_FILL_INDEX];
                 }
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_COLOR_PALETTE) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_COLOR_PALETTE) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_COLOR_PALETTE_INDEX];
                 }
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_ROP) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_ROP) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_ROP_INDEX];
                 }
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_QUANTIZE) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_QUANTIZE) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_QUANTIZE_INDEX];
                 }
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_SRC1_R2Y_CSC) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_SRC1_R2Y_CSC) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_SRC1_R2Y_CSC_INDEX];
                 }
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC_INDEX];
                 }
                 out << std::endl;
                 break;
 
             case RGA_EXPECTED:
-                switch (rga_info.performance) {
+                switch (rga_i.performance) {
                     case 1:
                         out << output_name[name] << performance[1] << std::endl;
                         break;
 
                     case 2:
-                        if (rga_info.version == RGA_2_LITE0 || rga_info.version == RGA_2_LITE1) {
+                        if (rga_i.version == RGA_2_LITE0 || rga_i.version == RGA_2_LITE1) {
                             out << output_name[name] << performance[2] << std::endl;
                         } else {
                             out << output_name[name] << performance[3] << std::endl;

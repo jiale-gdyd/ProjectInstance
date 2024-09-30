@@ -11,6 +11,12 @@
 #include <xlib/xlib/xmessages.h>
 #include <xlib/xlib/xtestutils.h>
 
+#if XLIB_SIZEOF_VOID_P == 8
+#define X_BYTES_MAX_INLINE          (128 - sizeof(XBytesInline))
+#else
+#define X_BYTES_MAX_INLINE          (64 - sizeof(XBytesInline))
+#endif
+
 struct _XBytes {
     xconstpointer   data;
     xsize           size;
@@ -19,9 +25,29 @@ struct _XBytes {
     xpointer        user_data;
 };
 
+typedef struct {
+    XBytes bytes;
+    xsize  padding;
+    xuint8 inline_data[];
+} XBytesInline;
+X_STATIC_ASSERT(X_STRUCT_OFFSET(XBytesInline, inline_data) == (6 * XLIB_SIZEOF_VOID_P));
+
 XBytes *x_bytes_new(xconstpointer data, xsize size)
 {
     x_return_val_if_fail(data != NULL || size == 0, NULL);
+
+    if (size <= X_BYTES_MAX_INLINE) {
+        XBytesInline *bytes;
+        bytes = x_malloc(sizeof *bytes + size);
+        bytes->bytes.data = bytes->inline_data;
+        bytes->bytes.size = size;
+        bytes->bytes.free_func = NULL;
+        bytes->bytes.user_data = NULL;
+        x_atomic_ref_count_init(&bytes->bytes.ref_count);
+        memcpy(bytes->inline_data, data, size);
+        return(XBytes *)bytes;
+    }
+
     return x_bytes_new_take(x_memdup2(data, size), size);
 }
 
@@ -41,7 +67,7 @@ XBytes *x_bytes_new_with_free_func(xconstpointer data, xsize size, XDestroyNotif
 
     x_return_val_if_fail(data != NULL || size == 0, NULL);
 
-    bytes = x_slice_new(XBytes);
+    bytes = x_new(XBytes, 1);
     bytes->data = data;
     bytes->size = size;
     bytes->free_func = free_func;
@@ -112,7 +138,7 @@ void x_bytes_unref(XBytes *bytes)
             bytes->free_func(bytes->user_data);
         }
 
-        x_slice_free(XBytes, bytes);
+        x_free(bytes);
     }
 }
 
@@ -170,7 +196,7 @@ static xpointer try_steal_and_unref(XBytes *bytes, XDestroyNotify free_func, xsi
     if (x_atomic_ref_count_compare(&bytes->ref_count, 1)) {
         *size = bytes->size;
         result = (xpointer)bytes->data;
-        x_slice_free(XBytes, bytes);
+        x_free(bytes);
         return result;
     }
 

@@ -172,7 +172,7 @@ struct rga_osd_info {
     };
 };
 
-typedef struct rga_info {
+typedef struct rga_infos {
     int                      fd;
     void                     *virAddr;
     void                     *phyAddr;
@@ -212,7 +212,10 @@ typedef struct rga_info {
         int                  ctx_id;
         int                  job_handle;
     };
-    char                     reserve[402];
+    uint16_t                 rgba5551_flags;
+    uint8_t                  rgba5551_alpha0;
+    uint8_t                  rgba5551_alpha1;
+    char                     reserve[398];
 } rga_info_t;
 
 typedef struct drm_rga {

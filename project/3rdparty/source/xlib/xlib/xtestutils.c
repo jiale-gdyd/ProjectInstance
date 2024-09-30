@@ -322,7 +322,7 @@ static void x_test_log(XTestLogType lbit, const xchar *string1, const xchar *str
 
         case X_TEST_LOG_STOP_CASE:
             result = (XTestResult)largs[X_TEST_CASE_LARGS_RESULT];
-            timing = largs[X_TEST_CASE_LARGS_EXECUTION_TIME];
+            timing = (xdouble)largs[X_TEST_CASE_LARGS_EXECUTION_TIME];
             fail = result == X_TEST_RUN_FAILURE;
             if (test_tap_log) {
                 XString *tap_output;
@@ -2384,7 +2384,7 @@ static xuint8 *x_test_log_dump(XTestLogMsg *msg, xuint *len)
     }
 
     for (ui = 0; ui < msg->n_nums; ui++) {
-        xstring_append_double(gstring, msg->nums[ui]);
+        xstring_append_double(gstring, (xdouble)msg->nums[ui]);
     }
 
     *len = gstring->len;

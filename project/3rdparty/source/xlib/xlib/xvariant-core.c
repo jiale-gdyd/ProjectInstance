@@ -33,7 +33,14 @@ struct _XVariant {
     xint                  state;
     xatomicrefcount       ref_count;
     xsize                 depth;
+#if x_macro__has_attribute(aligned)
+    xuint8                suffix[] __attribute__((aligned(8)));
+#else
+    xuint8                suffix[];
+#endif
 };
+
+X_STATIC_ASSERT(X_STRUCT_OFFSET(XVariant, suffix) % 8 == 0);
 
 #define STATE_LOCKED            1
 #define STATE_SERIALISED        2
@@ -177,11 +184,16 @@ static void x_variant_ensure_serialised(XVariant *value)
     }
 }
 
-static XVariant *x_variant_alloc(const XVariantType *type, xboolean serialised, xboolean trusted)
+static XVariant *x_variant_alloc(const XVariantType *type, xboolean serialised, xboolean trusted, xsize suffix_size)
 {
+    xsize size;
     XVariant *value;
+    X_GNUC_UNUSED xboolean size_check;
 
-    value = x_slice_new(XVariant);
+    size_check = x_size_checked_add(&size, sizeof *value, suffix_size);
+    x_assert(size_check);
+    value = x_malloc(size);
+
     value->type_info = x_variant_type_info_get(type);
     value->state = (serialised ? STATE_SERIALISED : 0) | (trusted ? STATE_TRUSTED : 0) | STATE_FLOATING;
     value->size = (xssize)-1;
@@ -193,13 +205,39 @@ static XVariant *x_variant_alloc(const XVariantType *type, xboolean serialised, 
 
 XVariant *x_variant_new_from_bytes(const XVariantType *type, XBytes *bytes, xboolean trusted)
 {
+    return x_variant_new_take_bytes(type, x_bytes_ref(bytes), trusted);
+}
+
+XVariant *x_variant_new_preallocated_trusted(const XVariantType *type, xconstpointer data, xsize size)
+{
+    XVariant *value;
+    xuint alignment;
+    xsize expected_size;
+
+    value = x_variant_alloc(type, TRUE, TRUE, size);
+    x_variant_type_info_query(value->type_info, &alignment, &expected_size);
+    x_assert(expected_size == 0 || size == expected_size);
+    value->contents.serialised.ordered_offsets_up_to = X_MAXSIZE;
+    value->contents.serialised.checked_offsets_up_to = X_MAXSIZE;
+    value->contents.serialised.bytes = NULL;
+    value->contents.serialised.data = value->suffix;
+    value->size = size;
+
+    memcpy(value->suffix, data, size);
+    TRACE(XLIB_VARIANT_FROM_BUFFER(value, value->type_info, value->ref_count, value->state));
+
+    return value;
+}
+
+XVariant *x_variant_new_take_bytes(const XVariantType *type, XBytes *bytes, xboolean trusted)
+{
     xsize size;
     XVariant *value;
     xuint alignment;
     XBytes *owned_bytes = NULL;
     XVariantSerialised serialised;
 
-    value = x_variant_alloc(type, TRUE, trusted);
+    value = x_variant_alloc(type, TRUE, trusted, 0);
     x_variant_type_info_query(value->type_info, &alignment, &size);
 
     serialised.type_info = value->type_info;
@@ -221,14 +259,16 @@ XVariant *x_variant_new_from_bytes(const XVariantType *type, XBytes *bytes, xboo
             memcpy(aligned_data, x_bytes_get_data(bytes, NULL), aligned_size);
         }
 
-        bytes = owned_bytes = x_bytes_new_with_free_func(aligned_data, aligned_size, free, aligned_data);
+        owned_bytes = bytes;
+        bytes = x_bytes_new_with_free_func(aligned_data, aligned_size, free, aligned_data);
         aligned_data = NULL;
 #else
-        bytes = owned_bytes = x_bytes_new(x_bytes_get_data(bytes, NULL), x_bytes_get_size(bytes));
+        owned_bytes = bytes;
+        bytes = x_bytes_new(x_bytes_get_data(bytes, NULL), x_bytes_get_size(bytes));
 #endif
     }
 
-    value->contents.serialised.bytes = x_bytes_ref(bytes);
+    value->contents.serialised.bytes = bytes;
 
     if (size && x_bytes_get_size(bytes) != size) {
         value->contents.serialised.data = NULL;
@@ -250,7 +290,7 @@ XVariant *x_variant_new_from_children(const XVariantType *type, XVariant **child
 {
     XVariant *value;
 
-    value = x_variant_alloc(type, FALSE, trusted);
+    value = x_variant_alloc(type, FALSE, trusted, 0);
     value->contents.tree.children = children;
     value->contents.tree.n_children = n_children;
     TRACE(XLIB_VARIANT_FROM_CHILDREN(value, value->type_info, value->ref_count, value->state));
@@ -294,7 +334,7 @@ void x_variant_unref(XVariant *value)
         }
 
         memset(value, 0, sizeof (XVariant));
-        x_slice_free(XVariant, value);
+        x_free(value);
     }
 }
 
@@ -311,19 +351,21 @@ XVariant *x_variant_ref(XVariant *value)
 
 XVariant *x_variant_ref_sink(XVariant *value)
 {
+    int old_state;
+
     x_return_val_if_fail(value != NULL, NULL);
     x_return_val_if_fail(!x_atomic_ref_count_compare(&value->ref_count, 0), NULL);
 
-    x_variant_lock(value);
-
     TRACE(XLIB_VARIANT_REF_SINK(value, value->type_info, value->ref_count, value->state, value->state & STATE_FLOATING));
 
-    if (~value->state & STATE_FLOATING) {
-        x_variant_ref(value);
-    } else {
-        value->state &= ~STATE_FLOATING;
+    old_state = value->state;
+    while (old_state & STATE_FLOATING) {
+        int new_state = old_state & ~STATE_FLOATING;
+        if (x_atomic_int_compare_and_exchange_full(&value->state, old_state, new_state, &old_state)) {
+            return value;
+        }
     }
-    x_variant_unlock(value);
+    x_atomic_ref_count_inc(&value->ref_count);
 
     return value;
 }
@@ -366,15 +408,20 @@ xconstpointer x_variant_get_data(XVariant *value)
 XBytes *x_variant_get_data_as_bytes(XVariant *value)
 {
     xsize size;
-    xsize bytes_size;
     const xchar *data;
+    xsize bytes_size = 0;
     const xchar *bytes_data;
 
     x_variant_lock(value);
     x_variant_ensure_serialised(value);
     x_variant_unlock(value);
 
-    bytes_data = (const xchar *)x_bytes_get_data(value->contents.serialised.bytes, &bytes_size);
+    if (value->contents.serialised.bytes != NULL) {
+        bytes_data = x_bytes_get_data(value->contents.serialised.bytes, &bytes_size);
+    } else {
+        bytes_data = NULL;
+    }
+
     data = (const xchar *)value->contents.serialised.data;
     size = value->size;
 
@@ -383,10 +430,12 @@ XBytes *x_variant_get_data_as_bytes(XVariant *value)
         data = bytes_data;
     }
 
-    if (data == bytes_data && size == bytes_size) {
+    if (bytes_data != NULL && data == bytes_data && size == bytes_size) {
         return x_bytes_ref(value->contents.serialised.bytes);
-    } else {
+    } else if (bytes_data != NULL) {
         return x_bytes_new_from_bytes(value->contents.serialised.bytes, data - bytes_data, size);
+    } else {
+        return x_bytes_new(value->contents.serialised.data, size);
     }
 }
 
@@ -440,7 +489,7 @@ XVariant *x_variant_get_child_value(XVariant *value, xsize index_)
             return x_variant_new_tuple (NULL, 0);
         }
 
-        child = x_slice_new(XVariant);
+        child = x_new(XVariant, 1);
         child->type_info = s_child.type_info;
         child->state = (value->state & STATE_TRUSTED) | STATE_SERIALISED;
         child->size = s_child.size;

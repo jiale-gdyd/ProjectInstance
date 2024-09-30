@@ -7,6 +7,7 @@
 #include <xlib/xlib/xlib_trace.h>
 #include <xlib/xlib/xtestutils.h>
 #include <xlib/xlib/xvarianttypeinfo.h>
+#include <xlib/xlib/xvarianttype-private.h>
 
 struct _XVariantTypeInfo {
     xsize  fixed_size;
@@ -334,22 +335,20 @@ static XHashTable *x_variant_type_info_table;
 
 XVariantTypeInfo *x_variant_type_info_get(const XVariantType *type)
 {
-    char type_char;
-    type_char = x_variant_type_peek_string(type)[0];
+    const xchar *type_string = x_variant_type_peek_string(type);
+    const char type_char = type_string[0];
 
     if (type_char == X_VARIANT_TYPE_INFO_CHAR_MAYBE
         || type_char == X_VARIANT_TYPE_INFO_CHAR_ARRAY
         || type_char == X_VARIANT_TYPE_INFO_CHAR_TUPLE
         || type_char == X_VARIANT_TYPE_INFO_CHAR_DICT_ENTRY)
     {
-        xchar *type_string;
         XVariantTypeInfo *info;
 
-        type_string = x_variant_type_dup_string(type);
         x_rec_mutex_lock(&x_variant_type_info_lock);
 
         if (x_variant_type_info_table == NULL) {
-            x_variant_type_info_table = x_hash_table_new(x_str_hash, x_str_equal);
+            x_variant_type_info_table = x_hash_table_new((XHashFunc)_x_variant_type_hash, (XEqualFunc)_x_variant_type_equal);
         }
 
         info = (XVariantTypeInfo *)x_hash_table_lookup(x_variant_type_info_table, type_string);
@@ -363,20 +362,18 @@ XVariantTypeInfo *x_variant_type_info_get(const XVariantType *type)
             }
 
             info = (XVariantTypeInfo *)container;
-            container->type_string = type_string;
+            container->type_string = x_variant_type_dup_string(type);
             x_atomic_ref_count_init(&container->ref_count);
 
             TRACE(XLIB_VARIANT_TYPE_INFO_NEW(info, container->type_string));
 
-            x_hash_table_insert(x_variant_type_info_table, type_string, info);
-            type_string = NULL;
+            x_hash_table_replace(x_variant_type_info_table, container->type_string, info);
         } else {
             x_variant_type_info_ref(info);
         }
 
         x_rec_mutex_unlock(&x_variant_type_info_lock);
         x_variant_type_info_check(info, 0);
-        x_free(type_string);
 
         return info;
     } else {

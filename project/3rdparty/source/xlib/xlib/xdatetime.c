@@ -30,6 +30,7 @@
 #include <xlib/xlib/xfileutils.h>
 #include <xlib/xlib/xtestutils.h>
 #include <xlib/xlib/xmappedfile.h>
+#include <xlib/xlib/xutilsprivate.h>
 #include <xlib/xlib/xconvertprivate.h>
 #include <xlib/xlib/xcharsetprivate.h>
 #include <xlib/xlib/xdatetime-private.h>
@@ -751,7 +752,7 @@ XDateTime *x_date_time_new(XTimeZone *tz, xint year, xint month, xint day, xint 
         day < 1 || day > days_in_months[GREGORIAN_LEAP(year)][month] ||
         hour < 0 || hour > 23 ||
         minute < 0 || minute > 59 ||
-        isnan (seconds) ||
+        x_isnan(seconds) ||
         seconds < 0.0 || seconds >= 60.0)
     {
         return NULL;
@@ -764,7 +765,7 @@ XDateTime *x_date_time_new(XTimeZone *tz, xint year, xint month, xint day, xint 
     full_time = SEC_PER_DAY * (ymd_to_days(year, month, day) - UNIX_EPOCH_START) + SECS_PER_HOUR * hour + SECS_PER_MINUTE * minute + (int)seconds;
     datetime->interval = x_time_zone_adjust_time(datetime->tz, X_TIME_TYPE_STANDARD, &full_time);
 
-    usec = seconds * USEC_PER_SECOND;
+    usec = (xint64)seconds * USEC_PER_SECOND;
     usecd = (usec + 1) * 1e-6;
     if (usecd <= seconds) {
         usec++;
@@ -883,7 +884,7 @@ XDateTime *x_date_time_add_minutes(XDateTime *datetime, xint minutes)
 
 XDateTime *x_date_time_add_seconds(XDateTime *datetime, xdouble seconds)
 {
-    return x_date_time_add(datetime, seconds * USEC_PER_SECOND);
+    return x_date_time_add(datetime, (XTimeSpan)(seconds * USEC_PER_SECOND));
 }
 
 XDateTime *x_date_time_add_full(XDateTime *datetime, xint years, xint months, xint days, xint hours, xint minutes, xdouble seconds)
@@ -1882,7 +1883,7 @@ static xboolean x_date_time_format_utf8(XDateTime *datetime, const xchar *utf8_f
                     tz = tmp = x_utf8_strdown(tz, -1);
                 }
                 x_string_append(outstr, tz);
-                x_free(tmp);
+                x_clear_pointer(&tmp, x_free);
                 break;
 
             case '%':

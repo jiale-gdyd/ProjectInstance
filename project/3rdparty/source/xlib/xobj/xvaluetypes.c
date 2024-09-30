@@ -109,7 +109,7 @@ static void value_copy_float(const XValue *src_value, XValue *dest_value)
 
 static xchar *value_collect_float(XValue *value, xuint n_collect_values, XTypeCValue *collect_values, xuint collect_flags)
 {
-    value->data[0].v_float = collect_values[0].v_double;
+    value->data[0].v_float = (xfloat)collect_values[0].v_double;
     return NULL;
 }
 

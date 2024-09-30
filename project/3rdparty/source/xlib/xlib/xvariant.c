@@ -17,15 +17,11 @@
 
 static XVariant *x_variant_new_from_trusted(const XVariantType *type, xconstpointer data, xsize size)
 {
-
-    XBytes *bytes;
-    XVariant *value;
-
-    bytes = x_bytes_new(data, size);
-    value = x_variant_new_from_bytes(type, bytes, TRUE);
-    x_bytes_unref(bytes);
-
-    return value;
+    if (size <= X_VARIANT_MAX_PREALLOCATED) {
+        return x_variant_new_preallocated_trusted(type, data, size);
+    } else {
+        return x_variant_new_take_bytes(type, x_bytes_new(data, size), TRUE);
+    }
 }
 
 XVariant *x_variant_new_boolean(xboolean value)
@@ -396,25 +392,30 @@ XVariant *x_variant_new_fixed_array(const XVariantType *element_type, xconstpoin
 
 XVariant *x_variant_new_string(const xchar *string)
 {
-    x_return_val_if_fail(string != NULL, NULL);
-    x_return_val_if_fail(x_utf8_validate(string, -1, NULL), NULL);
+    const char *endptr = NULL;
 
-    return x_variant_new_from_trusted(X_VARIANT_TYPE_STRING, string, strlen(string) + 1);
+    x_return_val_if_fail(string != NULL, NULL);
+
+    if X_LIKELY(x_utf8_validate(string, -1, &endptr)) {
+        return x_variant_new_from_trusted(X_VARIANT_TYPE_STRING, string, endptr - string + 1);
+    }
+
+    x_critical("x_variant_new_string(): requires valid UTF-8");
+    return NULL;
 }
 
 XVariant *x_variant_new_take_string(xchar *string)
 {
-    XBytes *bytes;
-    XVariant *value;
+    const char *end = NULL;
 
     x_return_val_if_fail(string != NULL, NULL);
-    x_return_val_if_fail(x_utf8_validate(string, -1, NULL), NULL);
+    if X_LIKELY(x_utf8_validate(string, -1, &end)) {
+        XBytes *bytes = x_bytes_new_take(string, end - string + 1);
+        return x_variant_new_take_bytes(X_VARIANT_TYPE_STRING, x_steal_pointer(&bytes), TRUE);
+    }
 
-    bytes = x_bytes_new_take(string, strlen(string) + 1);
-    value = x_variant_new_from_bytes(X_VARIANT_TYPE_STRING, bytes, TRUE);
-    x_bytes_unref(bytes);
-
-    return value;
+    x_critical("x_variant_new_take_string(): requires valid UTF-8");
+    return NULL;
 }
 
 XVariant *x_variant_new_printf(const xchar *format_string, ...)
@@ -431,8 +432,7 @@ XVariant *x_variant_new_printf(const xchar *format_string, ...)
     va_end(ap);
 
     bytes = x_bytes_new_take(string, strlen(string) + 1);
-    value = x_variant_new_from_bytes(X_VARIANT_TYPE_STRING, bytes, TRUE);
-    x_bytes_unref(bytes);
+    value = x_variant_new_take_bytes(X_VARIANT_TYPE_STRING, x_steal_pointer(&bytes), TRUE);
 
     return value;
 }
@@ -1451,6 +1451,7 @@ struct stack_builder {
 
     xuint              uniform_item_types : 1;
     xuint              trusted : 1;
+    xuint              type_owned : 1;
     xsize              magic;
 };
 
@@ -1486,7 +1487,7 @@ static xboolean ensure_valid_builder(XVariantBuilder *builder)
             return FALSE;
         }
 
-        x_variant_builder_init(builder, builder->u.s.type);
+        x_variant_builder_init_static(builder, builder->u.s.type);
     }
 
     return is_valid_builder(builder);
@@ -1546,7 +1547,9 @@ void x_variant_builder_clear(XVariantBuilder *builder)
     }
 
     return_if_invalid_builder(builder);
-    x_variant_type_free(GVSB(builder)->type);
+    if (GVSB(builder)->type_owned) {
+        x_variant_type_free(GVSB(builder)->type);
+    }
 
     for (i = 0; i < GVSB(builder)->offset; i++) {
         x_variant_unref(GVSB(builder)->children[i]);
@@ -1561,16 +1564,17 @@ void x_variant_builder_clear(XVariantBuilder *builder)
     memset(builder, 0, sizeof(XVariantBuilder));
 }
 
-void x_variant_builder_init(XVariantBuilder *builder, const XVariantType *type)
+static void _x_variant_builder_init(XVariantBuilder *builder, const XVariantType *type, xboolean type_owned)
 {
     x_return_if_fail(type != NULL);
     x_return_if_fail(x_variant_type_is_container(type));
 
     memset(builder, 0, sizeof(XVariantBuilder));
 
-    GVSB(builder)->type = x_variant_type_copy(type);
+    GVSB(builder)->type = (XVariantType *)type;
     GVSB(builder)->magic = GVSB_MAGIC;
     GVSB(builder)->trusted = TRUE;
+    GVSB(builder)->type_owned = type_owned;
 
     switch (*(const xchar *) type) {
         case X_VARIANT_CLASS_VARIANT:
@@ -1625,11 +1629,21 @@ void x_variant_builder_init(XVariantBuilder *builder, const XVariantType *type)
             x_assert_not_reached();
     }
 
-#ifdef X_ANALYZER_ANALYZING
+#if X_ANALYZER_ANALYZING
     GVSB(builder)->children = x_new0(XVariant *, GVSB(builder)->allocated_children);
 #else
-    GVSB(builder)->children = X_new(XVariant *, GVSB(builder)->allocated_children);
+    GVSB(builder)->children = x_new(XVariant *, GVSB(builder)->allocated_children);
 #endif
+}
+
+void x_variant_builder_init(XVariantBuilder *builder, const XVariantType *type)
+{
+    _x_variant_builder_init(builder, x_variant_type_copy(type), TRUE);
+}
+
+void x_variant_builder_init_static(XVariantBuilder *builder, const XVariantType *type)
+{
+    _x_variant_builder_init(builder, type, FALSE);
 }
 
 static void x_variant_builder_make_room(struct stack_builder *builder)
@@ -1718,32 +1732,41 @@ static XVariantType *x_variant_make_array_type(XVariant *element)
 XVariant *x_variant_builder_end(XVariantBuilder *builder)
 {
     XVariant *value;
-    XVariantType *my_type;
+    XVariant **children;
+    const XVariantType *type;
+    XVariantType *new_type = NULL;
 
     return_val_if_invalid_builder(builder, NULL);
     x_return_val_if_fail(GVSB(builder)->offset >= GVSB(builder)->min_items, NULL);
     x_return_val_if_fail(!GVSB(builder)->uniform_item_types || GVSB(builder)->prev_item_type != NULL || x_variant_type_is_definite(GVSB(builder)->type), NULL);
 
     if (x_variant_type_is_definite(GVSB(builder)->type)) {
-        my_type = x_variant_type_copy(GVSB(builder)->type);
+        type = GVSB(builder)->type;
     } else if (x_variant_type_is_maybe(GVSB(builder)->type)) {
-        my_type = x_variant_make_maybe_type(GVSB(builder)->children[0]);
+        type = new_type = x_variant_make_maybe_type(GVSB(builder)->children[0]);
     } else if (x_variant_type_is_array(GVSB(builder)->type)) {
-        my_type = x_variant_make_array_type(GVSB(builder)->children[0]);
+        type = new_type = x_variant_make_array_type(GVSB(builder)->children[0]);
     } else if (x_variant_type_is_tuple(GVSB(builder)->type)) {
-        my_type = x_variant_make_tuple_type(GVSB(builder)->children, GVSB(builder)->offset);
+        type = new_type = x_variant_make_tuple_type(GVSB(builder)->children, GVSB(builder)->offset);
     } else if (x_variant_type_is_dict_entry(GVSB(builder)->type)) {
-        my_type = x_variant_make_dict_entry_type(GVSB(builder)->children[0], GVSB(builder)->children[1]);
+        type = new_type = x_variant_make_dict_entry_type(GVSB(builder)->children[0], GVSB(builder)->children[1]);
     } else {
         x_assert_not_reached();
     }
 
-    value = x_variant_new_from_children(my_type, x_renew(XVariant *, GVSB(builder)->children, GVSB(builder)->offset), GVSB(builder)->offset, GVSB(builder)->trusted);
+    children = GVSB(builder)->children;
+    if X_UNLIKELY(GVSB(builder)->offset < GVSB(builder)->allocated_children) {
+        children = x_renew(XVariant *, children, GVSB(builder)->offset);
+    }
+
+    value = x_variant_new_from_children(type, children, GVSB(builder)->offset, GVSB(builder)->trusted);
     GVSB(builder)->children = NULL;
     GVSB(builder)->offset = 0;
 
     x_variant_builder_clear(builder);
-    x_variant_type_free(my_type);
+    if (new_type != NULL) {
+        x_variant_type_free(new_type);
+    }
 
     return value;
 }
@@ -1933,7 +1956,7 @@ XVariant *x_variant_dict_end(XVariantDict *dict)
 
     return_val_if_invalid_dict(dict, NULL);
 
-    x_variant_builder_init(&builder, X_VARIANT_TYPE_VARDICT);
+    x_variant_builder_init_static(&builder, X_VARIANT_TYPE_VARDICT);
 
     x_hash_table_iter_init(&iter, GVSD(dict)->values);
     while (x_hash_table_iter_next(&iter, &key, &value)) {
@@ -2153,6 +2176,10 @@ static xboolean valid_format_string(const xchar *format_string, xboolean single,
 {
     XVariantType *type;
     const xchar *endptr;
+
+    if X_LIKELY(value == NULL && x_variant_format_string_scan(format_string, NULL, &endptr) && (single || *endptr == '\0')) {
+        return TRUE;
+    }
 
     type = x_variant_format_string_scan_type(format_string, NULL, &endptr);
 
@@ -2676,10 +2703,10 @@ static XVariant *x_variant_valist_new(const xchar **str, va_list *app)
         XVariantBuilder b;
 
         if (**str == '(') {
-            x_variant_builder_init(&b, X_VARIANT_TYPE_TUPLE);
+            x_variant_builder_init_static(&b, X_VARIANT_TYPE_TUPLE);
         } else {
             x_assert(**str == '{');
-            x_variant_builder_init(&b, X_VARIANT_TYPE_DICT_ENTRY);
+            x_variant_builder_init_static(&b, X_VARIANT_TYPE_DICT_ENTRY);
         }
 
         (*str)++;
@@ -2888,7 +2915,7 @@ static XVariant *x_variant_deep_copy(XVariant *value, xboolean byteswap)
             xsize i, n_children;
             XVariantBuilder builder;
 
-            x_variant_builder_init(&builder, x_variant_get_type(value));
+            x_variant_builder_init_static(&builder, x_variant_get_type(value));
 
             for (i = 0, n_children = x_variant_n_children(value); i < n_children; i++) {
                 XVariant *child = x_variant_get_child_value(value, i);
@@ -2904,7 +2931,7 @@ static XVariant *x_variant_deep_copy(XVariant *value, xboolean byteswap)
             XVariantBuilder builder;
             XVariant *first_invalid_child_deep_copy = NULL;
 
-            x_variant_builder_init(&builder, x_variant_get_type(value));
+            x_variant_builder_init_static(&builder, x_variant_get_type(value));
 
             for (i = 0, n_children = x_variant_n_children(value); i < n_children; i++) {
                 XVariant *child = x_variant_maybe_get_child_value(value, i);
@@ -3045,8 +3072,7 @@ XVariant *x_variant_byteswap(XVariant *value)
         x_variant_serialised_byteswap(serialised);
 
         bytes = x_bytes_new_take(serialised.data, serialised.size);
-        newt = x_variant_ref_sink(x_variant_new_from_bytes(x_variant_get_type(value), bytes, TRUE));
-        x_bytes_unref(bytes);
+        newt = x_variant_ref_sink(x_variant_new_take_bytes(x_variant_get_type(value), x_steal_pointer(&bytes), TRUE));
     } else if (alignment) {
         newt = x_variant_ref_sink(x_variant_deep_copy(value, TRUE)); 
     } else {
@@ -3061,7 +3087,6 @@ XVariant *x_variant_byteswap(XVariant *value)
 XVariant *x_variant_new_from_data(const XVariantType *type, xconstpointer data, xsize size, xboolean trusted, XDestroyNotify notify, xpointer user_data)
 {
     XBytes *bytes;
-    XVariant *value;
 
     x_return_val_if_fail(x_variant_type_is_definite(type), NULL);
     x_return_val_if_fail(data != NULL || size == 0, NULL);
@@ -3072,8 +3097,5 @@ XVariant *x_variant_new_from_data(const XVariantType *type, xconstpointer data, 
         bytes = x_bytes_new_static(data, size);
     }
 
-    value = x_variant_new_from_bytes(type, bytes, trusted);
-    x_bytes_unref(bytes);
-
-    return value;
+    return x_variant_new_take_bytes(type, x_steal_pointer(&bytes), trusted);
 }

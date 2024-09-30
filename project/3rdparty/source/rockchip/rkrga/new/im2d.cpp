@@ -213,6 +213,12 @@ void imsetColorSpace(rga_buffer_t *buf, IM_COLOR_SPACE_MODE mode)
     buf->color_space_mode = mode;
 }
 
+void imsetAlphaBit(rga_buffer_t *buf, uint8_t alpha0, uint8_t alpha1)
+{
+    buf->alpha_bit.alpha0 = alpha0;
+    buf->alpha_bit.alpha1 = alpha1;
+}
+
 IM_API const char *querystring(int name)
 {
     long usage = 0;
@@ -247,6 +253,7 @@ IM_API const char *querystring(int name)
         "RGA_2_lite0 ",
         "RGA_2_lite1 ",
         "RGA_2_Enhance ",
+        "RGA_2_PRO ",
         "RGA_3 ",
     };
     const char *output_resolution[] = {
@@ -263,7 +270,8 @@ IM_API const char *querystring(int name)
     };
     const char *output_format[] = {
         "unknown",
-        "RGBA_8888 RGB_888 RGB_565 ",
+        "RGBA/ARGB_8888 RGB_888 RGB_565 ",
+        "ARGB_4444 ARGB_5551 ",
         "RGBA_4444 RGBA_5551 ",
         "BPP8 BPP4 BPP2 BPP1 ",
         "YUV420_sp_8bit ",
@@ -276,7 +284,12 @@ IM_API const char *querystring(int name)
         "YUV422_p_10bit ",
         "YUYV420 ",
         "YUYV422 ",
-        "YUV400/Y4 "
+        "YUV400 ",
+        "Y4 ",
+        "RGB2BPP ",
+        "ALPHA-8bit ",
+        "YUV444_sp_8bit ",
+        "Y8 ",
     };
     const char *feature[] = {
         "unknown ",
@@ -292,6 +305,7 @@ IM_API const char *querystring(int name)
         "mosaic ",
         "OSD ",
         "early_interruption ",
+        "alpha_bit_map ",
     };
     const char *performance[] = {
         "unknown",
@@ -302,10 +316,10 @@ IM_API const char *querystring(int name)
     ostringstream out;
     static string info;
 
-    rga_info_table_entry rga_info;
+    rga_info_table_entry rga_i;
 
-    memset(&rga_info, 0x0, sizeof(rga_info));
-    usage = rga_get_info(&rga_info);
+    memset(&rga_i, 0x0, sizeof(rga_i));
+    usage = rga_get_info(&rga_i);
     if (IM_STATUS_FAILED == usage) {
         rga_error("rga im2d: rga2 get info failed");
         return "get info failed";
@@ -321,28 +335,31 @@ IM_API const char *querystring(int name)
                 out << version_name[RGA_API] << "v" << RGA_API_VERSION << endl;
 
                 out << output_name[name];
-                if (rga_info.version == IM_RGA_HW_VERSION_RGA_V_ERR) {
+                if (rga_i.version == IM_RGA_HW_VERSION_RGA_V_ERR) {
                     out << output_version[IM_RGA_HW_VERSION_RGA_V_ERR_INDEX];
                 } else {
-                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_1) {
+                    if (rga_i.version & IM_RGA_HW_VERSION_RGA_1) {
                         out << output_version[IM_RGA_HW_VERSION_RGA_1_INDEX];
                     }
-                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_1_PLUS) {
+                    if (rga_i.version & IM_RGA_HW_VERSION_RGA_1_PLUS) {
                         out << output_version[IM_RGA_HW_VERSION_RGA_1_PLUS_INDEX];
                     }
-                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_2) {
+                    if (rga_i.version & IM_RGA_HW_VERSION_RGA_2) {
                         out << output_version[IM_RGA_HW_VERSION_RGA_2_INDEX];
                     }
-                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_2_LITE0) {
+                    if (rga_i.version & IM_RGA_HW_VERSION_RGA_2_LITE0) {
                         out << output_version[IM_RGA_HW_VERSION_RGA_2_LITE0_INDEX];
                     }
-                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_2_LITE1) {
+                    if (rga_i.version & IM_RGA_HW_VERSION_RGA_2_LITE1) {
                         out << output_version[IM_RGA_HW_VERSION_RGA_2_LITE1_INDEX];
                     }
-                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_2_ENHANCE) {
+                    if (rga_i.version & IM_RGA_HW_VERSION_RGA_2_ENHANCE) {
                         out << output_version[IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX];
                     }
-                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_3) {
+                    if (rga_i.version & IM_RGA_HW_VERSION_RGA_2_PRO) {
+                        out << output_version[IM_RGA_HW_VERSION_RGA_2_PRO_INDEX];
+                    }
+                    if (rga_i.version & IM_RGA_HW_VERSION_RGA_3) {
                         out << output_version[IM_RGA_HW_VERSION_RGA_3_INDEX];
                     }
                 }
@@ -350,7 +367,7 @@ IM_API const char *querystring(int name)
                 break;
 
             case RGA_MAX_INPUT:
-                switch (rga_info.input_resolution) {
+                switch (rga_i.input_resolution) {
                     case 2048:
                         out << output_name[name] << output_resolution[1] << endl;
                         break;
@@ -374,7 +391,7 @@ IM_API const char *querystring(int name)
                 break;
 
             case RGA_MAX_OUTPUT:
-                switch(rga_info.output_resolution) {
+                switch (rga_i.output_resolution) {
                     case 2048:
                         out << output_name[name] << output_resolution[1] << endl;
                         break;
@@ -398,15 +415,15 @@ IM_API const char *querystring(int name)
                 break;
 
             case RGA_BYTE_STRIDE:
-                if (rga_info.byte_stride > 0) {
-                    out << output_name[name] << rga_info.byte_stride << " byte" << endl;
+                if (rga_i.byte_stride > 0) {
+                    out << output_name[name] << rga_i.byte_stride << " byte" << endl;
                 } else {
                     out << output_name[name] << "unknown" << endl;
                 }
                 break;
 
             case RGA_SCALE_LIMIT:
-                switch (rga_info.scale_limit) {
+                switch (rga_i.scale_limit) {
                     case 8:
                         out << output_name[name] << output_scale_limit[1] << endl;
                         break;
@@ -423,49 +440,67 @@ IM_API const char *querystring(int name)
 
             case RGA_INPUT_FORMAT:
                 out << output_name[name];
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_RGB) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_RGB) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_RGB_OTHER) {
-                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_OTHER_INDEX];
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_ARGB_16BIT) {
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_ARGB_16BIT_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_BPP) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_RGBA_16BIT) {
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGBA_16BIT_INDEX];
+                }
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_BPP) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_BPP_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_10_BIT) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_10_BIT) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_10_BIT_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_10_BIT) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_10_BIT) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_10_BIT_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_10_BIT) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_10_BIT) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_10_BIT_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUYV_420) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_YUYV_420) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUYV_420_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUYV_422) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_YUYV_422) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUYV_422_INDEX];
                 }
-                if (rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_400) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_YUV_400) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_400_INDEX];
                 }
-                if (!(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_MASK)) {
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_Y4) {
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_Y4_INDEX];
+                }
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_RGBA2BPP) {
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGBA2BPP_INDEX];
+                }
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT) {
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT_INDEX];
+                }
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT) {
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT_INDEX];
+                }
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_Y8) {
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_Y8_INDEX];
+                }
+                if (!(rga_i.input_format & IM_RGA_SUPPORT_FORMAT_MASK)) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_ERROR_INDEX];
                 }
                 out << endl;
@@ -473,49 +508,67 @@ IM_API const char *querystring(int name)
 
             case RGA_OUTPUT_FORMAT:
                 out << output_name[name];
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_RGB) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_RGB) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_RGB_OTHER) {
-                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_OTHER_INDEX];
+                if (rga_i.input_format & IM_RGA_SUPPORT_FORMAT_ARGB_16BIT) {
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_ARGB_16BIT_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_BPP) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_RGBA_16BIT) {
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGBA_16BIT_INDEX];
+                }
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_BPP) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_BPP_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_10_BIT) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_10_BIT) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_10_BIT_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_10_BIT) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_10_BIT) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_10_BIT_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_10_BIT) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_10_BIT) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_10_BIT_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUYV_420) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_YUYV_420) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUYV_420_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUYV_422) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_YUYV_422) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUYV_422_INDEX];
                 }
-                if (rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_400) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_YUV_400) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_400_INDEX];
                 }
-                if (!(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_MASK)) {
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_Y4) {
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_Y4_INDEX];
+                }
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_RGBA2BPP) {
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGBA2BPP_INDEX];
+                }
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT) {
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT_INDEX];
+                }
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT) {
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT_INDEX];
+                }
+                if (rga_i.output_format & IM_RGA_SUPPORT_FORMAT_Y8) {
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_Y8_INDEX];
+                }
+                if (!(rga_i.output_format & IM_RGA_SUPPORT_FORMAT_MASK)) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_ERROR_INDEX];
                 }
                 out << endl;
@@ -523,47 +576,50 @@ IM_API const char *querystring(int name)
 
             case RGA_FEATURE:
                 out << output_name[name];
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_COLOR_FILL) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_COLOR_FILL) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_COLOR_FILL_INDEX];
                 }
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_COLOR_PALETTE) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_COLOR_PALETTE) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_COLOR_PALETTE_INDEX];
                 }
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_ROP) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_ROP) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_ROP_INDEX];
                 }
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_QUANTIZE) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_QUANTIZE) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_QUANTIZE_INDEX];
                 }
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_SRC1_R2Y_CSC) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_SRC1_R2Y_CSC) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_SRC1_R2Y_CSC_INDEX];
                 }
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC_INDEX];
                 }
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_FBC) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_FBC) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_FBC_INDEX];
                 }
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_BLEND_YUV) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_BLEND_YUV) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_BLEND_YUV_INDEX];
                 }
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_BT2020) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_BT2020) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_BT2020_INDEX];
                 }
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_MOSAIC) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_MOSAIC) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_MOSAIC_INDEX];
                 }
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_OSD) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_OSD) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_OSD_INDEX];
                 }
-                if (rga_info.feature & IM_RGA_SUPPORT_FEATURE_PRE_INTR) {
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_PRE_INTR) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_PRE_INTR_INDEX];
+                }
+                if (rga_i.feature & IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP) {
+                    out << feature[IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP_INDEX];
                 }
                 out << endl;
                 break;
 
             case RGA_EXPECTED:
-                switch(rga_info.performance) {
+                switch (rga_i.performance) {
                     case 1:
                         out << output_name[name] << performance[1] << endl;
                         break;
@@ -752,7 +808,8 @@ IM_API IM_STATUS imresize(const rga_buffer_t src, rga_buffer_t dst, double fx, d
         }
     }
 
-    UNUSED(interpolation);
+    opt.version = RGA_CURRENT_API_VERSION;
+    opt.interp = interpolation;
 
     if (sync == 0) {
         usage |= IM_ASYNC;
@@ -1447,7 +1504,9 @@ IM_API IM_STATUS imresizeTask(im_job_handle_t job_handle, const rga_buffer_t src
             }
         }
     }
-    UNUSED(interpolation);
+
+    opt.version = RGA_CURRENT_API_VERSION;
+    opt.interp = interpolation;
 
     return improcessTask(job_handle, src, dst, pat, srect, drect, prect, &opt, usage);
 }

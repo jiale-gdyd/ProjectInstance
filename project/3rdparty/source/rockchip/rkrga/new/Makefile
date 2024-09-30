@@ -9,3 +9,4 @@ obj-y += RgaApi.o
 obj-y += RgaUtils.o
 obj-y += RockchipRga.o
 obj-y += utils.o
+obj-y += im2d_debugger.o

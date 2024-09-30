@@ -14,7 +14,7 @@ typedef void (*XObjectNotifyQueueDispatcher)(XObject *object, xuint n_pspecs, XP
 struct _XObjectNotifyContext {
     XQuark                       quark_notify_queue;
     XObjectNotifyQueueDispatcher dispatcher;
-    XTrashStack                  *_nqueue_trash;
+    void                         *_nqueue_trash;
 };
 
 struct _XObjectNotifyQueue {

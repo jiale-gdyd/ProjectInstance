@@ -744,6 +744,7 @@ static xchar *x_build_user_config_dir(void)
 
     if (!config_dir || !config_dir[0]) {
         xchar *home_dir = x_build_home_dir();
+        x_free(config_dir);
         config_dir = x_build_filename(home_dir, ".config", NULL);
         x_free(home_dir);
     }
@@ -776,6 +777,7 @@ static xchar *x_build_user_cache_dir(void)
 
     if (!cache_dir || !cache_dir[0]) {
         xchar *home_dir = x_build_home_dir();
+        x_free(cache_dir);
         cache_dir = x_build_filename(home_dir, ".cache", NULL);
         x_free(home_dir);
     }
@@ -808,6 +810,7 @@ static xchar *x_build_user_state_dir(void)
 
     if (!state_dir || !state_dir[0]) {
         xchar *home_dir = x_build_home_dir();
+        x_free(state_dir);
         state_dir = x_build_filename(home_dir, ".local/state", NULL);
         x_free(home_dir);
     }

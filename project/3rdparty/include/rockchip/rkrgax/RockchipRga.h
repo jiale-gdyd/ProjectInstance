@@ -41,9 +41,9 @@ public:
     int RkRgaFree(bo_t *bo_info);
     int RkRgaGetBufferFd(bo_t *bo_info, int *fd);
 
-    int RkRgaBlit(rga_info *src, rga_info *dst, rga_info *src1);
-    int RkRgaCollorFill(rga_info *dst);
-    int RkRgaCollorPalette(rga_info *src, rga_info *dst, rga_info *lut);
+    int RkRgaBlit(rga_infos *src, rga_infos *dst, rga_infos *src1);
+    int RkRgaCollorFill(rga_infos *dst);
+    int RkRgaCollorPalette(rga_infos *src, rga_infos *dst, rga_infos *lut);
     int RkRgaFlush();
 
     void RkRgaSetLogOnceFlag(int log) {
@@ -55,7 +55,7 @@ public:
     }
 
     void RkRgaLogOutRgaReq(struct rga_req rgaReg);
-    int RkRgaLogOutUserPara(rga_info *rgaInfo);
+    int RkRgaLogOutUserPara(rga_infos *rgaInfo);
 
     inline bool RkRgaIsReady() {
         return mSupportRga;

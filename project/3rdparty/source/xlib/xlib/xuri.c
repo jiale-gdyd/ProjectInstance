@@ -1419,7 +1419,7 @@ xchar *x_uri_escape_string (const xchar *unescaped, const xchar *reserved_chars_
     XString *s;
 
     x_return_val_if_fail(unescaped != NULL, NULL);
-    s = x_string_sized_new(strlen(unescaped) * 1.25);
+    s = x_string_sized_new((size_t)(strlen(unescaped) * 1.25));
     x_string_append_uri_escaped(s, unescaped, reserved_chars_allowed, allow_utf8);
 
     return x_string_free(s, FALSE);
@@ -1450,7 +1450,7 @@ xchar *x_uri_escape_bytes(const xuint8 *unescaped, xsize length, const xchar *re
     XString *string;
 
     x_return_val_if_fail(unescaped != NULL, NULL);
-    string = x_string_sized_new(length * 1.25);
+    string = x_string_sized_new((size_t)(length * 1.25));
     _uri_encoder(string, unescaped, length, reserved_chars_allowed, FALSE);
 
     return x_string_free(string, FALSE);

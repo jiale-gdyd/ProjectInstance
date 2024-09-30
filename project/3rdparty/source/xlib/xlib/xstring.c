@@ -467,37 +467,87 @@ XString *x_string_erase(XString *string, xssize pos, xssize len)
 
 xuint x_string_replace (XString *string, const xchar *find, const xchar *replace, xuint limit)
 {
-    xuint n = 0;
-    xchar *cur, *next;
-    xsize f_len, r_len, pos;
+    xuint n;
+    XString *new_string = NULL;
+    xsize f_len, r_len, new_len;
+    xchar *cur, *next, *first, *dst;
 
     x_return_val_if_fail(string != NULL, 0);
     x_return_val_if_fail(find != NULL, 0);
     x_return_val_if_fail(replace != NULL, 0);
 
+    first = strstr(string->str, find);
+    if (first == NULL) {
+        return 0;
+    }
+    new_len = string->len;
+
     f_len = strlen(find);
     r_len = strlen(replace);
-    cur = string->str;
 
-    while ((next = strstr(cur, find)) != NULL) {
-        pos = next - string->str;
-        x_string_erase(string, pos, f_len);
-        x_string_insert(string, pos, replace);
-        cur = string->str + pos + r_len;
-        n++;
+   do {
+        dst = first;
+        cur = first;
+        n = 0;
+        while ((next = strstr (cur, find)) != NULL) {
+            n++;
+            if X_UNLIKELY(f_len == 0) {
+                x_string_insert_len(string, next - string->str, replace, r_len);
+                cur = next + r_len;
 
-        if (f_len == 0) {
-            if (cur[0] == '\0') {
-                break;
+                if (cur[0] == '\0') {
+                    break;
+                } else {
+                    cur++;
+                }
             } else {
-                cur++;
+                if (r_len <= f_len) {
+                    memmove(dst, cur, next - cur);
+                    dst += next - cur;
+                    memcpy(dst, replace, r_len);
+                    dst += r_len;
+                } else {
+                    if (new_string == NULL) {
+                        new_len += r_len - f_len;
+                    } else {
+                        x_string_append_len(new_string, cur, next - cur);
+                        x_string_append_len(new_string, replace, r_len);
+                    }
+                }
+
+                cur = next + f_len;
+            }
+
+            if (n == limit) {
+                break;
             }
         }
 
-        if (n == limit) {
+        if (f_len == 0) {
             break;
         }
-    }
+
+        if (r_len <= f_len) {
+            xchar *end = string->str + string->len;
+            memmove(dst, cur, end - cur);
+            end = dst + (end - cur);
+            *end = 0;
+            string->len = end - string->str;
+            break;
+        } else {
+            if (new_string == NULL) {
+                new_string = x_string_sized_new(new_len);
+                x_string_append_len(new_string, string->str, first - string->str);
+            } else {
+                x_string_append_len(new_string, cur, (string->str + string->len) - cur);
+                x_free(string->str);
+                string->allocated_len = new_string->allocated_len;
+                string->len = new_string->len;
+                string->str = x_string_free_and_steal(x_steal_pointer(&new_string));
+                break;
+            }
+        }
+    } while (1);
 
     return n;
 }

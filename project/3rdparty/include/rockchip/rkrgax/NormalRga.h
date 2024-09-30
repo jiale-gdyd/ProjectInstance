@@ -28,7 +28,7 @@ int RgaBlit(rga_info_t *src, rga_info_t *dst, rga_info_t *src1);
 int RgaFlush();
 
 int RgaCollorFill(rga_info_t *dst);
-int RgaCollorPalette(rga_info *src, rga_info *dst, rga_info *lut);
+int RgaCollorPalette(rga_infos *src, rga_infos *dst, rga_infos *lut);
 
 int NormalRgaInitTables();
 int NormalRgaScale();
@@ -85,7 +85,7 @@ bool NormalRgaIsYuvFormat(int format);
 bool NormalRgaIsRgbFormat(int format);
 bool NormalRgaFormatHasAlpha(int format);
 
-int NormalRgaSetBitbltMode(struct rga_req *msg, unsigned char scale_mode, unsigned char rotate_mode, unsigned int angle, unsigned int dither_en, unsigned int AA_en, unsigned int yuv2rgb_mode);
+int NormalRgaSetBitbltMode(struct rga_req *msg, struct rga_interp interp, unsigned char rotate_mode, unsigned int angle, unsigned int dither_en, unsigned int AA_en, unsigned int yuv2rgb_mode);
 int NormalRgaSetColorPaletteMode(struct rga_req *msg, unsigned char palette_mode,unsigned char endian_mode, unsigned int bpp1_0_color, unsigned int bpp1_1_color);
 
 int NormalRgaSetColorFillMode(struct rga_req *msg, COLOR_FILL *gr_color, unsigned char  gr_satur_mode, unsigned char cf_mode, unsigned int color, unsigned short pat_width, unsigned short pat_height, unsigned char pat_x_off, unsigned char pat_y_off, unsigned char aa_en);
@@ -100,11 +100,11 @@ int NormalRgaUpdatePaletteTableMode(struct rga_req *msg, arch_type_t LUT_addr, u
 
 int NormalRgaUpdatePattenBuffMode(struct rga_req *msg, unsigned int pat_addr, unsigned int w, unsigned int h, unsigned int format);
 
-int NormalRgaNNQuantizeMode(struct rga_req *msg, rga_info *dst);
+int NormalRgaNNQuantizeMode(struct rga_req *msg, rga_infos *dst);
 
 int NormalRgaFullColorSpaceConvert(struct rga_req *msg, int color_space_mode);
 
-int NormalRgaDitherMode(struct rga_req *msg, rga_info *dst, int format);
+int NormalRgaDitherMode(struct rga_req *msg, rga_infos *dst, int format);
 
 int NormalRgaMmuInfo(struct rga_req *msg, unsigned char mmu_en, unsigned char src_flush, unsigned char dst_flush, unsigned char cmd_flush, arch_type_t base_addr, unsigned char page_size);
 

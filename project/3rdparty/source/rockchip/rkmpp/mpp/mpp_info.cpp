@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2024-09-11 fix[h265d_vdpu383]: fix dec err when ps_update_flag=0";
+static const char *mpp_last_commit_message = "2024-09-25 fix[smt_rc]: Fix first frame QP error";
 
 void show_mpp_version(void)
 {

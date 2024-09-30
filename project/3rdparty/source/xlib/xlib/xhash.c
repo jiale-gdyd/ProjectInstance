@@ -466,7 +466,7 @@ static void x_hash_table_resize(XHashTable *hash_table)
     old_size = hash_table->size;
     is_a_set = hash_table->keys == hash_table->values;
 
-    x_hash_table_set_shift_from_size(hash_table, hash_table->nnodes * 1.333);
+    x_hash_table_set_shift_from_size(hash_table, (xint)(hash_table->nnodes * 1.333));
 
     if (hash_table->size > old_size) {
         realloc_arrays(hash_table, is_a_set);

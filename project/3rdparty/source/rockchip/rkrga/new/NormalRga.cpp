@@ -187,7 +187,7 @@ int RgaDeInit(void **ctx)
     return ret;
 }
 
-int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1)
+int RgaBlit(rga_infos *src, rga_infos *dst, rga_infos *src1)
 {
     RECT clip;
     int ret = 0;
@@ -203,13 +203,14 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1)
     void *dstBuf = NULL;
     void *src1Buf = NULL;
     bool perpixelAlpha = 0;
+    struct rga_interp interp;
     unsigned int yuvToRgbMode;
     int sync_mode = RGA_BLIT_SYNC;
     struct rgaContext *ctx = rgaCtx;
     struct rga_req rgaReg, tmprgaReg;
     rga_rect_t relSrc1Rect, tmpSrc1Rect;
     int fg_global_alpha, bg_global_alpha;
-    int scaleMode, rotateMode, orientation, ditherEn;
+    int rotateMode, orientation, ditherEn;
     int srcVirW, srcVirH, srcActW, srcActH, srcXPos, srcYPos;
     int dstVirW, dstVirH, dstActW, dstActH, dstXPos, dstYPos;
     rga_rect_t relSrcRect, tmpSrcRect, relDstRect, tmpDstRect;
@@ -251,6 +252,8 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1)
     if (src) {
         rotation = src->rotation;
         blend = src->blend;
+        interp.horiz = src->scale_mode & 0xf;
+        interp.verti = (src->scale_mode >> 4) & 0xf;
         memcpy(&relSrcRect, &src->rect, sizeof(rga_rect_t));
     }
 
@@ -406,7 +409,7 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1)
         fg_global_alpha = (blend >> 16) & 0xff;
         bg_global_alpha = (blend >> 24) & 0xff;
 
-        switch (blend) {
+        switch (blend & 0xFFF) {
             case 0x405:
                 fg_global_alpha = (blend >> 16) & 0xff;
                 bg_global_alpha = 0xff;
@@ -531,16 +534,46 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1)
         }
     }
 
-    scaleMode = 0;
     stretch = (hScale != 1.0f) || (vScale != 1.0f);
-    if ((hScale < 1) || (vScale < 1)) {
-        if ((relSrcRect.format == RK_FORMAT_RGBA_8888) || (relSrcRect.format == RK_FORMAT_BGRA_8888)) {
-            scaleMode = 0;
+    if (interp.horiz == RGA_INTERP_DEFAULT) {
+        if (hScale > 1.0f) {
+            interp.horiz = RGA_INTERP_AVERAGE;
+        } else if (hScale < 1.0f) {
+            interp.horiz = RGA_INTERP_BICUBIC;
         }
     }
 
+    if (interp.verti == RGA_INTERP_DEFAULT) {
+        if (vScale > 1.0f) {
+            interp.verti = RGA_INTERP_AVERAGE;
+        } else if (vScale < 1.0f) {
+            if (relSrcRect.width > 1996 || (relDstRect.width > 1996 && hScale > 1.0f)) {
+                interp.verti = RGA_INTERP_LINEAR;
+            } else {
+                interp.verti = RGA_INTERP_BICUBIC;
+            }
+        }
+    }
+
+    if (interp.verti == RGA_INTERP_BICUBIC && vScale < 1.0f) {
+        if (relSrcRect.width > 1996 || (relDstRect.width > 1996 && hScale > 1.0f)) {
+            rga_error("when using bicubic scaling in the vertical direction, it does not support input width larger than %d.", 1996);
+            return -EINVAL;
+        }
+    }
+
+    if (((vScale > 1.0f && interp.verti == RGA_INTERP_LINEAR) || (hScale > 1.0f && interp.horiz == RGA_INTERP_LINEAR)) && (hScale < 1.0f || vScale < 1.0f)) {
+            rga_error("when using bilinear scaling for downsizing, it does not support scaling up in other directions.");
+            return -EINVAL;
+    }
+
+    if ((vScale > 1.0f && interp.verti == RGA_INTERP_LINEAR) && relDstRect.width > 4096) {
+        rga_error("bi-linear scale-down only supports vertical direction smaller than 4096.");
+        return -EINVAL;
+    }
+
     if (is_out_log()) {
-        rga_debug("scaleMode:[%d], stretch:[%d]",scaleMode,stretch);
+        rga_debug("interp[horiz, verti] = [0x%X, 0x%X] , stretch:[0x%X]", interp.horiz, interp.verti, stretch);
     }
 
     switch (rotation & 0x0f) {
@@ -964,7 +997,7 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1)
         }
     }
 
-    NormalRgaSetBitbltMode(&rgaReg, scaleMode, rotateMode, orientation, ditherEn, 0, yuvToRgbMode);
+    NormalRgaSetBitbltMode(&rgaReg, interp, rotateMode, orientation, ditherEn, 0, yuvToRgbMode);
     NormalRgaNNQuantizeMode(&rgaReg, dst);
     NormalRgaDitherMode(&rgaReg, dst, relDstRect.format);
 
@@ -1009,6 +1042,12 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1)
         rga_debug("srcMmuFlag:[%d], dstMmuFlag:[%d], rotateMode:[%d]", srcMmuFlag, dstMmuFlag, rotateMode);
         rga_debug("<<<<-------- rgaReg -------->>>>");
         NormalRgaLogOutRgaReq(rgaReg);
+    }
+
+    if (src->rgba5551_flags == 1) {
+        rgaReg.rgba5551_alpha.flags = src->rgba5551_flags;
+        rgaReg.rgba5551_alpha.alpha0 = src->rgba5551_alpha0;
+        rgaReg.rgba5551_alpha.alpha1 = src->rgba5551_alpha1;
     }
 
     if ((src->sync_mode == RGA_BLIT_ASYNC) || (dst->sync_mode == RGA_BLIT_ASYNC)) {
@@ -1113,7 +1152,7 @@ int RgaFlush()
     return 0;
 }
 
-int RgaCollorFill(rga_info *dst)
+int RgaCollorFill(rga_infos *dst)
 {
     RECT clip;
     int ret = 0;
@@ -1342,7 +1381,7 @@ int RgaCollorFill(rga_info *dst)
     return 0;
 }
 
-int RgaCollorPalette(rga_info *src, rga_info *dst, rga_info *lut)
+int RgaCollorPalette(rga_infos *src, rga_infos *dst, rga_infos *lut)
 {
     RECT clip;
     int ret = 0;

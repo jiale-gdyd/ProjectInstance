@@ -2,6 +2,7 @@
 #define __X_UTILS_PRIVATE_H__
 
 #include <time.h>
+#include <math.h>
 
 #include "xlibconfig.h"
 #include "xtypes.h"
@@ -27,6 +28,11 @@ static inline xsize x_nearest_pow(xsize num)
 #endif
 
     return n + 1;
+}
+
+static inline int x_isnan(double d)
+{
+    return isnan(d);
 }
 
 void _x_unset_cached_tmp_dir(void);
