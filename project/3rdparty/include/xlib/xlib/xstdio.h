@@ -65,6 +65,9 @@ XLIB_AVAILABLE_IN_2_36
 xboolean x_close(xint fd, XError **error);
 
 XLIB_AVAILABLE_STATIC_INLINE_IN_2_76
+static inline xboolean x_clear_fd(int *fd_ptr, XError **error);
+
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_76
 static inline xboolean x_clear_fd(int *fd_ptr, XError **error)
 {
     int fd = *fd_ptr;

@@ -913,189 +913,263 @@ err_out:
     return result;
 }
 
-#define VALIDATE_BYTE(mask, expect)                             \
-    X_STMT_START {                                              \
-        if (X_UNLIKELY((*(xuchar *)p & (mask)) != (expect))) {  \
-            goto error;                                         \
-        }                                                       \
-    } X_STMT_END
+#define align_to(_val, _to)         (((_val) + (_to) - 1) & ~((_to) - 1))
 
-static const xchar *fast_validate(const char *str)
+static inline xuint8 load_u8(xconstpointer memory, xsize offset)
 {
-    const xchar *p;
-
-    for (p = str; *p; p++){
-        if (*(xuchar *)p < 128) {
-            ;
-        } else {
-            const xchar *last;
-
-            last = p;
-            if (*(xuchar *)p < 0xe0) {
-                if (X_UNLIKELY(*(xuchar *)p < 0xc2)) {
-                    goto error;
-                }
-            } else {
-                if (*(xuchar *)p < 0xf0) {
-                    switch (*(xuchar *)p++ & 0x0f) {
-                        case 0:
-                            VALIDATE_BYTE(0xe0, 0xa0);
-                            break;
-
-                        case 0x0d:
-                            VALIDATE_BYTE(0xe0, 0x80);
-                            break;
-
-                        default:
-                            VALIDATE_BYTE(0xc0, 0x80);
-                    }
-                } else if (*(xuchar *)p < 0xf5) {
-                    switch (*(xuchar *)p++ & 0x07) {
-                        case 0:
-                            VALIDATE_BYTE(0xc0, 0x80);
-                            if (X_UNLIKELY((*(xuchar *)p & 0x30) == 0)) {
-                                goto error;
-                            }
-                            break;
-
-                        case 4:
-                            VALIDATE_BYTE(0xf0, 0x80);
-                            break;
-
-                            default:
-                            VALIDATE_BYTE(0xc0, 0x80);
-                    }
-
-                    p++;
-                    VALIDATE_BYTE(0xc0, 0x80);
-                } else {
-                    goto error;
-                }
-            }
-
-            p++;
-            VALIDATE_BYTE(0xc0, 0x80);
-            continue;
-error:
-            return last;
-        }
-    }
-
-    return p;
+    return ((const xuint8 *)memory)[offset];
 }
 
-static const xchar *fast_validate_len(const char *str, xssize max_len)
+#if X_GNUC_CHECK_VERSION(4,8) || defined(__clang__)
+# define _attribute_aligned(n)      __attribute__((aligned(n)))
+#elif defined(_MSC_VER)
+#define _attribute_aligned(n)       __declspec(align(n))
+#else
+#define _attribute_aligned(n)
+#endif
+
+static inline xsize load_word(xconstpointer memory, xsize offset)
 {
-    const xchar *p;
+#if XLIB_SIZEOF_VOID_P == 8
+    _attribute_aligned(8) const xuint8 *m = ((const xuint8 *)memory) + offset;
+    return ((xuint64)m[0] <<  0) | ((xuint64)m[1] <<  8) |
+         ((xuint64)m[2] << 16) | ((xuint64)m[3] << 24) |
+         ((xuint64)m[4] << 32) | ((xuint64)m[5] << 40) |
+         ((xuint64)m[6] << 48) | ((xuint64)m[7] << 56);
+#else
+    _attribute_aligned(4) const xuint8 *m = ((const xuint8 *)memory) + offset;
+    return ((xuint)m[0] <<  0) | ((xuint)m[1] <<  8) | ((xuint)m[2] << 16) | ((xuint)m[3] << 24);
+#endif
+}
 
-    x_assert(max_len >= 0);
+#define UTF8_ASCII_MASK         ((xsize)0x8080808080808080L)
+#define UTF8_ASCII_SUB          ((xsize)0x0101010101010101L)
 
-    for (p = str; ((p - str) < max_len) && *p; p++) {
-        if (*(xuchar *)p < 128) {
-            ;
-        } else {
-            const xchar *last;
+static inline int utf8_word_is_ascii(xsize word)
+{
+    return ((((word - UTF8_ASCII_SUB) | word) & UTF8_ASCII_MASK) == 0);
+}
 
-            last = p;
-            if (*(xuchar *)p < 0xe0) {
-                if (X_UNLIKELY(max_len - (p - str) < 2)) {
-                    goto error;
+static void utf8_verify_ascii(const char **strp, xsize *lenp)
+{
+    const char *str = *strp;
+    xsize len = lenp ? *lenp : (xsize)-1;
+
+    while (len > 0 && load_u8(str, 0) < 128) {
+        if ((xpointer)align_to((xuintptr)str, sizeof(xsize)) == str) {
+            while (len >= 2 * sizeof(xsize)) {
+                if (!utf8_word_is_ascii(load_word (str, 0)) || !utf8_word_is_ascii(load_word (str, sizeof(xsize)))) {
+                    break;
                 }
-            
-                if (X_UNLIKELY(*(xuchar *)p < 0xc2)) {
-                    goto error;
-                }
-            } else {
-                if (*(xuchar *)p < 0xf0) {
-                    if (X_UNLIKELY(max_len - (p - str) < 3)) {
-                        goto error;
-                    }
 
-                    switch (*(xuchar *)p++ & 0x0f) {
-                        case 0:
-                            VALIDATE_BYTE(0xe0, 0xa0);
-                            break;
-
-                        case 0x0d:
-                            VALIDATE_BYTE(0xe0, 0x80);
-                            break;
-
-                        default:
-                            VALIDATE_BYTE(0xc0, 0x80);
-                    }
-                } else if (*(xuchar *)p < 0xf5) {
-                    if (X_UNLIKELY(max_len - (p - str) < 4)) {
-                        goto error;
-                    }
-
-                    switch (*(xuchar *)p++ & 0x07) {
-                        case 0:
-                            VALIDATE_BYTE(0xc0, 0x80);
-                            if (X_UNLIKELY((*(xuchar *)p & 0x30) == 0)) {
-                                goto error;
-                            }
-                            break;
-
-                        case 4:
-                            VALIDATE_BYTE(0xf0, 0x80);
-                            break;
-
-                        default:
-                        VALIDATE_BYTE(0xc0, 0x80);
-                    }
-
-                    p++;
-                    VALIDATE_BYTE(0xc0, 0x80);
-                } else {
-                    goto error;
-                }
+                str += 2 * sizeof(xsize);
+                len -= 2 * sizeof(xsize);
             }
 
-            p++;
-            VALIDATE_BYTE(0xc0, 0x80);
-            continue;
-error:
-            return last;
+            while (len > 0 && load_u8(str, 0) < 128) {
+                if X_UNLIKELY(load_u8(str, 0) == 0x00) {
+                    goto out;
+                }
+
+                ++str;
+                --len;
+            }
+        } else {
+            if X_UNLIKELY(load_u8 (str, 0) == 0x00) {
+                goto out;
+            }
         }
     }
 
-    return p;
+out:
+    *strp = str;
+    if (lenp) {
+        *lenp = len;
+    }
+}
+
+#define UTF8_CHAR_IS_TAIL(_x)       (((_x) & 0xC0) == 0x80)
+
+static void utf8_verify(const char **strp, xsize *lenp)
+{
+    const char *str = *strp;
+    xsize len = lenp ? *lenp : (xsize)-1;
+
+    while (len > 0) {
+        xuint8 b = load_u8(str, 0);
+        if (b == 0x00) {
+            goto out;
+        } else if (b <= 0x7F) {
+            utf8_verify_ascii((const char **)&str, &len);
+        } else if (b >= 0xC2 && b <= 0xDF) {
+            if X_UNLIKELY(len < 2) {
+                goto out;
+            }
+
+            if X_UNLIKELY(!UTF8_CHAR_IS_TAIL(load_u8(str, 1))) {
+                goto out;
+            }
+
+            str += 2;
+            len -= 2;
+        } else if (b == 0xE0) {
+            if X_UNLIKELY(len < 3) {
+                goto out;
+            }
+
+            if X_UNLIKELY(load_u8(str, 1) < 0xA0 || load_u8(str, 1) > 0xBF) {
+                goto out;
+            }
+
+            if X_UNLIKELY(!UTF8_CHAR_IS_TAIL(load_u8(str, 2))) {
+                goto out;
+            }
+
+            str += 3;
+            len -= 3;
+        } else if (b >= 0xE1 && b <= 0xEC) {
+            if X_UNLIKELY(len < 3) {
+                goto out;
+            }
+
+            if X_UNLIKELY(!UTF8_CHAR_IS_TAIL(load_u8(str, 1))) {
+                goto out;
+            }
+
+            if X_UNLIKELY(!UTF8_CHAR_IS_TAIL(load_u8(str, 2))) {
+                goto out;
+            }
+
+            str += 3;
+            len -= 3;
+        } else if (b == 0xED) {
+            if X_UNLIKELY(len < 3) {
+                goto out;
+            }
+
+            if X_UNLIKELY(load_u8(str, 1) < 0x80 || load_u8(str, 1) > 0x9F) {
+                goto out;
+            }
+
+            if X_UNLIKELY(!UTF8_CHAR_IS_TAIL(load_u8(str, 2))) {
+                goto out;
+            }
+
+            str += 3;
+            len -= 3;
+        } else if (b >= 0xEE && b <= 0xEF) {
+            if X_UNLIKELY(len < 3) {
+                goto out;
+            }
+
+            if X_UNLIKELY(!UTF8_CHAR_IS_TAIL(load_u8(str, 1))) {
+                goto out;
+            }
+
+            if X_UNLIKELY(!UTF8_CHAR_IS_TAIL(load_u8(str, 2))) {
+                goto out;
+            }
+
+            str += 3;
+            len -= 3;
+        } else if (b == 0xF0) {
+            if X_UNLIKELY(len < 4) {
+                goto out;
+            }
+
+            if X_UNLIKELY(load_u8(str, 1) < 0x90 || load_u8(str, 1) > 0xBF) {
+                goto out;
+            }
+
+            if X_UNLIKELY(!UTF8_CHAR_IS_TAIL(load_u8(str, 2))) {
+                goto out;
+            }
+
+            if X_UNLIKELY(!UTF8_CHAR_IS_TAIL(load_u8(str, 3))) {
+                goto out;
+            }
+
+            str += 4;
+            len -= 4;
+        } else if (b >= 0xF1 && b <= 0xF3) {
+            if X_UNLIKELY(len < 4) {
+                goto out;
+            }
+
+            if X_UNLIKELY(!UTF8_CHAR_IS_TAIL(load_u8(str, 1))) {
+                goto out;
+            }
+
+            if X_UNLIKELY(!UTF8_CHAR_IS_TAIL(load_u8(str, 2))) {
+                goto out;
+            }
+
+            if X_UNLIKELY(!UTF8_CHAR_IS_TAIL(load_u8(str, 3))) {
+                goto out;
+            }
+
+            str += 4;
+            len -= 4;
+        } else if (b == 0xF4) {
+            if X_UNLIKELY(len < 4) {
+                goto out;
+            }
+
+            if X_UNLIKELY(load_u8(str, 1) < 0x80 || load_u8(str, 1) > 0x8F) {
+                goto out;
+            }
+
+            if X_UNLIKELY(!UTF8_CHAR_IS_TAIL(load_u8(str, 2))) {
+                goto out;
+            }
+
+            if X_UNLIKELY(!UTF8_CHAR_IS_TAIL(load_u8(str, 3))) {
+                goto out;
+            }
+
+            str += 4;
+            len -= 4;
+        } else {
+            goto out;
+        }
+    }
+
+out:
+    *strp = str;
+    if (lenp) {
+        *lenp = len;
+    }
 }
 
 xboolean x_utf8_validate(const char *str, xssize max_len, const xchar **end)
 {
-    const xchar *p;
-
     if (max_len >= 0) {
         return x_utf8_validate_len(str, max_len, end);
     }
 
-    p = fast_validate(str);
-    if (end) {
-        *end = p;
+    utf8_verify(&str, NULL);
+    if (end != NULL) {
+        *end = str;
     }
 
-    if (*p != '\0') {
-        return FALSE;
-    } else {
-        return TRUE;
-    }
+    return *str == 0;
 }
 
 xboolean x_utf8_validate_len(const char *str, xsize max_len, const xchar **end)
 {
-    const xchar *p;
+    utf8_verify(&str, &max_len);
 
-    p = fast_validate_len(str, max_len);
-    if (end) {
-        *end = p;
+    if (end != NULL) {
+        *end = str;
     }
 
-    if (p != str + max_len) {
-        return FALSE;
-    } else {
-        return TRUE;
-    }
+    return max_len == 0;
+}
+
+xboolean x_str_is_ascii(const xchar *str)
+{
+    utf8_verify_ascii(&str, NULL);
+    return *str == 0;
 }
 
 xboolean x_unichar_validate(xunichar ch)

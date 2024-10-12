@@ -6,6 +6,7 @@
 #include <xlib/xlib/xrefcount.h>
 #include <xlib/xlib/xlib_trace.h>
 #include <xlib/xlib/xtestutils.h>
+#include <xlib/xlib/xlib-private.h>
 #include <xlib/xlib/xvarianttypeinfo.h>
 #include <xlib/xlib/xvarianttype-private.h>
 
@@ -330,8 +331,31 @@ const XVariantMemberInfo *x_variant_type_info_member_info(XVariantTypeInfo *info
     return NULL;
 }
 
+#define GC_THRESHOLD            32
+
+static XPtrArray *x_variant_type_info_gc;
 static XRecMutex x_variant_type_info_lock;
 static XHashTable *x_variant_type_info_table;
+
+static void gc_while_locked(void)
+{
+    while (x_variant_type_info_gc->len > 0) {
+        XVariantTypeInfo *info = x_ptr_array_steal_index_fast(x_variant_type_info_gc, 0);
+        ContainerInfo *container = (ContainerInfo *)info;
+        if (x_atomic_ref_count_dec(&container->ref_count)) {
+            TRACE(GLIB_VARIANT_TYPE_INFO_FREE(info));
+            x_hash_table_remove(x_variant_type_info_table, container->type_string);
+            x_free(container->type_string);
+            if (info->container_class == XV_ARRAY_INFO_CLASS) {
+                array_info_free(info);
+            } else if (info->container_class == XV_TUPLE_INFO_CLASS) {
+                tuple_info_free(info);
+            } else {
+                x_assert_not_reached();
+            }
+        }
+    }
+}
 
 XVariantTypeInfo *x_variant_type_info_get(const XVariantType *type)
 {
@@ -349,6 +373,7 @@ XVariantTypeInfo *x_variant_type_info_get(const XVariantType *type)
 
         if (x_variant_type_info_table == NULL) {
             x_variant_type_info_table = x_hash_table_new((XHashFunc)_x_variant_type_hash, (XEqualFunc)_x_variant_type_equal);
+            x_ignore_leak(x_variant_type_info_table);
         }
 
         info = (XVariantTypeInfo *)x_hash_table_lookup(x_variant_type_info_table, type_string);
@@ -415,31 +440,31 @@ void x_variant_type_info_unref(XVariantTypeInfo *info)
 
         x_rec_mutex_lock(&x_variant_type_info_lock);
         if (x_atomic_ref_count_dec(&container->ref_count)) {
-            TRACE(XLIB_VARIANT_TYPE_INFO_FREE(info));
-
-            x_hash_table_remove(x_variant_type_info_table, container->type_string);
-            if (x_hash_table_size(x_variant_type_info_table) == 0) {
-                x_hash_table_unref(x_variant_type_info_table);
-                x_variant_type_info_table = NULL;
+            if (x_variant_type_info_gc == NULL) {
+                x_variant_type_info_gc = x_ptr_array_new();
+                x_ignore_leak(x_variant_type_info_gc);
             }
-            x_rec_mutex_unlock(&x_variant_type_info_lock);
 
-            x_free(container->type_string);
+            x_atomic_ref_count_init(&container->ref_count);
+            x_ptr_array_add(x_variant_type_info_gc, info);
 
-            if (info->container_class == XV_ARRAY_INFO_CLASS) {
-                array_info_free(info);
-            } else if (info->container_class == XV_TUPLE_INFO_CLASS) {
-                tuple_info_free(info);
-            } else {
-                x_assert_not_reached();
+            if (x_variant_type_info_gc->len > GC_THRESHOLD) {
+                gc_while_locked();
             }
-        } else {
-            x_rec_mutex_unlock(&x_variant_type_info_lock);
         }
+
+        x_rec_mutex_unlock(&x_variant_type_info_lock);
     }
 }
 
 void x_variant_type_info_assert_no_infos(void)
 {
-    x_assert(x_variant_type_info_table == NULL);
+    X_GNUC_UNUSED xboolean empty;
+    x_rec_mutex_lock(&x_variant_type_info_lock);
+    if (x_variant_type_info_table != NULL) {
+        gc_while_locked();
+    }
+    empty = (x_variant_type_info_table == NULL || x_hash_table_size(x_variant_type_info_table) == 0);
+    x_rec_mutex_unlock(&x_variant_type_info_lock);
+    x_assert(empty);
 }

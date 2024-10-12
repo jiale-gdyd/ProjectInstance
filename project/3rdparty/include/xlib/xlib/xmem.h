@@ -109,6 +109,9 @@ void x_aligned_free_sized(xpointer mem, size_t alignment, size_t size);
 #endif
 
 XLIB_AVAILABLE_STATIC_INLINE_IN_2_44
+static inline xpointer x_steal_pointer(xpointer pp);
+
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_44
 static inline xpointer x_steal_pointer(xpointer pp)
 {
     xpointer ref;

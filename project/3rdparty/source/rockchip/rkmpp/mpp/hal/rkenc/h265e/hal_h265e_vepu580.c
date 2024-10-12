@@ -107,6 +107,7 @@
 //     void                *roi_data;
 //     RkvRoiCfg_v2        *roi_cfg_tmp;
 //     MppBufferGroup      roi_grp;
+//    MppBufferGroup      qpmap_grp;
 //     MppBuffer           roi_base_cfg_buf;
 //     void                *roi_base_cfg_sw_buf;
 //     RK_S32              roi_base_buf_size;
@@ -1398,6 +1399,11 @@ MPP_RET hal_h265e_v580_deinit(void *hal)
         ctx->tune = NULL;
     }
 
+    if (ctx->md_info_buf) {
+        mpp_buffer_put(ctx->md_info_buf);
+        ctx->md_info_buf = NULL;
+    }
+
     if (ctx->qpmap_base_cfg_buf) {
         mpp_buffer_put(ctx->qpmap_base_cfg_buf);
         ctx->qpmap_base_cfg_buf = NULL;
@@ -1410,6 +1416,11 @@ MPP_RET hal_h265e_v580_deinit(void *hal)
 
     if (ctx->md_flag_buf) {
         MPP_FREE(ctx->md_flag_buf);
+    }
+
+    if (ctx->qpmap_grp) {
+        mpp_buffer_group_put(ctx->qpmap_grp);
+        ctx->qpmap_grp = NULL;
     }
 
     hal_h265e_leave();
@@ -2325,13 +2336,37 @@ static void vepu580_h265_set_me_regs(H265eV580HalContext *ctx, H265eSyntax_new *
 
 }
 
+static MppBuffer vepu580_h265_get_md_info_buf(H265eV580HalContext *ctx)
+{
+    RK_S32 w = ctx->cfg->prep.width;
+    RK_S32 h = ctx->cfg->prep.height;
+    RK_S32 buf_size = (MPP_ALIGN(w, 64) >> 6) * (MPP_ALIGN(h, 64) >> 6) * 32;
+    /* prepare md info internal buffer when deblur is enabled */
+    if (ctx->cfg->tune.deblur_en && (buf_size > ctx->md_info_buf_size)) {
+        if (ctx->md_info_buf) {
+            mpp_buffer_put(ctx->md_info_buf);
+            ctx->md_info_buf = NULL;
+        }
+        if (!ctx->qpmap_grp)
+            mpp_buffer_group_get_internal(&ctx->qpmap_grp, MPP_BUFFER_TYPE_ION);
+        mpp_buffer_get(ctx->qpmap_grp, &ctx->md_info_buf, buf_size);
+        if (!ctx->md_info_buf)
+            mpp_err_f("failed to get md info buffer\n");
+        else {
+            hal_h265e_dbg_flow("get md info internal buffer %p size %d %d\n",
+                               ctx->md_info_buf, buf_size, ctx->md_info_buf_size);
+            ctx->md_info_buf_size = buf_size;
+        }
+    }
+    return ctx->md_info_buf;
+}
+
 void vepu580_h265_set_hw_address(H265eV580HalContext *ctx, HalEncTask *task)
 {
     Vepu580H265eFrmCfg *frm = ctx->frm;
     hevc_vepu580_base *regs = &frm->regs_set[0]->reg_base;
     HalEncTask *enc_task = task;
     HalBuf *recon_buf, *ref_buf;
-    MppBuffer md_info_buf = enc_task->md_info;
     H265eSyntax_new *syn = ctx->syn;
 
     hal_h265e_enter();
@@ -2391,12 +2426,16 @@ void vepu580_h265_set_hw_address(H265eV580HalContext *ctx, HalEncTask *task)
         regs->reg0177_lpfr_addr  = mpp_buffer_get_fd(frm->hw_tile_buf[1]);
     }
 
-    if (md_info_buf) {
-        regs->reg0192_enc_pic.mei_stor    = 1;
-        regs->reg0171_meiw_addr = mpp_buffer_get_fd(md_info_buf);
-    } else {
-        regs->reg0192_enc_pic.mei_stor    = 0;
-        regs->reg0171_meiw_addr = 0;
+    {
+        if (!enc_task->md_info)
+            enc_task->md_info = vepu580_h265_get_md_info_buf(ctx);
+        if (enc_task->md_info) {
+            regs->reg0192_enc_pic.mei_stor    = 1;
+            regs->reg0171_meiw_addr = mpp_buffer_get_fd(enc_task->md_info);
+        } else {
+            regs->reg0192_enc_pic.mei_stor    = 0;
+            regs->reg0171_meiw_addr = 0;
+        }
     }
 
     regs->reg0172_bsbt_addr = mpp_buffer_get_fd(enc_task->output);
@@ -2684,8 +2723,8 @@ MPP_RET hal_h265e_v580_gen_regs(void *hal, HalEncTask *task)
     if (frm->is_i_refresh)
         setup_intra_refresh(ctx, frm->seq_idx % ctx->cfg->rc.gop);
 
-    if (cfg->tune.qpmap_en && (!rc_task->info.complex_scene) &&
-        cfg->rc.rc_mode == MPP_ENC_RC_MODE_SMTRC &&
+    if (cfg->tune.deblur_en && (!rc_task->info.complex_scene) &&
+        cfg->rc.rc_mode == MPP_ENC_RC_MODE_SMTRC && task->md_info &&
         cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC) {
         if (MPP_OK != vepu580_setup_qpmap_buf(ctx))
             mpp_err("qpmap malloc buffer failed!\n");

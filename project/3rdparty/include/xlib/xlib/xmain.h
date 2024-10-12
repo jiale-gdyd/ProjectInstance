@@ -189,6 +189,9 @@ typedef void XMainContextPusher XLIB_AVAILABLE_TYPE_IN_2_64;
 
 X_GNUC_BEGIN_IGNORE_DEPRECATIONS
 XLIB_AVAILABLE_STATIC_INLINE_IN_2_64
+static inline XMainContextPusher *x_main_context_pusher_new(XMainContext *main_context);
+
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_64
 static inline XMainContextPusher *x_main_context_pusher_new(XMainContext *main_context)
 {
     x_main_context_push_thread_default(main_context);
@@ -197,6 +200,9 @@ static inline XMainContextPusher *x_main_context_pusher_new(XMainContext *main_c
 X_GNUC_END_IGNORE_DEPRECATIONS
 
 X_GNUC_BEGIN_IGNORE_DEPRECATIONS
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_64
+static inline void x_main_context_pusher_free(XMainContextPusher *pusher);
+
 XLIB_AVAILABLE_STATIC_INLINE_IN_2_64
 static inline void x_main_context_pusher_free(XMainContextPusher *pusher)
 {
@@ -376,6 +382,18 @@ void x_clear_handle_id(xuint *tag_ptr, XClearHandleFunc clear_func);
     } X_STMT_END                                                \
     XLIB_AVAILABLE_MACRO_IN_2_56
 
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_84
+static inline unsigned int x_steal_handle_id(unsigned int *handle_pointer);
+
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_84
+static inline unsigned int x_steal_handle_id(unsigned int *handle_pointer)
+{
+    unsigned int handle;
+    handle = *handle_pointer;
+    *handle_pointer = 0;
+    return handle;
+}
+
 XLIB_AVAILABLE_IN_ALL
 xuint x_timeout_add_full(xint priority, xuint interval, XSourceFunc function, xpointer data, XDestroyNotify notify);
 
@@ -417,6 +435,9 @@ void x_main_context_invoke_full(XMainContext *context, xint priority, XSourceFun
 
 XLIB_AVAILABLE_IN_ALL
 void x_main_context_invoke(XMainContext *context, XSourceFunc function, xpointer data);
+
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_70
+static inline int x_steal_fd(int *fd_ptr);
 
 XLIB_AVAILABLE_STATIC_INLINE_IN_2_70
 static inline int x_steal_fd(int *fd_ptr)

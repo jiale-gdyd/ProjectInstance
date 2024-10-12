@@ -160,6 +160,7 @@ typedef struct H265eV580HalContext_t {
     RK_S32              last_frame_type;
 
     MppBufferGroup      roi_grp;
+    MppBufferGroup      qpmap_grp;
 
     MppEncCfgSet        *cfg;
     H265eSyntax_new     *syn;
@@ -189,9 +190,11 @@ typedef struct H265eV580HalContext_t {
 
     /* finetune */
     void                *tune;
+    MppBuffer           md_info_buf; /* md info buffer for deblurring */
     MppBuffer           qpmap_base_cfg_buf;
     MppBuffer           qpmap_qp_cfg_buf;
     RK_U8*              md_flag_buf;
+    RK_S32              md_info_buf_size;
     RK_S32              qpmap_base_cfg_size;
     RK_S32              qpmap_qp_cfg_size;
     RK_S32              md_flag_size;

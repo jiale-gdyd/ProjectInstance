@@ -196,6 +196,7 @@ static xpointer try_steal_and_unref(XBytes *bytes, XDestroyNotify free_func, xsi
     if (x_atomic_ref_count_compare(&bytes->ref_count, 1)) {
         *size = bytes->size;
         result = (xpointer)bytes->data;
+        x_assert(result != NULL);
         x_free(bytes);
         return result;
     }

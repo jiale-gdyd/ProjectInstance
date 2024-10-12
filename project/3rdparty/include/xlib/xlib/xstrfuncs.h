@@ -296,6 +296,9 @@ XLIB_AVAILABLE_IN_2_54
 xboolean x_ascii_string_to_unsigned(const xchar *str, xuint base, xuint64 min, xuint64 max, xuint64 *out_num, XError **error);
 
 XLIB_AVAILABLE_STATIC_INLINE_IN_2_76
+static inline xboolean x_set_str(char **str_pointer, const char *new_str);
+
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_76
 static inline xboolean x_set_str(char **str_pointer, const char *new_str)
 {
     char *copy;

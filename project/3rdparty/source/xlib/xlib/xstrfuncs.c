@@ -454,19 +454,6 @@ xchar *x_ascii_strup(const xchar *str, xssize len)
     return result;
 }
 
-xboolean x_str_is_ascii(const xchar *str)
-{
-    xsize i;
-
-    for (i = 0; str[i]; i++) {
-        if (str[i] & 0x80) {
-            return FALSE;
-        }
-    }
-
-    return TRUE;
-}
-
 xchar *x_strdown(xchar *string)
 {
     xuchar *s;

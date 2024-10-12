@@ -62,10 +62,16 @@ typedef enum {
 X_GNUC_BEGIN_IGNORE_DEPRECATIONS
 
 XLIB_AVAILABLE_STATIC_INLINE_IN_2_80
+static inline xboolean x_unix_pipe_open(XUnixPipe *self, int flags, XError **error);
+
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_80
 static inline xboolean x_unix_pipe_open(XUnixPipe *self, int flags, XError **error)
 {
     return x_unix_open_pipe(self->fds, flags, error);
 }
+
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_80
+static inline int x_unix_pipe_get(XUnixPipe *self, XUnixPipeEnd end);
 
 XLIB_AVAILABLE_STATIC_INLINE_IN_2_80
 static inline int x_unix_pipe_get(XUnixPipe *self, XUnixPipeEnd end)
@@ -74,16 +80,25 @@ static inline int x_unix_pipe_get(XUnixPipe *self, XUnixPipeEnd end)
 }
 
 XLIB_AVAILABLE_STATIC_INLINE_IN_2_80
+static inline int x_unix_pipe_steal(XUnixPipe *self, XUnixPipeEnd end);
+
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_80
 static inline int x_unix_pipe_steal(XUnixPipe *self, XUnixPipeEnd end)
 {
     return x_steal_fd(&self->fds[end]);
 }
 
 XLIB_AVAILABLE_STATIC_INLINE_IN_2_80
+static inline xboolean x_unix_pipe_close(XUnixPipe *self, XUnixPipeEnd end, XError **error);
+
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_80
 static inline xboolean x_unix_pipe_close(XUnixPipe *self, XUnixPipeEnd end, XError **error)
 {
     return x_clear_fd(&self->fds[end], error);
 }
+
+XLIB_AVAILABLE_STATIC_INLINE_IN_2_80
+static inline void x_unix_pipe_clear(XUnixPipe *self);
 
 XLIB_AVAILABLE_STATIC_INLINE_IN_2_80
 static inline void x_unix_pipe_clear(XUnixPipe *self)

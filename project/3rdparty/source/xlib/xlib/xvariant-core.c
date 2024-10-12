@@ -33,11 +33,10 @@ struct _XVariant {
     xint                  state;
     xatomicrefcount       ref_count;
     xsize                 depth;
-#if x_macro__has_attribute(aligned)
-    xuint8                suffix[] __attribute__((aligned(8)));
-#else
-    xuint8                suffix[];
+#if XLIB_SIZEOF_VOID_P == 4
+    xuint                 _padding;
 #endif
+    xuint8                suffix[];
 };
 
 X_STATIC_ASSERT(X_STRUCT_OFFSET(XVariant, suffix) % 8 == 0);

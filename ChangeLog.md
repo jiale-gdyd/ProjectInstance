@@ -1,5 +1,10 @@
 # 变更日志
 
+## 2024-10-12
+  * rapidjson: Fix endif condition to match NOT MSVC and VALGRIND_FOUND.
+  * rkmpp    : fix[vdpu383]: fix err detection mask issue
+  * xlib     : Merge branch 'ebassi/gsettings-build-docs' into 'main'
+
 ## 2024-09-29
   * rkmpp    : fix[smt_rc]: Fix first frame QP error
   * rga      : normal: fix wrong full_csc_clip size in memcpy
