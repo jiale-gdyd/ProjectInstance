@@ -1,5 +1,9 @@
 # 变更日志
 
+## 2024-11-11
+  * rkmpp: fix[hal_vdpu383]: fix fbc hor_stride mismatch issue
+  * xlib : 
+
 ## 2024-10-12
   * rapidjson: Fix endif condition to match NOT MSVC and VALGRIND_FOUND.
   * rkmpp    : fix[vdpu383]: fix err detection mask issue

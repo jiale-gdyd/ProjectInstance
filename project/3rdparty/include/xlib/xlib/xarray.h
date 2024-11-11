@@ -129,7 +129,7 @@ XLIB_AVAILABLE_IN_2_76
 XPtrArray *x_ptr_array_new_from_null_terminated_array(xpointer *data, XCopyFunc copy_func, xpointer copy_func_user_data, XDestroyNotify element_free_func);
 
 XLIB_AVAILABLE_IN_ALL
-xpointer *x_ptr_array_free(XPtrArray *array, xboolean free_seg);
+xpointer *x_ptr_array_free(XPtrArray *array, xboolean free_segment);
 
 XLIB_AVAILABLE_IN_ALL
 XPtrArray *x_ptr_array_ref(XPtrArray *array);

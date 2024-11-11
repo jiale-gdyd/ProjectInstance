@@ -367,7 +367,7 @@ void h265e_code_slice_header(H265eSlice *slice, MppWriteCtx *bitIf,
     mpp_writer_put_ue(bitIf, slice->m_ppsId);
 
     if (slice_segment_addr != 0) {
-        while (max_ctu_num > (1 << slice_address_addr_bits)) {
+        while (max_ctu_num > (RK_U32)(1 << slice_address_addr_bits)) {
             slice_address_addr_bits++;
         }
         //slice_segment_address
@@ -421,7 +421,7 @@ void h265e_code_slice_header(H265eSlice *slice, MppWriteCtx *bitIf,
                     }
                 }
 
-                numLtrpInSH -= numLtrpInSPS;
+                numLtrpInSH -= rps->m_numberOfPictures - rps->num_long_term_pic;
 
                 RK_S32 bitsForLtrpInSPS = 0;
                 while (slice->m_sps->m_numLongTermRefPicSPS > (RK_U32)(1 << bitsForLtrpInSPS)) {

@@ -332,6 +332,7 @@ static int safe_fdwalk(int (*cb)(void *data, int fd), void *data)
 #if defined(__sun__) && defined(F_PREVFD) && defined(F_NEXTFD)
     xint fd;
     xint res = 0;
+    xint open_max;
 
     open_max = fcntl(INT_MAX, F_PREVFD);
     if (open_max < 0) {

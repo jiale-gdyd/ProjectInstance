@@ -24,7 +24,7 @@
 #include "inc/mpp_info.h"
 
 static const char *mpp_version = "rockchip-rkmpp - " __DATE__ " " __TIME__;
-static const char *mpp_last_commit_message = "2024-10-12 fix[vdpu383]: fix err detection mask issue";
+static const char *mpp_last_commit_message = "2024-10-29 fix[hal_vdpu383]: fix fbc hor_stride mismatch issue";
 
 void show_mpp_version(void)
 {
